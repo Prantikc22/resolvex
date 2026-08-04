@@ -12,7 +12,6 @@ type ArticlePageProps = { params: Promise<{ slug: string }> };
 export function generateStaticParams() {
   return helpArticles.map((article) => ({ slug: article.slug }));
 }
-
 export async function generateMetadata({ params }: ArticlePageProps): Promise<Metadata> {
   const article = getHelpArticle((await params).slug);
   if (!article) return {};
@@ -78,4 +77,3 @@ export default async function HelpArticlePage({ params }: ArticlePageProps) {
     </main>
   );
 }
-

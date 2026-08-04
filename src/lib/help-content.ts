@@ -215,4 +215,3 @@ export function getHelpCategory(slug: string) {
 export function getHelpArticle(slug: string) {
   return helpArticles.find((article) => article.slug === slug);
 }
-
