@@ -1,0 +1,44 @@
+import type { Metadata } from "next";
+import { redirect } from "next/navigation";
+import { Workspace } from "@/components/workspace/Workspace";
+import { getCurrentOrganization } from "@/lib/supabase/current-org";
+
+export const metadata: Metadata = { title: "Workspace" };
+
+export default async function AppPage() {
+  const { supabase, user, organizationId } = await getCurrentOrganization();
+  if (!user) redirect("/login");
+  if (!organizationId) redirect("/onboarding");
+  const [{ data: organization }, { data: profile }] = await Promise.all([
+    supabase
+      .from("organizations")
+      .select("name,support_email")
+      .eq("id", organizationId)
+      .single(),
+    supabase
+      .from("profiles")
+      .select("full_name")
+      .eq("id", user.id)
+      .maybeSingle(),
+  ]);
+  return (
+    <Workspace
+      identity={{
+        workspaceName: organization?.name ?? "Your workspace",
+        supportEmail: organization?.support_email ?? "",
+        userName:
+          profile?.full_name ??
+          user.user_metadata?.full_name ??
+          user.email?.split("@")[0] ??
+          "Workspace owner",
+      }}
+      capabilities={{
+        billing: Boolean(
+          process.env.RAZORPAY_KEY_ID && process.env.RAZORPAY_KEY_SECRET,
+        ),
+        voice: Boolean(process.env.VOICE_PROVIDER_API_KEY),
+        email: Boolean(process.env.INBOUND_EMAIL_WEBHOOK_SECRET),
+      }}
+    />
+  );
+}

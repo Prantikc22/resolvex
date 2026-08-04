@@ -1,36 +1,66 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# ResolveX
 
-## Getting Started
+ResolveX is a standalone customer-support platform that combines a shared inbox, AI resolution, workflows, knowledge, reporting, and customer context in one workspace.
 
-First, run the development server:
+## Product surfaces
+
+- `/` - animated marketing site and pricing
+- `/demo` - public interactive workspace with demo data
+- `/signup` and `/login` - Supabase-backed authentication
+- `/onboarding` - workspace, inbox, and AI-policy setup
+- `/app` - authenticated support workspace
+- `/api/billing/*` - Razorpay order, verification, and webhook endpoints
+
+## Local setup
 
 ```bash
+npm install
+cp .env.example .env.local
+npm run db:migrate
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+The app runs at `http://localhost:3000` unless that port is occupied.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Environment variables
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Populate `.env.local` with:
 
-## Learn More
+```text
+NEXT_PUBLIC_APP_URL=
+NEXT_PUBLIC_SUPABASE_URL=
+NEXT_PUBLIC_SUPABASE_ANON_KEY=
+SUPABASE_SERVICE_ROLE_KEY=
+DATABASE_URL=
+RAZORPAY_KEY_ID=
+RAZORPAY_KEY_SECRET=
+NEXT_PUBLIC_RAZORPAY_KEY_ID=
+RAZORPAY_WEBHOOK_SECRET=
+```
 
-To learn more about Next.js, take a look at the following resources:
+Never expose the Supabase service-role key or Razorpay secret to browser code. The `NEXT_PUBLIC_*` values are the only client-readable variables.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Database
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+The initial schema lives in `supabase/migrations/001_initial.sql`. It includes organisations, memberships, contacts, inboxes, conversations, messages, knowledge, automations, integrations, subscriptions, usage events, indexes, triggers, and row-level security policies.
 
-## Deploy on Vercel
+Run migrations with:
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+```bash
+npm run db:migrate
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Razorpay
+
+Add the Razorpay keys to `.env.local`, configure the webhook URL as `/api/billing/webhook`, and set the same webhook secret in Razorpay and `RAZORPAY_WEBHOOK_SECRET`. Checkout can call `/api/billing/create-order`, then submit the returned payment details to `/api/billing/verify`.
+
+## Welcome email
+
+Set `RESEND_API_KEY`, `RESEND_FROM_EMAIL`, `RESEND_REPLY_TO`, and `RESEND_NOTIFY_EMAIL` in the deployment secret store. Completing onboarding sends the new user a welcome email and notifies the internal address once. Verify the sending domain in Resend before public onboarding; `onboarding@resend.dev` is suitable only for restricted testing.
+
+## Verification
+
+```bash
+npm run lint
+npm run build
+```
