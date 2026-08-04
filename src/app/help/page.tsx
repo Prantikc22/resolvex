@@ -1,6 +1,15 @@
-import { BookOpen, CreditCard, KeyRound, Search, Settings2, Sparkles } from "lucide-react";
+import { HelpCenter } from "@/components/help/HelpCenter";
 import { ResourcePage } from "@/components/marketing/ResourcePage";
 
-const topics = [[BookOpen,"Getting started","Install the messenger, invite agents, and connect your first inbox."],[Sparkles,"AI resolutions","Ground answers, set confidence thresholds, and review every automated decision."],[CreditCard,"Plans and billing","Understand paid agents, free collaborators, AI usage, and voice charges."],[KeyRound,"Account and security","Manage access, retention, exports, SSO, and audit history."],[Settings2,"Channels and routing","Connect chat, email, voice, forms, SLAs, queues, and automations."]];
+export default function HelpPage() {
+  return (
+    <ResourcePage
+      eyebrow="ResolveX help center"
+      title="Answers before a ticket exists."
+      copy="Search practical setup guidance, billing rules, Arlo controls, and channel configuration. Every answer is public, specific, and available without opening a ticket."
+    >
+      <HelpCenter />
+    </ResourcePage>
+  );
+}
 
-export default function HelpPage(){return <ResourcePage eyebrow="ResolveX help center" title="Answers before a ticket exists." copy="Search setup guidance, billing rules, AI controls, and channel configuration. This is also the kind of branded support page every ResolveX workspace can publish."><section className="bg-white px-4 py-20 sm:px-6"><div className="mx-auto max-w-[1050px]"><div className="flex h-16 items-center gap-3 rounded-[7px] border border-black/12 bg-[#f7f7f4] px-5"><Search size={19}/><input aria-label="Search help" placeholder="Search ResolveX help" className="min-w-0 flex-1 bg-transparent text-sm outline-none"/></div><div className="mt-10 grid gap-3 sm:grid-cols-2">{topics.map(([Icon,title,copy])=>{const I=Icon as typeof BookOpen;return <article key={title as string} className="rounded-[7px] border border-black/10 p-6"><I size={21} className="text-[#ff5c35]"/><h2 className="mt-5 text-xl font-semibold">{title as string}</h2><p className="mt-2 text-sm leading-relaxed text-[#70737a]">{copy as string}</p><div className="mt-6 text-xs font-semibold">Browse articles -&gt;</div></article>})}</div></div></section></ResourcePage>}
