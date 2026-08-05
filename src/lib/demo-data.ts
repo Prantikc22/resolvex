@@ -3,6 +3,7 @@ export type Conversation = {
   customer: string;
   initials: string;
   company: string;
+  phone: string;
   subject: string;
   preview: string;
   time: string;
@@ -15,12 +16,12 @@ export type Conversation = {
 };
 
 export const conversations: Conversation[] = [
-  { id: "R-1842", customer: "Avery Morgan", initials: "AM", company: "Northstar Labs", subject: "Can I change our billing cycle?", preview: "We would like to move to annual without losing...", time: "Now", unread: true, priority: "high", channel: "chat", sentiment: "neutral", assignee: "You", tags: ["Billing", "Enterprise"] },
-  { id: "R-1841", customer: "Sana Khan", initials: "SK", company: "Fieldnote", subject: "SSO setup for our team", preview: "The metadata URL is returning an invalid...", time: "4m", unread: true, priority: "urgent", channel: "email", sentiment: "frustrated", assignee: "Maya", tags: ["Technical", "VIP"] },
-  { id: "R-1840", customer: "Jonas Reed", initials: "JR", company: "Planeview", subject: "Webhook delivery failed", preview: "Three events have not reached production...", time: "12m", unread: false, priority: "high", channel: "form", sentiment: "neutral", assignee: "You", tags: ["API"] },
-  { id: "R-1839", customer: "Lena Park", initials: "LP", company: "Arc & Co.", subject: "Export my account data", preview: "Could you send a copy of all activity tied...", time: "31m", unread: false, priority: "normal", channel: "email", sentiment: "neutral", assignee: "AI", tags: ["Privacy"] },
-  { id: "R-1838", customer: "Omar Farooq", initials: "OF", company: "Forma", subject: "Thank you for the quick fix", preview: "Everything is working perfectly now...", time: "1h", unread: false, priority: "normal", channel: "chat", sentiment: "positive", assignee: "Maya", tags: ["Feedback"] },
-  { id: "R-1837", customer: "Meera Shah", initials: "MS", company: "Sable Health", subject: "Unable to invite a teammate", preview: "The invite disappears after I click send...", time: "2h", unread: false, priority: "normal", channel: "chat", sentiment: "frustrated", assignee: "Unassigned", tags: ["Account"] },
+  { id: "R-1842", customer: "Avery Morgan", initials: "AM", company: "Northstar Labs", phone: "+1 415 555 0142", subject: "Can I change our billing cycle?", preview: "We would like to move to annual without losing...", time: "Now", unread: true, priority: "high", channel: "chat", sentiment: "neutral", assignee: "You", tags: ["Billing", "Enterprise"] },
+  { id: "R-1841", customer: "Sana Khan", initials: "SK", company: "Fieldnote", phone: "+44 20 7946 0821", subject: "SSO setup for our team", preview: "The metadata URL is returning an invalid...", time: "4m", unread: true, priority: "urgent", channel: "email", sentiment: "frustrated", assignee: "Maya", tags: ["Technical", "VIP"] },
+  { id: "R-1840", customer: "Jonas Reed", initials: "JR", company: "Planeview", phone: "+91 98304 22184", subject: "Webhook delivery failed", preview: "Three events have not reached production...", time: "12m", unread: false, priority: "high", channel: "form", sentiment: "neutral", assignee: "You", tags: ["API"] },
+  { id: "R-1839", customer: "Lena Park", initials: "LP", company: "Arc & Co.", phone: "+65 6123 9088", subject: "Export my account data", preview: "Could you send a copy of all activity tied...", time: "31m", unread: false, priority: "normal", channel: "email", sentiment: "neutral", assignee: "AI", tags: ["Privacy"] },
+  { id: "R-1838", customer: "Omar Farooq", initials: "OF", company: "Forma", phone: "+971 4 555 0187", subject: "Thank you for the quick fix", preview: "Everything is working perfectly now...", time: "1h", unread: false, priority: "normal", channel: "chat", sentiment: "positive", assignee: "Maya", tags: ["Feedback"] },
+  { id: "R-1837", customer: "Meera Shah", initials: "MS", company: "Sable Health", phone: "+91 99870 45120", subject: "Unable to invite a teammate", preview: "The invite disappears after I click send...", time: "2h", unread: false, priority: "normal", channel: "chat", sentiment: "frustrated", assignee: "Unassigned", tags: ["Account"] },
 ];
 
 export const chartData = [

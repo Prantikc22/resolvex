@@ -214,7 +214,7 @@ export function BillCalculator({ compact = false }: { compact?: boolean }) {
           href="/signup"
           className="button-bright mt-8 flex h-14 items-center justify-center gap-2 rounded-[6px] bg-[#ff5c35] text-sm font-semibold text-white"
         >
-          Start 14 days free <ArrowRight size={16} />
+          Start 7 days free <ArrowRight size={16} />
         </Link>
       </div>
     </div>

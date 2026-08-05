@@ -8,7 +8,7 @@ export default function RefundPolicyPage() {
     <LegalPage title="Cancellation and refund policy" updated="4 August 2026">
       <h2>Free trial</h2>
       <p>
-        The standard 14-day ResolveX trial does not require a payment card. You
+        The standard 7-day ResolveX trial does not require a payment card. You
         can evaluate the product before starting a paid subscription.
       </p>
       <h2>Cancellation</h2>

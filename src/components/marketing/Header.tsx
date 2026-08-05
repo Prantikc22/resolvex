@@ -81,8 +81,9 @@ export function Header() {
     >
       <div ref={shellRef} className="relative mx-auto max-w-[1400px]">
         <motion.div
+          initial={{ maxWidth: 1400 }}
           animate={{
-            maxWidth: scrolled ? 1180 : 1400,
+            maxWidth: scrolled ? 1280 : 1400,
             boxShadow: scrolled
               ? "0 24px 70px rgba(18,22,33,.19)"
               : "0 14px 44px rgba(18,22,33,.13)",

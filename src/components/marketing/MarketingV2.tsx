@@ -4,6 +4,7 @@ import {
   AnimatePresence,
   motion,
   useInView,
+  useMotionValueEvent,
   useScroll,
   useTransform,
 } from "framer-motion";
@@ -100,12 +101,7 @@ function ProductCanvas() {
   const [draft, setDraft] = useState(false);
   const [resolved, setResolved] = useState(false);
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 70, rotateX: 6 }}
-      animate={{ opacity: 1, y: 0, rotateX: 0 }}
-      transition={{ duration: 1.1, delay: 0.45, ease }}
-      className="relative h-[610px] overflow-hidden rounded-[8px] border border-black/10 bg-[#111318] shadow-[0_55px_130px_rgba(18,20,28,.25)] sm:h-[680px] lg:h-[720px]"
-    >
+    <div className="relative h-[610px] overflow-hidden rounded-[8px] border border-black/10 bg-[#111318] shadow-[0_55px_130px_rgba(18,20,28,.25)] sm:h-[680px] lg:h-[720px]">
       <div className="flex h-12 items-center justify-between border-b border-white/8 bg-[#0d0f13] px-4">
         <div className="flex gap-1.5">
           <span className="size-2 rounded-full bg-[#ff6b55]" />
@@ -374,7 +370,7 @@ function ProductCanvas() {
           </aside>
         </div>
       </div>
-    </motion.div>
+    </div>
   );
 }
 
@@ -382,82 +378,183 @@ function Hero() {
   const ref = useRef<HTMLElement>(null);
   const { scrollYProgress } = useScroll({
     target: ref,
-    offset: ["start start", "end start"],
+    offset: ["start start", "end end"],
   });
-  const titleY = useTransform(scrollYProgress, [0, 1], [0, 120]);
+  const titleY = useTransform(
+    scrollYProgress,
+    [0, 0.22, 0.4, 1],
+    [0, 0, -145, -190],
+  );
+  const titleOpacity = useTransform(
+    scrollYProgress,
+    [0, 0.22, 0.38, 1],
+    [1, 1, 0, 0],
+  );
+  const dashboardScale = useTransform(
+    scrollYProgress,
+    [0, 0.4, 0.72, 1],
+    [0.74, 0.8, 0.88, 0.88],
+  );
+  const dashboardY = useTransform(
+    scrollYProgress,
+    [0, 0.4, 0.72, 1],
+    [520, 360, 100, 95],
+  );
+  const worldScale = useTransform(scrollYProgress, [0, 1], [1.01, 1.07]);
+  const worldY = useTransform(scrollYProgress, [0, 1], [0, -30]);
+
   return (
-    <section
-      ref={ref}
-      className="relative overflow-hidden bg-[#f5f4ef] px-4 pb-16 pt-28 sm:px-6 md:pt-36"
-    >
-      <div className="absolute left-0 top-0 h-2 w-full bg-[#ff5c35]" />
-      <motion.div
-        style={{ y: titleY }}
-        className="relative mx-auto max-w-[1500px]"
+    <>
+      <section
+        ref={ref}
+        className="relative hidden h-[210svh] min-h-[1500px] bg-[#f5f4ef] md:block"
       >
-        <div className="mx-auto max-w-6xl text-center">
+        <div className="sticky top-0 h-[100svh] min-h-[720px] overflow-hidden">
           <motion.div
-            initial={{ opacity: 0, y: 15 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.08 }}
-            className="inline-flex items-center gap-2 rounded-full border border-black/10 bg-white px-4 py-2 text-xs font-semibold shadow-sm"
+            aria-hidden="true"
+            style={{
+              scale: worldScale,
+              y: worldY,
+              backgroundImage: "url('/resolvex-world.jpg')",
+            }}
+            className="absolute inset-0 bg-cover bg-center"
+          />
+          <div
+            aria-hidden="true"
+            className="absolute inset-0 bg-[linear-gradient(180deg,rgba(245,244,239,.84)_0%,rgba(245,244,239,.58)_50%,rgba(245,244,239,.16)_100%)]"
+          />
+          <div className="absolute left-0 top-0 h-2 w-full bg-[#ff5c35]" />
+
+          <motion.div
+            style={{ y: titleY, opacity: titleOpacity }}
+            className="relative z-40 mx-auto max-w-[1500px] px-6 pt-24 md:pt-26"
           >
+            <div className="mx-auto max-w-6xl text-center">
+              <motion.div
+                initial={{ opacity: 0, y: 15 }}
+                animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+                transition={{ delay: 0.08 }}
+                className="inline-flex items-center gap-2 rounded-full border border-black/10 bg-white/88 px-4 py-2 text-xs font-semibold shadow-sm backdrop-blur-md"
+              >
+                <span className="size-2 rounded-full bg-[#69a834]" />
+                AI helpdesk. Human standard.
+              </motion.div>
+              <motion.h1
+                initial={{ opacity: 0, y: 30 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.9, delay: 0.14, ease }}
+                className="mt-5 text-balance text-[clamp(3.35rem,6.3vw,6.35rem)] font-semibold leading-[.88] tracking-[-.06em]"
+              >
+                Support moves fast.
+                <br />
+                <span className="font-display font-normal italic tracking-[-.035em] text-[#ff5c35]">
+                  Customers feel it.
+                </span>
+              </motion.h1>
+              <motion.p
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.7, delay: 0.3 }}
+                className="mx-auto mt-5 max-w-3xl text-balance text-base leading-relaxed text-[#4f535b] md:text-lg"
+              >
+                ResolveX learns your business, answers across chat and email,
+                completes safe work, and hands the important moments to a
+                person. One beautiful helpdesk. A much smaller bill.
+              </motion.p>
+              <motion.div
+                initial={{ opacity: 0, y: 18 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.4 }}
+                className="mt-6 flex items-center justify-center gap-3"
+              >
+                <Link
+                  href="/signup"
+                  className="button-bright flex h-14 items-center justify-center gap-3 rounded-[6px] bg-[#ff5c35] px-7 text-sm font-semibold text-white shadow-[0_18px_50px_rgba(255,92,53,.28)]"
+                >
+                  Start free - no card <ArrowRight size={18} />
+                </Link>
+                <Link
+                  href="/demo"
+                  className="flex h-14 items-center justify-center gap-3 rounded-[6px] border border-black/12 bg-white px-7 text-sm font-semibold hover:border-black/30"
+                >
+                  <Play size={16} fill="currentColor" />
+                  Open live workspace
+                </Link>
+              </motion.div>
+              <div className="mx-auto mt-4 inline-flex items-center rounded-full border border-black/10 bg-white/85 px-4 py-2 text-xs font-semibold text-[#3f434b] shadow-sm backdrop-blur-xl">
+                7 days free · First 50 AI resolutions included · Free migration
+              </div>
+            </div>
+          </motion.div>
+
+          <motion.div
+            style={{ scale: dashboardScale, y: dashboardY, x: "-50%" }}
+            className="absolute left-1/2 top-0 z-20 w-[min(1180px,calc(100vw-6rem))] origin-top [perspective:1800px]"
+          >
+            <div className="absolute inset-x-8 bottom-[-34px] top-8 rounded-[14px] border border-black/12 bg-[#cbc7be] shadow-[0_70px_150px_rgba(17,20,28,.38)]" />
+            <div className="relative z-10 drop-shadow-[0_48px_70px_rgba(19,23,34,.38)]">
+              <ProductCanvas />
+            </div>
+          </motion.div>
+
+          <motion.div
+            aria-hidden="true"
+            style={{
+              scale: worldScale,
+              y: worldY,
+              backgroundImage: "url('/resolvex-world.jpg')",
+              maskImage:
+                "linear-gradient(to bottom, transparent 0%, transparent 65%, rgba(0,0,0,.18) 72%, black 84%, black 100%)",
+              WebkitMaskImage:
+                "linear-gradient(to bottom, transparent 0%, transparent 65%, rgba(0,0,0,.18) 72%, black 84%, black 100%)",
+            }}
+            className="pointer-events-none absolute inset-0 z-30 bg-cover bg-center"
+          />
+          <div className="pointer-events-none absolute inset-x-0 bottom-0 z-40 h-6 bg-[#f5f4ef]" />
+        </div>
+      </section>
+
+      <section className="relative bg-[#f5f4ef] px-4 pb-12 pt-28 md:hidden">
+        <div className="absolute left-0 top-0 h-1.5 w-full bg-[#ff5c35]" />
+        <div className="mx-auto max-w-xl text-center">
+          <div className="inline-flex items-center gap-2 rounded-full border border-black/10 bg-white px-3 py-2 text-[11px] font-semibold shadow-sm">
             <span className="size-2 rounded-full bg-[#69a834]" />
             AI helpdesk. Human standard.
-          </motion.div>
-          <motion.h1
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.9, delay: 0.14, ease }}
-            className="mt-6 text-balance text-[clamp(3.5rem,7.8vw,8rem)] font-semibold leading-[.87] tracking-[-.07em]"
-          >
+          </div>
+          <h1 className="mt-6 text-balance text-[3.25rem] font-semibold leading-[.9] tracking-[-.055em]">
             Support moves fast.
             <br />
-            <span className="font-display font-normal italic tracking-[-.035em] text-[#ff5c35]">
+            <span className="font-display font-normal italic tracking-[-.025em] text-[#ff5c35]">
               Customers feel it.
             </span>
-          </motion.h1>
-          <motion.p
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.7, delay: 0.3 }}
-            className="mx-auto mt-8 max-w-3xl text-balance text-lg leading-relaxed text-[#5d6067] md:text-xl"
-          >
-            ResolveX learns your business, answers across chat and email,
-            completes safe work, and hands the important moments to a person.
-            One beautiful helpdesk. A much smaller bill.
-          </motion.p>
-          <motion.div
-            initial={{ opacity: 0, y: 18 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.4 }}
-            className="mt-9 flex flex-col items-center justify-center gap-3 sm:flex-row"
-          >
+          </h1>
+          <p className="mx-auto mt-6 max-w-md text-balance text-[15px] leading-relaxed text-[#555961]">
+            ResolveX learns your business, answers across chat and email, and
+            brings in a person with the full context when it matters.
+          </p>
+          <div className="mt-7 grid gap-3">
             <Link
               href="/signup"
-              className="button-bright flex h-16 w-full items-center justify-center gap-3 rounded-[6px] bg-[#ff5c35] px-8 text-base font-semibold text-white shadow-[0_18px_50px_rgba(255,92,53,.28)] sm:w-auto"
+              className="button-bright flex h-14 items-center justify-center gap-2 rounded-[6px] bg-[#ff5c35] px-6 text-sm font-semibold text-white shadow-[0_18px_44px_rgba(255,92,53,.25)]"
             >
-              Start free - no card <ArrowRight size={18} />
+              Start free - no card <ArrowRight size={16} />
             </Link>
             <Link
               href="/demo"
-              className="flex h-16 w-full items-center justify-center gap-3 rounded-[6px] border border-black/12 bg-white px-8 text-base font-semibold hover:border-black/30 sm:w-auto"
+              className="flex h-14 items-center justify-center gap-2 rounded-[6px] border border-black/12 bg-white px-6 text-sm font-semibold"
             >
-              <Play size={16} fill="currentColor" />
+              <Play size={14} fill="currentColor" />
               Open live workspace
             </Link>
-          </motion.div>
-          <div className="mt-5 text-xs text-[#85878d]">
-            14 days free - first 50 AI resolutions included - migrate free
+          </div>
+          <div className="mt-4 rounded-full border border-black/10 bg-white px-4 py-2 text-xs font-semibold leading-relaxed text-[#4d5159] shadow-sm">
+            7 days free · First 50 AI resolutions included · Free migration
           </div>
         </div>
-        <div className="relative z-10 mx-auto mt-12 max-w-[1450px] [perspective:1800px]">
-          <div className="absolute inset-x-6 bottom-[-18px] top-7 rounded-[10px] border border-black/10 bg-[#dad8d1] shadow-[0_42px_90px_rgba(17,20,28,.22)]" />
-          <div className="relative z-10 drop-shadow-[0_34px_45px_rgba(19,23,34,.24)]">
-            <ProductCanvas />
-          </div>
-        </div>
-        <div className="relative z-20 mx-auto mt-8 grid max-w-[1450px] overflow-hidden rounded-[7px] border border-black/10 bg-white shadow-[0_18px_45px_rgba(24,28,38,.10)] sm:grid-cols-2 lg:grid-cols-4">
+      </section>
+
+      <section className="relative z-30 bg-[#f5f4ef] px-4 pb-16 sm:px-6 md:pb-20">
+        <div className="mx-auto grid max-w-[1380px] overflow-hidden rounded-[7px] border border-black/10 bg-white shadow-[0_18px_45px_rgba(24,28,38,.10)] sm:grid-cols-2 lg:grid-cols-4">
           {[
             ["< 1 minute", "to install the widget"],
             ["$15", "per full agent / month"],
@@ -478,8 +575,8 @@ function Hero() {
             </div>
           ))}
         </div>
-      </motion.div>
-    </section>
+      </section>
+    </>
   );
 }
 
@@ -747,12 +844,137 @@ function Features() {
   );
 }
 
+function ArloSection() {
+  const ref = useRef<HTMLElement>(null);
+  const { scrollYProgress } = useScroll({
+    target: ref,
+    offset: ["start end", "end start"],
+  });
+  const sceneScale = useTransform(scrollYProgress, [0, 1], [1, 1.055]);
+  const sceneY = useTransform(scrollYProgress, [0, 1], [0, -34]);
+  const copyY = useTransform(scrollYProgress, [0, 1], [24, -12]);
+
+  return (
+    <section
+      ref={ref}
+      id="arlo"
+      className="relative min-h-[960px] overflow-hidden bg-[#07090c] text-white md:min-h-[1080px]"
+    >
+      <motion.div
+        aria-hidden="true"
+        style={{
+          scale: sceneScale,
+          y: sceneY,
+          backgroundImage: "url('/arlo-world.jpg')",
+        }}
+        className="absolute inset-x-0 top-0 h-[680px] bg-cover bg-[center_top] md:h-[820px]"
+      />
+      <div
+        aria-hidden="true"
+        className="absolute inset-0 bg-[linear-gradient(180deg,rgba(4,6,9,.06)_0%,rgba(4,6,9,.16)_30%,rgba(7,9,12,.72)_54%,#07090c_76%,#07090c_100%)]"
+      />
+      <div
+        aria-hidden="true"
+        className="absolute inset-x-0 top-[29%] h-px bg-[linear-gradient(90deg,transparent,rgba(216,255,112,.58),transparent)] shadow-[0_0_60px_rgba(216,255,112,.22)] md:top-[30%]"
+      />
+
+      <div className="absolute left-1/2 top-[14%] z-10 -translate-x-1/2 md:top-[15%]">
+        <div className="grid size-28 place-items-center rounded-full border border-white/35 bg-[radial-gradient(circle_at_36%_28%,#ff967c,#ff5c35_44%,#42150c_100%)] shadow-[0_0_0_12px_rgba(255,255,255,.035),0_0_90px_rgba(216,255,112,.28)] md:size-36">
+          <div className="text-center drop-shadow-[0_2px_8px_rgba(0,0,0,.45)]">
+            <Sparkles className="mx-auto" size={25} />
+            <div className="mt-2 text-sm font-bold tracking-[.12em]">ARLO</div>
+          </div>
+        </div>
+      </div>
+
+      <motion.div
+        style={{ y: copyY }}
+        className="relative z-20 mx-auto flex min-h-[960px] max-w-[1380px] flex-col items-center px-4 pb-16 pt-[350px] text-center sm:px-6 md:min-h-[1080px] md:pb-20 md:pt-[390px]"
+      >
+        <div className="rounded-full border border-white/22 bg-black/74 px-4 py-2 text-[10px] font-bold uppercase tracking-[.14em] text-[#d8ff70] shadow-[0_14px_45px_rgba(0,0,0,.5)] backdrop-blur-xl">
+          Arlo AI - grounded, inspectable, accountable
+        </div>
+        <h2 className="mt-6 max-w-5xl text-balance text-[2.8rem] font-semibold leading-[.94] tracking-[-.045em] text-white drop-shadow-[0_3px_22px_rgba(0,0,0,.95)] md:text-7xl">
+          One intelligence layer for
+          <br />
+          <span className="font-display font-normal italic tracking-[-.02em] text-[#ff8064]">
+            every customer moment.
+          </span>
+        </h2>
+        <p className="mt-6 max-w-2xl text-balance text-[15px] leading-relaxed text-white/82 drop-shadow-[0_2px_12px_rgba(0,0,0,.9)] md:text-lg">
+          Arlo reads only approved knowledge, completes low-risk work, and knows
+          when a person should take over. Every answer keeps its source and
+          every handoff keeps its context.
+        </p>
+        <div className="mt-8 grid w-full max-w-4xl gap-px overflow-hidden rounded-[8px] border border-white/18 bg-white/18 text-left shadow-[0_28px_80px_rgba(0,0,0,.42)] sm:grid-cols-3">
+          {[
+            ["01", "Answer", "Cites the exact approved source."],
+            ["02", "Act", "Runs only work your team allows."],
+            ["03", "Escalate", "Hands over the history, not a summary void."],
+          ].map(([number, title, copy]) => (
+            <div key={title} className="bg-[#0d0f13]/96 p-5 backdrop-blur-xl">
+              <div className="font-mono text-[10px] text-[#d8ff70]">
+                {number}
+              </div>
+              <div className="mt-5 text-lg font-semibold text-white">{title}</div>
+              <div className="mt-2 text-xs leading-relaxed text-white/68">
+                {copy}
+              </div>
+            </div>
+          ))}
+        </div>
+        <Link
+          href="/resources#ai-resolution"
+          className="button-bright mt-8 flex h-12 items-center gap-2 rounded-[6px] bg-[#ff5c35] px-5 text-sm font-semibold"
+        >
+          See how Arlo decides <ArrowRight size={15} />
+        </Link>
+      </motion.div>
+    </section>
+  );
+}
+
 function KnowledgeSection() {
   const [mode, setMode] = useState<"site" | "pdf" | "center">("site");
+  const narrativeRef = useRef<HTMLDivElement>(null);
+  const { scrollYProgress } = useScroll({
+    target: narrativeRef,
+    offset: ["start start", "end end"],
+  });
+
+  const knowledgeOptions = [
+    ["site", Globe2, "Learn from website", "Up to 500 pages"],
+    ["pdf", Upload, "Upload documents", "25 PDFs, 20 MB each"],
+    ["center", BookOpen, "Publish help center", "Your brand and domain"],
+  ] as const;
+
+  useMotionValueEvent(scrollYProgress, "change", (progress) => {
+    if (typeof window === "undefined" || window.innerWidth < 1024) return;
+    const next = progress < 0.34 ? "site" : progress < 0.68 ? "pdf" : "center";
+    setMode((current) => (current === next ? current : next));
+  });
+
+  function selectMode(next: typeof mode) {
+    setMode(next);
+    if (typeof window === "undefined" || window.innerWidth < 1024) return;
+    const index = knowledgeOptions.findIndex(([id]) => id === next);
+    const start = narrativeRef.current?.getBoundingClientRect().top ?? 0;
+    const top = window.scrollY + start;
+    const distance = Math.max(
+      0,
+      (narrativeRef.current?.offsetHeight ?? window.innerHeight) -
+        window.innerHeight,
+    );
+    window.scrollTo({
+      top: top + distance * (index / (knowledgeOptions.length - 1)),
+      behavior: "smooth",
+    });
+  }
+
   return (
     <section
       id="knowledge"
-      className="overflow-hidden bg-[#111214] px-4 py-24 text-white sm:px-6 md:py-36"
+      className="relative bg-[#111214] px-4 py-24 text-white sm:px-6 md:py-36"
     >
       <div className="mx-auto max-w-[1380px]">
         <Reveal className="grid gap-8 lg:grid-cols-2 lg:items-end">
@@ -771,29 +993,37 @@ function KnowledgeSection() {
             or write an answer directly. No source means no confident answer.
           </p>
         </Reveal>
-        <div className="mt-16 grid overflow-hidden rounded-[8px] border border-white/10 bg-[#181a1f] lg:grid-cols-[360px_1fr]">
-          <div className="border-b border-white/10 p-3 lg:border-b-0 lg:border-r">
+        <div ref={narrativeRef} className="relative mt-16 lg:h-[220vh]">
+          <div className="grid overflow-hidden rounded-[12px] border border-white/12 bg-[#181a1f] shadow-[0_48px_140px_rgba(0,0,0,.38)] lg:sticky lg:top-24 lg:min-h-[620px] lg:grid-cols-[380px_1fr]">
+          <div className="relative border-b border-white/10 bg-[radial-gradient(circle_at_top_left,rgba(216,255,112,.08),transparent_48%)] p-3 lg:border-b-0 lg:border-r">
+            <div className="hidden px-4 pb-5 pt-4 lg:block">
+              <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-[.14em] text-white/35">
+                <span>Knowledge source</span>
+                <span>{String(knowledgeOptions.findIndex(([id]) => id === mode) + 1).padStart(2, "0")} / 03</span>
+              </div>
+              <div className="mt-4 h-1 overflow-hidden rounded-full bg-white/8">
+                <motion.div
+                  className="h-full origin-left rounded-full bg-[#d8ff70]"
+                  animate={{ scaleX: (knowledgeOptions.findIndex(([id]) => id === mode) + 1) / 3 }}
+                  transition={{ duration: 0.45, ease }}
+                />
+              </div>
+              <p className="mt-4 text-xs leading-relaxed text-white/38">
+                Scroll to see each source become a controlled, citable answer layer.
+              </p>
+            </div>
             <div className="grid gap-2 sm:grid-cols-3 lg:grid-cols-1">
-              {[
-                ["site", Globe2, "Learn from website", "Up to 500 pages"],
-                ["pdf", Upload, "Upload documents", "25 PDFs, 20 MB each"],
-                [
-                  "center",
-                  BookOpen,
-                  "Publish help center",
-                  "Your brand and domain",
-                ],
-              ].map(([id, Icon, title, copy]) => {
+              {knowledgeOptions.map(([id, Icon, title, copy], index) => {
                 const I = Icon as typeof Globe2;
                 return (
                   <button
                     key={id as string}
-                    onClick={() => setMode(id as typeof mode)}
+                    onClick={() => selectMode(id)}
                     className={cn(
-                      "flex items-center gap-3 rounded-[6px] p-4 text-left",
+                      "group flex items-center gap-3 rounded-[8px] border p-4 text-left transition-all duration-300",
                       mode === id
-                        ? "bg-white text-[#151619]"
-                        : "text-white/48 hover:bg-white/5",
+                        ? "border-white bg-white text-[#151619] shadow-[0_18px_45px_rgba(0,0,0,.22)]"
+                        : "border-transparent text-white/48 hover:border-white/8 hover:bg-white/5 hover:text-white/72",
                     )}
                   >
                     <span
@@ -805,6 +1035,9 @@ function KnowledgeSection() {
                       <I size={18} />
                     </span>
                     <div>
+                      <div className={cn("mb-1 font-mono text-[9px]", mode === id ? "text-[#66842c]" : "text-white/22")}>
+                        0{index + 1}
+                      </div>
                       <div className="text-sm font-semibold">
                         {title as string}
                       </div>
@@ -822,14 +1055,16 @@ function KnowledgeSection() {
               })}
             </div>
           </div>
-          <div className="min-h-[520px] p-5 sm:p-8 lg:p-12">
+          <div className="relative min-h-[520px] overflow-hidden p-5 sm:p-8 lg:p-12">
+            <div aria-hidden="true" className="pointer-events-none absolute -right-24 -top-24 size-72 rounded-full bg-[#d8ff70]/5 blur-3xl" />
             <AnimatePresence mode="wait">
               <motion.div
                 key={mode}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -8 }}
-                transition={{ duration: 0.3 }}
+                initial={{ opacity: 0, y: 18, filter: "blur(8px)" }}
+                animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+                exit={{ opacity: 0, y: -12, filter: "blur(6px)" }}
+                transition={{ duration: 0.42, ease }}
+                className="relative z-10"
               >
                 {mode === "site" && (
                   <div>
@@ -964,6 +1199,7 @@ function KnowledgeSection() {
             </AnimatePresence>
           </div>
         </div>
+        </div>
       </div>
     </section>
   );
@@ -1069,8 +1305,7 @@ function Comparison() {
     <section id="compare" className="bg-white px-4 py-24 sm:px-6 md:py-36">
       <div className="mx-auto max-w-[1180px]">
         <Reveal className="text-center">
-          <Label>Compare the operating model</Label>
-          <h2 className="mx-auto mt-5 max-w-4xl text-balance text-5xl font-semibold leading-[.95] tracking-[-.055em] md:text-7xl">
+          <h2 className="mx-auto max-w-4xl text-balance text-5xl font-semibold leading-[.95] tracking-[-.055em] md:text-7xl">
             Less software tax.
             <br />
             <span className="font-display font-normal italic text-[#888b91]">
@@ -1083,19 +1318,23 @@ function Comparison() {
           </p>
         </Reveal>
         <Reveal className="mt-14 overflow-hidden rounded-[8px] border border-black/10">
-          <div className="grid grid-cols-[1.1fr_.8fr_.8fr] bg-[#111214] px-4 py-5 text-sm font-semibold text-white sm:px-6">
-            <span>Cost driver</span>
-            <span className="text-[#d8ff70]">ResolveX</span>
-            <span className="text-white/45">Typical legacy stack</span>
+          <div className="grid grid-cols-[1.1fr_.8fr_.8fr] bg-[#111214] text-sm font-semibold text-white">
+            <span className="px-4 py-5 sm:px-6">Cost driver</span>
+            <span className="border-x border-[#d8ff70]/20 bg-[#d8ff70]/10 px-4 py-5 text-[#d8ff70] sm:px-6">
+              ResolveX
+            </span>
+            <span className="px-4 py-5 text-white/45 sm:px-6">Typical legacy stack</span>
           </div>
           {rows.map(([label, ours, legacy]) => (
             <div
               key={label}
-              className="grid grid-cols-[1.1fr_.8fr_.8fr] border-b border-black/8 px-4 py-5 text-xs last:border-b-0 sm:px-6 sm:text-sm"
+              className="grid grid-cols-[1.1fr_.8fr_.8fr] border-b border-black/8 text-xs last:border-b-0 sm:text-sm"
             >
-              <span className="font-semibold">{label}</span>
-              <span className="text-[#3e7417]">{ours}</span>
-              <span className="text-[#797c83]">{legacy}</span>
+              <span className="px-4 py-5 font-semibold sm:px-6">{label}</span>
+              <span className="border-x border-[#8ebc37]/20 bg-[#f1f8e2] px-4 py-5 font-semibold text-[#386913] sm:px-6">
+                {ours}
+              </span>
+              <span className="px-4 py-5 text-[#797c83] sm:px-6">{legacy}</span>
             </div>
           ))}
         </Reveal>
@@ -1188,7 +1427,7 @@ function BigCTA() {
             href="/signup"
             className="flex h-16 items-center justify-center gap-3 rounded-[6px] bg-white px-8 text-base font-semibold text-[#151619]"
           >
-            Start 14 days free <ArrowRight size={18} />
+            Start 7 days free <ArrowRight size={18} />
           </Link>
           <Link
             href="/demo"
@@ -1205,10 +1444,11 @@ function BigCTA() {
 
 export function MarketingV2() {
   return (
-    <main className="overflow-clip bg-white">
+    <main className="bg-white">
       <Header />
       <Hero />
       <Features />
+      <ArloSection />
       <KnowledgeSection />
       <VoiceSection />
       <PricingPreview />

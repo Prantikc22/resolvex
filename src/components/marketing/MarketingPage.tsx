@@ -153,7 +153,7 @@ function Hero() {
             <Link href="/signup" className="button-fill flex h-13 w-full items-center justify-center gap-2 rounded-[6px] bg-[#101114] px-6 text-sm font-semibold text-white sm:w-auto">Start free <ArrowRight size={16}/></Link>
             <Link href="/demo" className="flex h-13 w-full items-center justify-center gap-2 rounded-[6px] border border-black/14 bg-white px-6 text-sm font-semibold transition hover:border-black/30 sm:w-auto"><Play size={15} fill="currentColor"/> Explore the workspace</Link>
           </motion.div>
-          <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: .65 }} className="mt-4 text-xs text-[#7a808c]">14 days free · No card · Setup in minutes</motion.p>
+          <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: .65 }} className="mt-4 text-xs text-[#7a808c]">7 days free · No card · Setup in minutes</motion.p>
         </div>
         <div className="relative mx-auto mt-14 max-w-6xl [perspective:1800px] md:mt-16"><ProductWindow/></div>
         <div className="mx-auto mt-6 grid max-w-6xl grid-cols-2 border border-black/10 bg-white/70 backdrop-blur md:grid-cols-4">

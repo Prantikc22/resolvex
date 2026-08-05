@@ -1,6 +1,13 @@
 import { NextResponse } from "next/server";
 import { getCurrentOrganization } from "@/lib/supabase/current-org";
 
+function contactPhone(attributes: unknown) {
+  if (!attributes || typeof attributes !== "object" || Array.isArray(attributes))
+    return null;
+  const phone = (attributes as Record<string, unknown>).phone;
+  return typeof phone === "string" && phone.trim() ? phone.trim() : null;
+}
+
 export async function GET() {
   const { supabase, organizationId } = await getCurrentOrganization();
   if (!organizationId)
@@ -35,7 +42,7 @@ export async function GET() {
       contactIds.length
         ? supabase
             .from("contacts")
-            .select("id,name,email,company")
+            .select("id,name,email,company,attributes")
             .in("id", contactIds)
         : Promise.resolve({ data: [] }),
       inboxIds.length
@@ -52,7 +59,12 @@ export async function GET() {
             .limit(1000)
         : Promise.resolve({ data: [] }),
     ]);
-  const contactsById = new Map((contacts ?? []).map((item) => [item.id, item]));
+  const contactsById = new Map(
+    (contacts ?? []).map(({ attributes, ...item }) => [
+      item.id,
+      { ...item, phone: contactPhone(attributes) },
+    ]),
+  );
   const inboxesById = new Map((inboxes ?? []).map((item) => [item.id, item]));
   return NextResponse.json({
     conversations: (conversations ?? []).map((conversation) => ({

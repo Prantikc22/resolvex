@@ -3,7 +3,7 @@ export const pricing = {
   includedResolutions: 50,
   resolution: 0.39,
   voicePlatformMinute: 0.02,
-  trialDays: 14,
+  trialDays: 7,
 };
 
 export function estimateResolveX(agents: number, resolutions: number, voiceMinutes = 0) {

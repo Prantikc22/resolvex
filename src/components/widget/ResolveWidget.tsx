@@ -4,8 +4,6 @@ import { AnimatePresence, motion } from "framer-motion";
 import {
   ArrowUp,
   CheckCheck,
-  ChevronLeft,
-  MoreHorizontal,
   Paperclip,
   Phone,
   Sparkles,
@@ -131,55 +129,43 @@ export function WidgetPanel({
       exit={{ opacity: 0, y: 18, scale: 0.97 }}
       transition={{ duration: 0.38, ease: [0.22, 1, 0.36, 1] }}
       className={cn(
-        "flex overflow-hidden rounded-[8px] border border-black/10 bg-white text-[#151619] shadow-[0_30px_90px_rgba(20,24,35,.24)]",
+        "flex overflow-hidden rounded-[22px] border border-white/80 bg-white text-[#151619] shadow-[0_34px_110px_rgba(10,13,20,.3),0_6px_24px_rgba(10,13,20,.12)]",
         embedded
           ? "h-screen w-full flex-col rounded-none border-0"
-          : "h-[min(680px,calc(100vh-7rem))] w-[min(410px,calc(100vw-1.5rem))] flex-col",
+          : "h-[min(650px,calc(100vh-7rem))] w-[min(392px,calc(100vw-1.5rem))] flex-col",
       )}
     >
-      <header className="relative overflow-hidden bg-[#202126] px-4 pb-5 pt-4 text-white">
-        <div className="absolute inset-x-0 bottom-0 h-px bg-[#d8ff70]" />
-        <div className="flex items-center justify-between">
-          <button
-            type="button"
-            aria-label="Back"
-            className="grid size-9 place-items-center rounded-full text-white/55 hover:bg-white/8"
-          >
-            <ChevronLeft size={19} />
-          </button>
+      <header className="relative overflow-hidden bg-[#111318] px-5 pb-5 pt-5 text-white">
+        <div className="absolute -right-14 -top-20 size-52 rounded-full bg-[#ff5c35]/18 blur-3xl" />
+        <div className="absolute -bottom-24 -left-14 size-44 rounded-full bg-[#d8ff70]/10 blur-3xl" />
+        <div className="relative flex items-center justify-between gap-3">
           <div className="flex items-center gap-2">
-            <Mark className="size-8" />
+            <Mark className="size-10 rounded-[12px] ring-1 ring-white/15" />
             <div>
-              <div className="text-sm font-semibold">
+              <div className="text-[15px] font-semibold tracking-[-.02em]">
                 Arlo from {workspaceName}
               </div>
-              <div className="flex items-center gap-1 text-[10px] text-white/45">
-                <span className="size-1.5 rounded-full bg-[#a7e85b]" />
-                AI now. Human when needed.
+              <div className="mt-0.5 flex items-center gap-1.5 text-[10px] text-white/48">
+                <span className="size-1.5 rounded-full bg-[#b9f46b] shadow-[0_0_12px_rgba(185,244,107,.7)]" />
+                Online · typically instant
               </div>
             </div>
           </div>
-          <div className="flex">
+          <div className="flex items-center gap-1">
             <button
               type="button"
+              onClick={() => void send("I'd like to request a callback.")}
               aria-label="Call support"
-              className="grid size-9 place-items-center rounded-full text-white/55 hover:bg-white/8"
+              className="grid size-9 place-items-center rounded-full border border-white/10 bg-white/[.06] text-white/68 transition hover:bg-white/12 hover:text-white"
             >
               <Phone size={16} />
-            </button>
-            <button
-              type="button"
-              aria-label="More options"
-              className="grid size-9 place-items-center rounded-full text-white/55 hover:bg-white/8"
-            >
-              <MoreHorizontal size={17} />
             </button>
             {onClose && (
               <button
                 type="button"
                 onClick={onClose}
                 aria-label="Close messenger"
-                className="grid size-9 place-items-center rounded-full text-white/55 hover:bg-white/8"
+                className="grid size-9 place-items-center rounded-full border border-white/10 bg-white/[.06] text-white/68 transition hover:bg-white/12 hover:text-white"
               >
                 <X size={18} />
               </button>
@@ -187,18 +173,20 @@ export function WidgetPanel({
           </div>
         </div>
       </header>
-      <div className="scrollbar-none min-h-0 flex-1 overflow-y-auto bg-[#f5f4ef] p-4">
+      <div className="scrollbar-none min-h-0 flex-1 overflow-y-auto bg-[#f7f5f0] p-4">
         {messages.length === 0 ? (
           <div className="flex min-h-full flex-col justify-between">
-            <div className="pt-8 text-center">
+            <div className="pt-6 text-center">
               <span
-                className="mx-auto grid size-16 place-items-center rounded-full text-white shadow-[0_12px_30px_rgba(20,24,35,.18)]"
+                className="mx-auto grid size-14 place-items-center rounded-[18px] text-white shadow-[0_16px_34px_rgba(20,24,35,.2)] ring-4 ring-white"
                 style={{ backgroundColor: accent }}
               >
-                <Sparkles size={25} />
+                <Sparkles size={22} />
               </span>
-              <h2 className="mt-5 font-display text-3xl">Ask Arlo anything.</h2>
-              <p className="mx-auto mt-2 max-w-xs text-sm leading-relaxed text-[#74777e]">
+              <h2 className="mt-5 font-display text-[2rem] leading-none">
+                How can we help?
+              </h2>
+              <p className="mx-auto mt-3 max-w-xs text-[13px] leading-relaxed text-[#74777e]">
                 Ask naturally. The answer cites approved knowledge or brings in
                 a person with the context ready.
               </p>
@@ -211,10 +199,12 @@ export function WidgetPanel({
                   transition={{ delay: 0.14 + index * 0.06 }}
                   key={action}
                   onClick={() => void send(action)}
-                  className="flex w-full items-center justify-between rounded-[7px] border border-black/8 bg-white px-4 py-3 text-left text-sm font-medium shadow-sm hover:border-black/20"
+                  className="group flex w-full items-center justify-between rounded-[12px] border border-black/7 bg-white px-4 py-3.5 text-left text-[13px] font-medium shadow-[0_8px_24px_rgba(20,24,35,.05)] transition hover:-translate-y-0.5 hover:border-black/16 hover:shadow-[0_12px_30px_rgba(20,24,35,.09)]"
                 >
                   {action}
-                  <span className="text-[#ff5c35]">-&gt;</span>
+                  <span className="grid size-6 place-items-center rounded-full bg-[#fff0eb] text-[#ff5c35] transition group-hover:bg-[#ff5c35] group-hover:text-white">
+                    -&gt;
+                  </span>
                 </motion.button>
               ))}
             </div>
@@ -261,7 +251,7 @@ export function WidgetPanel({
         )}
       </div>
       <form onSubmit={submit} className="border-t border-black/8 bg-white p-3">
-        <div className="rounded-[7px] border border-black/12 bg-[#fafafa] p-2 focus-within:border-[#ff5c35] focus-within:ring-4 focus-within:ring-[#ff5c35]/8">
+        <div className="rounded-[14px] border border-black/10 bg-[#fafafa] p-2 shadow-inner focus-within:border-[#ff5c35] focus-within:ring-4 focus-within:ring-[#ff5c35]/8">
           <textarea
             value={input}
             onChange={(event) => setInput(event.target.value)}
@@ -307,7 +297,7 @@ export function ResolveWidget() {
     <div className="fixed bottom-4 right-4 z-[70] sm:bottom-6 sm:right-6">
       <AnimatePresence>
         {open && (
-          <div className="absolute bottom-[74px] right-0">
+          <div className="absolute bottom-[76px] right-0">
             <WidgetPanel onClose={() => setOpen(false)} />
           </div>
         )}
@@ -320,13 +310,26 @@ export function ResolveWidget() {
           open ? "Close ResolveX messenger" : "Open ResolveX messenger"
         }
         className={cn(
-          "ml-auto grid size-15 place-items-center border transition-colors",
+          "ml-auto flex h-15 items-center justify-center border transition-all",
           open
-            ? "rounded-full border-[#ff5c35] bg-[#ff5c35] text-white shadow-[0_18px_45px_rgba(255,92,53,.35)]"
-            : "rounded-[15px] border-white/75 bg-white/90 shadow-[0_18px_45px_rgba(18,20,28,.2)] backdrop-blur-xl",
+            ? "w-15 rounded-full border-[#ff5c35] bg-[#ff5c35] text-white shadow-[0_18px_45px_rgba(255,92,53,.35)]"
+            : "gap-2.5 rounded-full border-white/12 bg-[#111318]/96 px-2 pr-4 text-white shadow-[0_20px_55px_rgba(10,13,20,.28)] backdrop-blur-xl sm:min-w-[158px]",
         )}
       >
-        {open ? <X size={22} /> : <Mark className="size-10 rounded-[10px]" />}
+        {open ? (
+          <X size={22} />
+        ) : (
+          <>
+            <Mark className="size-10 shrink-0 rounded-full ring-1 ring-white/14" />
+            <span className="hidden text-left sm:block">
+              <span className="block text-xs font-semibold">Ask Arlo</span>
+              <span className="mt-0.5 flex items-center gap-1 text-[9px] text-white/42">
+                <span className="size-1.5 rounded-full bg-[#b9f46b]" />
+                AI + human support
+              </span>
+            </span>
+          </>
+        )}
       </motion.button>
     </div>
   );

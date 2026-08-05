@@ -12,7 +12,7 @@ export const metadata: Metadata = {
 const faqs = [
   [
     "Can I try ResolveX without a sales call?",
-    "Yes. The trial lasts 14 days and does not require a card. Create a workspace, add approved knowledge, and use the product demo before deciding.",
+    "Yes. The trial lasts 7 days and does not require a card. Create a workspace, add approved knowledge, and use the product demo before deciding.",
   ],
   [
     "What does Arlo answer from?",

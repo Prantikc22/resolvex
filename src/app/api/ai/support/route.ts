@@ -6,7 +6,7 @@ const requestSchema = z.object({
   messages: z.array(z.object({ role: z.enum(["user", "assistant"]), content: z.string().min(1).max(4000) })).min(1).max(20),
 });
 
-const context = "ResolveX provides a shared inbox, Arlo AI resolutions, a help center, website chat, approved knowledge ingestion, workflows, reports, and provider-connected voice handoff. The One plan is $15 per full agent each month, includes 50 AI resolutions, and charges $0.39 for each additional AI-resolved conversation. Human collaborators are free. The trial lasts 14 days and does not require a card. Voice and live billing require configured production providers.";
+const context = "ResolveX provides a shared inbox, Arlo AI resolutions, a help center, website chat, approved knowledge ingestion, workflows, reports, and provider-connected voice handoff. The One plan is $15 per full agent each month, includes 50 AI resolutions, and charges $0.39 for each additional AI-resolved conversation. Human collaborators are free. The trial lasts 7 days and does not require a card. Voice and live billing require configured production providers.";
 
 export async function POST(request: Request) {
   try {

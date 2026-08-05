@@ -69,7 +69,7 @@ export function MarketingFooter() {
               href="/signup"
               className="button-bright flex h-14 items-center justify-center gap-2 rounded-[6px] bg-[#ff5c35] px-6 text-sm font-semibold"
             >
-              Start 14 days free <ArrowRight size={16} />
+              Start 7 days free <ArrowRight size={16} />
             </Link>
             <button
               type="button"

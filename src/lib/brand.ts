@@ -11,7 +11,7 @@ export const brand = {
 
 export const marketingNav = [
   { label: "Features", href: "/#features" },
-  { label: "Arlo AI", href: "/#knowledge" },
+  { label: "Arlo AI", href: "/#arlo" },
   { label: "Pricing", href: "/pricing" },
   { label: "Compare", href: "/compare/intercom" },
   { label: "About", href: "/about" },

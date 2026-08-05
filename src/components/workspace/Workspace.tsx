@@ -66,6 +66,7 @@ import { KnowledgeManager } from "@/components/workspace/KnowledgeManager";
 import { LiveInbox } from "@/components/workspace/LiveInbox";
 import { VoiceView } from "@/components/workspace/VoiceView";
 import { TeamBillingView } from "@/components/workspace/TeamBillingView";
+import { CallCustomerDialog } from "@/components/workspace/CallCustomerDialog";
 
 type View =
   | "inbox"
@@ -444,6 +445,7 @@ function ConversationPane({
 }) {
   const [draft, setDraft] = useState("");
   const [thinking, setThinking] = useState(false);
+  const [callOpen, setCallOpen] = useState(false);
   const [messages, setMessages] = useState([
     {
       side: "customer",
@@ -494,6 +496,13 @@ function ConversationPane({
           </div>
         </div>
         <div className="flex items-center gap-1.5">
+          <button
+            onClick={() => setCallOpen(true)}
+            className="flex h-8 items-center gap-1.5 rounded-[5px] border border-black/10 bg-white px-2.5 text-[10px] font-semibold text-[#303641] hover:border-black/20"
+          >
+            <Phone size={13} />
+            Call
+          </button>
           <button
             onClick={onResolve}
             className="flex h-8 items-center gap-1.5 rounded-[5px] bg-[#eafbd2] px-2.5 text-[10px] font-semibold text-[#397613]"
@@ -610,6 +619,15 @@ function ConversationPane({
           </div>
         </div>
       </div>
+      <AnimatePresence>
+        {callOpen && (
+          <CallCustomerDialog
+            customer={conversation.customer}
+            initialNumber={conversation.phone}
+            onClose={() => setCallOpen(false)}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 }
@@ -629,6 +647,12 @@ function ContextPane({ conversation }: { conversation: Conversation }) {
           <div className="mt-1 text-[10px] text-white/35">
             {conversation.company}
           </div>
+          <a
+            href={`tel:${conversation.phone.replace(/[^+\d]/g, "")}`}
+            className="mt-1.5 block text-[10px] text-[#d8ff70] hover:underline"
+          >
+            {conversation.phone}
+          </a>
         </div>
       </div>
       <div className="mt-5 grid grid-cols-2 gap-2">
