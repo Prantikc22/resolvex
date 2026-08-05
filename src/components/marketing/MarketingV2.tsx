@@ -382,23 +382,23 @@ function Hero() {
   });
   const titleY = useTransform(
     scrollYProgress,
-    [0, 0.22, 0.4, 1],
-    [0, 0, -145, -190],
+    [0, 0.08, 0.2, 1],
+    [0, 0, -130, -180],
   );
   const titleOpacity = useTransform(
     scrollYProgress,
-    [0, 0.22, 0.38, 1],
+    [0, 0.08, 0.2, 1],
     [1, 1, 0, 0],
   );
   const dashboardScale = useTransform(
     scrollYProgress,
-    [0, 0.4, 0.72, 1],
-    [0.74, 0.8, 0.88, 0.88],
+    [0, 0.12, 0.42, 0.72, 1],
+    [0.82, 0.82, 0.9, 0.93, 0.93],
   );
   const dashboardY = useTransform(
     scrollYProgress,
-    [0, 0.4, 0.72, 1],
-    [520, 360, 100, 95],
+    [0, 0.12, 0.42, 0.72, 1],
+    [525, 510, 250, 86, 82],
   );
   const worldScale = useTransform(scrollYProgress, [0, 1], [1.01, 1.07]);
   const worldY = useTransform(scrollYProgress, [0, 1], [0, -30]);
@@ -427,7 +427,7 @@ function Hero() {
 
           <motion.div
             style={{ y: titleY, opacity: titleOpacity }}
-            className="relative z-40 mx-auto max-w-[1500px] px-6 pt-24 md:pt-26"
+            className="relative z-30 mx-auto max-w-[1500px] px-6 pt-24 md:pt-26"
           >
             <div className="mx-auto max-w-6xl text-center">
               <motion.div
@@ -465,7 +465,15 @@ function Hero() {
                 initial={{ opacity: 0, y: 18 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.4 }}
-                className="mt-6 flex items-center justify-center gap-3"
+                className="mx-auto mt-5 inline-flex items-center rounded-full border border-black/10 bg-white/85 px-4 py-2 text-xs font-semibold text-[#3f434b] shadow-sm backdrop-blur-xl"
+              >
+                7 days free · First 50 AI resolutions included · Free migration
+              </motion.div>
+              <motion.div
+                initial={{ opacity: 0, y: 18 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.46 }}
+                className="mt-5 flex items-center justify-center gap-3"
               >
                 <Link
                   href="/signup"
@@ -481,15 +489,12 @@ function Hero() {
                   Open live workspace
                 </Link>
               </motion.div>
-              <div className="mx-auto mt-4 inline-flex items-center rounded-full border border-black/10 bg-white/85 px-4 py-2 text-xs font-semibold text-[#3f434b] shadow-sm backdrop-blur-xl">
-                7 days free · First 50 AI resolutions included · Free migration
-              </div>
             </div>
           </motion.div>
 
           <motion.div
             style={{ scale: dashboardScale, y: dashboardY, x: "-50%" }}
-            className="absolute left-1/2 top-0 z-20 w-[min(1180px,calc(100vw-6rem))] origin-top [perspective:1800px]"
+            className="absolute left-1/2 top-0 z-40 w-[min(1180px,calc(100vw-6rem))] origin-top [perspective:1800px]"
           >
             <div className="absolute inset-x-8 bottom-[-34px] top-8 rounded-[14px] border border-black/12 bg-[#cbc7be] shadow-[0_70px_150px_rgba(17,20,28,.38)]" />
             <div className="relative z-10 drop-shadow-[0_48px_70px_rgba(19,23,34,.38)]">
@@ -504,13 +509,13 @@ function Hero() {
               y: worldY,
               backgroundImage: "url('/resolvex-world.jpg')",
               maskImage:
-                "linear-gradient(to bottom, transparent 0%, transparent 65%, rgba(0,0,0,.18) 72%, black 84%, black 100%)",
+                "linear-gradient(to bottom, transparent 0%, transparent 82%, rgba(0,0,0,.16) 87%, black 96%, black 100%)",
               WebkitMaskImage:
-                "linear-gradient(to bottom, transparent 0%, transparent 65%, rgba(0,0,0,.18) 72%, black 84%, black 100%)",
+                "linear-gradient(to bottom, transparent 0%, transparent 82%, rgba(0,0,0,.16) 87%, black 96%, black 100%)",
             }}
-            className="pointer-events-none absolute inset-0 z-30 bg-cover bg-center"
+            className="pointer-events-none absolute inset-0 z-50 bg-cover bg-center"
           />
-          <div className="pointer-events-none absolute inset-x-0 bottom-0 z-40 h-6 bg-[#f5f4ef]" />
+          <div className="pointer-events-none absolute inset-x-0 bottom-0 z-[60] h-6 bg-[#f5f4ef]" />
         </div>
       </section>
 
@@ -877,15 +882,6 @@ function ArloSection() {
         aria-hidden="true"
         className="absolute inset-x-0 top-[29%] h-px bg-[linear-gradient(90deg,transparent,rgba(216,255,112,.58),transparent)] shadow-[0_0_60px_rgba(216,255,112,.22)] md:top-[30%]"
       />
-
-      <div className="absolute left-1/2 top-[14%] z-10 -translate-x-1/2 md:top-[15%]">
-        <div className="grid size-28 place-items-center rounded-full border border-white/35 bg-[radial-gradient(circle_at_36%_28%,#ff967c,#ff5c35_44%,#42150c_100%)] shadow-[0_0_0_12px_rgba(255,255,255,.035),0_0_90px_rgba(216,255,112,.28)] md:size-36">
-          <div className="text-center drop-shadow-[0_2px_8px_rgba(0,0,0,.45)]">
-            <Sparkles className="mx-auto" size={25} />
-            <div className="mt-2 text-sm font-bold tracking-[.12em]">ARLO</div>
-          </div>
-        </div>
-      </div>
 
       <motion.div
         style={{ y: copyY }}
