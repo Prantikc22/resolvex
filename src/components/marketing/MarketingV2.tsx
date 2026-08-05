@@ -603,8 +603,8 @@ const systemFeatures = [
   },
   {
     visual: "voice",
-    title: "Voice from the desk",
-    copy: "Call a customer when a number is present. Record consent and keep the call on the timeline.",
+    title: "Provider-connected voice",
+    copy: "Call from the conversation now, then connect a browser softphone provider for full call controls and timeline events.",
   },
   {
     visual: "outcomes",
@@ -1219,15 +1219,15 @@ function VoiceSection() {
             </span>
           </h2>
           <p className="mt-7 max-w-xl text-lg leading-relaxed text-[#4f617a]">
-            If a customer shares a number and a human agent is connected, call
-            without leaving the helpdesk. Notes, consent, recording status, and
-            follow-up stay on the conversation.
+            Start a device call from the conversation today. Connect your voice
+            provider when you need a true browser softphone, inbound routing,
+            recordings, transfers, and call events on the timeline.
           </p>
           <div className="mt-8 grid gap-3 sm:grid-cols-2">
             {[
-              "Click-to-call and callback queue",
-              "Consent and recording controls",
-              "Call notes and AI summary",
+              "Click-to-call from the conversation",
+              "Browser softphone with provider setup",
+              "Consent, recording, and call notes",
               "Carrier rates passed through",
             ].map((item) => (
               <div key={item} className="flex items-center gap-2 text-sm">
@@ -1260,7 +1260,7 @@ function VoiceSection() {
               </motion.div>
               <div className="mt-8 font-mono text-3xl">06:42</div>
               <div className="mt-2 text-xs text-white/35">
-                Connected via ResolveX Voice
+                Connected through your voice provider
               </div>
             </div>
           </div>
