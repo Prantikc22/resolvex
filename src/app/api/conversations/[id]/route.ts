@@ -25,7 +25,7 @@ export async function POST(
       );
     const { data: conversation } = await supabase
       .from("conversations")
-      .select("id")
+      .select("id,status")
       .eq("id", id)
       .eq("organization_id", organizationId)
       .single();
@@ -35,11 +35,40 @@ export async function POST(
         { status: 404 },
       );
     if (input.action === "resolve") {
+      const { data: messages, error: messageError } = await supabase
+        .from("messages")
+        .select("sender_type,ai_metadata")
+        .eq("conversation_id", id)
+        .eq("is_internal", false);
+      if (messageError) throw messageError;
+      const hasGroundedAiAnswer = (messages ?? []).some(
+        (message) =>
+          message.sender_type === "ai" &&
+          message.ai_metadata?.grounded === true,
+      );
+      const hasAgentReply = (messages ?? []).some(
+        (message) => message.sender_type === "agent",
+      );
       const { error } = await supabase
         .from("conversations")
         .update({ status: "resolved", ai_state: "disabled" })
         .eq("id", id);
       if (error) throw error;
+      if (
+        conversation.status !== "resolved" &&
+        hasGroundedAiAnswer &&
+        !hasAgentReply
+      ) {
+        const { error: usageError } = await supabase
+          .from("usage_events")
+          .insert({
+            organization_id: organizationId,
+            event_type: "ai_resolution",
+            quantity: 1,
+            metadata: { conversation_id: id, source: "conversation_resolved" },
+          });
+        if (usageError && usageError.code !== "23505") throw usageError;
+      }
       return NextResponse.json({ resolved: true });
     }
     const { data, error } = await supabase

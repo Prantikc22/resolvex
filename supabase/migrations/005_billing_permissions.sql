@@ -1,6 +1,9 @@
 drop policy if exists "tenant_insert" on public.subscriptions;
 drop policy if exists "tenant_update" on public.subscriptions;
 drop policy if exists "tenant_delete" on public.subscriptions;
+drop policy if exists "billing_manager_insert" on public.subscriptions;
+drop policy if exists "billing_manager_update" on public.subscriptions;
+drop policy if exists "billing_manager_delete" on public.subscriptions;
 
 create policy "billing_manager_insert"
 on public.subscriptions

@@ -9,6 +9,7 @@ type RazorpayEntity = {
   amount?: number;
   currency?: string;
   customer_id?: string;
+  current_start?: number;
   current_end?: number;
   quantity?: number;
   notes?: Record<string, string>;
@@ -133,6 +134,9 @@ export async function POST(request: Request) {
         amount: payment?.amount ?? order?.amount,
         currency: payment?.currency ?? order?.currency,
         agents: subscription?.quantity ?? notes.agents ?? metadata.agents,
+        period_start: subscription?.current_start
+          ? new Date(subscription.current_start * 1000).toISOString()
+          : metadata.period_start,
         pending_agents:
           event.event === "subscription.updated"
             ? null

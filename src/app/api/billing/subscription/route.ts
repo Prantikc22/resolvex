@@ -93,6 +93,43 @@ async function currentSubscription(
   return data as StoredSubscription | null;
 }
 
+async function currentUsage(
+  supabase: Awaited<ReturnType<typeof getCurrentOrganization>>["supabase"],
+  organizationId: string,
+  subscription: StoredSubscription | null,
+) {
+  const metadata = subscription?.metadata ?? {};
+  const storedStart = metadata.period_start ?? metadata.trial_start;
+  const periodStart =
+    typeof storedStart === "number"
+      ? new Date(storedStart * 1000)
+      : typeof storedStart === "string"
+        ? new Date(storedStart)
+        : new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+  const { data, error } = await supabase
+    .from("usage_events")
+    .select("quantity")
+    .eq("organization_id", organizationId)
+    .eq("event_type", "ai_resolution")
+    .gte("created_at", periodStart.toISOString());
+  if (error) throw error;
+  const resolutions = (data ?? []).reduce(
+    (total, event) => total + Number(event.quantity ?? 0),
+    0,
+  );
+  const billableResolutions = Math.max(
+    0,
+    resolutions - pricing.includedResolutions,
+  );
+  return {
+    resolutions,
+    includedResolutions: pricing.includedResolutions,
+    billableResolutions,
+    estimatedOverage: billableResolutions * pricing.resolution,
+    periodStart: periodStart.toISOString(),
+  };
+}
+
 export async function GET() {
   const { supabase, user, organizationId, membershipRole } =
     await getCurrentOrganization();
@@ -114,9 +151,11 @@ export async function GET() {
 
   try {
     const row = await currentSubscription(supabase, organizationId);
+    const usage = await currentUsage(supabase, organizationId, row);
     return NextResponse.json({
       configured: configuration().configured,
       subscription: publicSubscription(row),
+      usage,
     });
   } catch {
     return NextResponse.json(

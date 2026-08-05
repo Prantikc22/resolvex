@@ -31,6 +31,13 @@ type BillingResponse = {
   keyId?: string;
   customer?: { email?: string; name?: string };
   subscription?: Subscription | null;
+  usage?: {
+    resolutions: number;
+    includedResolutions: number;
+    billableResolutions: number;
+    estimatedOverage: number;
+    periodStart: string;
+  };
   error?: string;
 };
 
@@ -120,6 +127,7 @@ export function SubscriptionBillingView({
   billingConfigured: boolean;
 }) {
   const [subscription, setSubscription] = useState<Subscription | null>(null);
+  const [usage, setUsage] = useState<BillingResponse["usage"]>();
   const [configured, setConfigured] = useState(billingConfigured);
   const [agents, setAgents] = useState(1);
   const [loading, setLoading] = useState(true);
@@ -139,6 +147,7 @@ export function SubscriptionBillingView({
         throw new Error(data.error ?? "Could not load billing.");
       setConfigured(Boolean(data.configured));
       setSubscription(data.subscription ?? null);
+      setUsage(data.usage);
       setAgents(data.subscription?.agents ?? 1);
     } catch (error) {
       toast.error(
@@ -404,7 +413,7 @@ export function SubscriptionBillingView({
                   cycle.
                 </div>
               )}
-              <div className="mt-6 grid gap-3 sm:grid-cols-2">
+              <div className="mt-6 grid gap-3 sm:grid-cols-3">
                 <div className="rounded-[7px] border border-black/8 p-4">
                   <div className="text-[9px] font-bold uppercase tracking-[.1em] text-[#92959c]">
                     Estimated base
@@ -423,6 +432,19 @@ export function SubscriptionBillingView({
                   </div>
                   <div className="mt-2 text-sm font-semibold">
                     {dateLabel(subscription?.currentPeriodEnd ?? null)}
+                  </div>
+                </div>
+                <div className="rounded-[7px] border border-black/8 p-4">
+                  <div className="text-[9px] font-bold uppercase tracking-[.1em] text-[#92959c]">
+                    AI resolutions
+                  </div>
+                  <div className="mt-2 text-sm font-semibold">
+                    {usage?.resolutions ?? 0} / {pricing.includedResolutions}
+                  </div>
+                  <div className="mt-1 text-[9px] text-[#92959c]">
+                    {usage?.billableResolutions
+                      ? `${usage.billableResolutions} over · ${money(usage.estimatedOverage)}`
+                      : "Included allowance"}
                   </div>
                 </div>
               </div>
