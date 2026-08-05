@@ -1,13 +1,12 @@
 "use client";
 
-import { AnimatePresence, motion } from "framer-motion";
+import { motion } from "framer-motion";
 import {
   ArrowRight,
   CheckCircle2,
   Inbox,
   Loader2,
   MessageSquareText,
-  Phone,
   Send,
   Sparkles,
 } from "lucide-react";
@@ -15,7 +14,6 @@ import Link from "next/link";
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import { CallCustomerDialog } from "@/components/workspace/CallCustomerDialog";
 
 type LiveMessage = {
   id: string;
@@ -49,7 +47,6 @@ export function LiveInbox() {
   const [loading, setLoading] = useState(true);
   const [reply, setReply] = useState("");
   const [sending, setSending] = useState(false);
-  const [callOpen, setCallOpen] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -188,14 +185,6 @@ export function LiveInbox() {
           </div>
           <div className="flex items-center gap-2">
             <button
-              type="button"
-              onClick={() => setCallOpen(true)}
-              className="flex h-9 items-center gap-2 rounded-[5px] border border-black/10 bg-white px-3 text-[10px] font-semibold text-[#303641] hover:border-black/20"
-            >
-              <Phone size={13} />
-              Call
-            </button>
-            <button
               disabled={sending}
               onClick={() => void act({ action: "resolve" })}
               className="flex h-9 items-center gap-2 rounded-[5px] bg-[#eafbd2] px-3 text-[10px] font-semibold text-[#3d7e18]"
@@ -278,12 +267,9 @@ export function LiveInbox() {
           {current.contact?.email ?? "Anonymous website session"}
         </p>
         {current.contact?.phone && (
-          <a
-            href={`tel:${current.contact.phone.replace(/[^+\d]/g, "")}`}
-            className="mt-2 block text-xs text-[#d8ff70] hover:underline"
-          >
+          <span className="mt-2 block text-xs text-white/45">
             {current.contact.phone}
-          </a>
+          </span>
         )}
         <div className="mt-8 space-y-4 border-t border-white/8 pt-5 text-xs">
           <div>
@@ -312,15 +298,6 @@ export function LiveInbox() {
           </div>
         </div>
       </aside>
-      <AnimatePresence>
-        {callOpen && (
-          <CallCustomerDialog
-            customer={current.contact?.name ?? "Website visitor"}
-            initialNumber={current.contact?.phone}
-            onClose={() => setCallOpen(false)}
-          />
-        )}
-      </AnimatePresence>
     </div>
   );
 }

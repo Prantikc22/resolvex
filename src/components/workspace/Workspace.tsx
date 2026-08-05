@@ -26,7 +26,6 @@ import {
   MoreHorizontal,
   PanelRightClose,
   Paperclip,
-  Phone,
   Plus,
   Search,
   Send,
@@ -64,9 +63,8 @@ import {
 import { cn } from "@/lib/utils";
 import { KnowledgeManager } from "@/components/workspace/KnowledgeManager";
 import { LiveInbox } from "@/components/workspace/LiveInbox";
-import { VoiceView } from "@/components/workspace/VoiceView";
 import { TeamBillingView } from "@/components/workspace/TeamBillingView";
-import { CallCustomerDialog } from "@/components/workspace/CallCustomerDialog";
+import { SubscriptionBillingView } from "@/components/workspace/SubscriptionBillingView";
 
 type View =
   | "inbox"
@@ -74,7 +72,6 @@ type View =
   | "knowledge"
   | "automations"
   | "customers"
-  | "voice"
   | "reports"
   | "integrations"
   | "team"
@@ -86,7 +83,6 @@ const nav: { id: View; label: string; icon: typeof Inbox }[] = [
   { id: "knowledge", label: "Knowledge", icon: BookOpen },
   { id: "automations", label: "Automations", icon: Workflow },
   { id: "customers", label: "Customers", icon: Users },
-  { id: "voice", label: "Voice", icon: Phone },
   { id: "reports", label: "Reports", icon: Activity },
   { id: "integrations", label: "Integrations", icon: Link2 },
   { id: "team", label: "Team & billing", icon: CreditCard },
@@ -445,7 +441,6 @@ function ConversationPane({
 }) {
   const [draft, setDraft] = useState("");
   const [thinking, setThinking] = useState(false);
-  const [callOpen, setCallOpen] = useState(false);
   const [messages, setMessages] = useState([
     {
       side: "customer",
@@ -496,13 +491,6 @@ function ConversationPane({
           </div>
         </div>
         <div className="flex items-center gap-1.5">
-          <button
-            onClick={() => setCallOpen(true)}
-            className="flex h-8 items-center gap-1.5 rounded-[5px] border border-black/10 bg-white px-2.5 text-[10px] font-semibold text-[#303641] hover:border-black/20"
-          >
-            <Phone size={13} />
-            Call
-          </button>
           <button
             onClick={onResolve}
             className="flex h-8 items-center gap-1.5 rounded-[5px] bg-[#eafbd2] px-2.5 text-[10px] font-semibold text-[#397613]"
@@ -619,15 +607,6 @@ function ConversationPane({
           </div>
         </div>
       </div>
-      <AnimatePresence>
-        {callOpen && (
-          <CallCustomerDialog
-            customer={conversation.customer}
-            initialNumber={conversation.phone}
-            onClose={() => setCallOpen(false)}
-          />
-        )}
-      </AnimatePresence>
     </div>
   );
 }
@@ -647,12 +626,9 @@ function ContextPane({ conversation }: { conversation: Conversation }) {
           <div className="mt-1 text-[10px] text-white/35">
             {conversation.company}
           </div>
-          <a
-            href={`tel:${conversation.phone.replace(/[^+\d]/g, "")}`}
-            className="mt-1.5 block text-[10px] text-[#d8ff70] hover:underline"
-          >
+          <span className="mt-1.5 block text-[10px] text-white/35">
             {conversation.phone}
-          </a>
+          </span>
         </div>
       </div>
       <div className="mt-5 grid grid-cols-2 gap-2">
@@ -1438,9 +1414,11 @@ function IntegrationsView() {
 function SettingsView({
   identity,
   billingConfigured,
+  onManageBilling,
 }: {
   identity: WorkspaceIdentity;
   billingConfigured: boolean;
+  onManageBilling: () => void;
 }) {
   const [retention, setRetention] = useState("18 months");
   return (
@@ -1527,15 +1505,10 @@ function SettingsView({
                 </div>
               </div>
               <button
-                disabled={!billingConfigured}
-                onClick={() =>
-                  toast.info(
-                    "Billing portal opens after a subscription is created",
-                  )
-                }
+                onClick={onManageBilling}
                 className="h-9 rounded-[5px] bg-[#101114] px-3 text-xs font-semibold text-white"
               >
-                {billingConfigured ? "Manage plan" : "Setup required"}
+                {billingConfigured ? "Manage payment" : "View setup"}
               </button>
             </div>
           </section>
@@ -1666,7 +1639,6 @@ const viewTitles: Record<View, string> = {
   knowledge: "Knowledge",
   automations: "Automations",
   customers: "Customers",
-  voice: "Voice",
   reports: "Reports",
   integrations: "Integrations",
   team: "Team & billing",
@@ -1675,10 +1647,8 @@ const viewTitles: Record<View, string> = {
 
 function WorkspaceSetupView({
   view,
-  configured = false,
 }: {
   view: Exclude<View, "inbox" | "knowledge" | "settings">;
-  configured?: boolean;
 }) {
   const content: Record<
     Exclude<View, "inbox" | "knowledge" | "settings">,
@@ -1698,15 +1668,6 @@ function WorkspaceSetupView({
       title: "Customer profiles build from real conversations.",
       copy: "The first messenger, email, form, or API conversation creates the profile and keeps its history together here.",
       action: "Install messenger",
-    },
-    voice: {
-      title: configured
-        ? "Voice provider connected."
-        : "Connect a voice provider before calling.",
-      copy: configured
-        ? "Provider credentials are available. Complete number, consent, recording, and carrier configuration before making the channel live."
-        : "ResolveX will not simulate calls in a customer workspace. Add provider credentials, choose numbers, and configure recording consent first.",
-      action: "Read voice setup",
     },
     reports: {
       title: "Reports begin with live support events.",
@@ -1764,8 +1725,6 @@ type WorkspaceIdentity = {
 };
 type WorkspaceCapabilities = {
   billing: boolean;
-  voice: boolean;
-  email: boolean;
 };
 
 export function Workspace({
@@ -1775,7 +1734,7 @@ export function Workspace({
     supportEmail: "support@acme.co",
     userName: "Prantik Mazumder",
   },
-  capabilities = { billing: false, voice: false, email: false },
+  capabilities = { billing: false },
 }: {
   demo?: boolean;
   identity?: WorkspaceIdentity;
@@ -1804,12 +1763,6 @@ export function Workspace({
         ) : (
           <WorkspaceSetupView view="customers" />
         );
-      case "voice":
-        return demo ? (
-          <VoiceView />
-        ) : (
-          <WorkspaceSetupView view="voice" configured={capabilities.voice} />
-        );
       case "reports":
         return demo ? <ReportsView /> : <WorkspaceSetupView view="reports" />;
       case "integrations":
@@ -1822,16 +1775,14 @@ export function Workspace({
         return demo ? (
           <TeamBillingView />
         ) : (
-          <WorkspaceSetupView
-            view="team"
-            configured={capabilities.billing && capabilities.email}
-          />
+          <SubscriptionBillingView billingConfigured={capabilities.billing} />
         );
       case "settings":
         return (
           <SettingsView
             identity={identity}
             billingConfigured={capabilities.billing}
+            onManageBilling={() => setView("team")}
           />
         );
     }

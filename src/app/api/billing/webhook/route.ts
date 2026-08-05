@@ -8,6 +8,9 @@ type RazorpayEntity = {
   status?: string;
   amount?: number;
   currency?: string;
+  customer_id?: string;
+  current_end?: number;
+  quantity?: number;
   notes?: Record<string, string>;
 };
 
@@ -26,7 +29,11 @@ function safeSignatureMatch(expected: string, received: string) {
 }
 
 function billingStatus(eventName: string | undefined, entityStatus?: string) {
-  if (eventName === "payment.captured" || eventName === "order.paid") {
+  if (
+    eventName === "payment.captured" ||
+    eventName === "order.paid" ||
+    eventName === "subscription.activated"
+  ) {
     return "active";
   }
   if (eventName === "payment.failed") return "failed";
@@ -82,7 +89,7 @@ export async function POST(request: Request) {
   const admin = createClient(supabaseUrl, serviceRoleKey);
   const { data: current } = await admin
     .from("subscriptions")
-    .select("metadata")
+    .select("provider_subscription_id,current_period_end,metadata")
     .eq("organization_id", organizationId)
     .maybeSingle();
   const metadata = (current?.metadata ?? {}) as Record<string, unknown>;
@@ -95,7 +102,14 @@ export async function POST(request: Request) {
   }
 
   const providerId =
-    subscription?.id ?? order?.id ?? payment?.order_id ?? payment?.id;
+    subscription?.id ??
+    current?.provider_subscription_id ??
+    order?.id ??
+    payment?.order_id ??
+    payment?.id;
+  const currentPeriodEnd = subscription?.current_end
+    ? new Date(subscription.current_end * 1000).toISOString()
+    : current?.current_period_end;
   const nextEventIds = eventId
     ? [...processedEventIds.slice(-19), eventId]
     : processedEventIds;
@@ -104,9 +118,11 @@ export async function POST(request: Request) {
     {
       organization_id: organizationId,
       provider: "razorpay",
+      provider_customer_id: subscription?.customer_id,
       provider_subscription_id: providerId,
       status: billingStatus(event.event, entity?.status),
       plan: notes.plan ?? "one",
+      current_period_end: currentPeriodEnd,
       metadata: {
         ...metadata,
         last_event: event.event,
@@ -116,7 +132,19 @@ export async function POST(request: Request) {
         razorpay_payment_id: payment?.id,
         amount: payment?.amount ?? order?.amount,
         currency: payment?.currency ?? order?.currency,
-        agents: notes.agents,
+        agents: subscription?.quantity ?? notes.agents ?? metadata.agents,
+        pending_agents:
+          event.event === "subscription.updated"
+            ? null
+            : metadata.pending_agents,
+        seat_change_scheduled:
+          event.event === "subscription.updated"
+            ? false
+            : metadata.seat_change_scheduled,
+        cancel_at_period_end:
+          event.event === "subscription.cancelled"
+            ? false
+            : metadata.cancel_at_period_end,
       },
     },
     { onConflict: "organization_id" },

@@ -34,10 +34,10 @@ export default async function AppPage() {
       }}
       capabilities={{
         billing: Boolean(
-          process.env.RAZORPAY_KEY_ID && process.env.RAZORPAY_KEY_SECRET,
+          process.env.RAZORPAY_KEY_ID &&
+          process.env.RAZORPAY_KEY_SECRET &&
+          process.env.RAZORPAY_PLAN_ID,
         ),
-        voice: Boolean(process.env.VOICE_PROVIDER_API_KEY),
-        email: Boolean(process.env.INBOUND_EMAIL_WEBHOOK_SECRET),
       }}
     />
   );
