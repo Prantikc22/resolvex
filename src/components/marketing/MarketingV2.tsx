@@ -404,6 +404,11 @@ function Hero() {
   );
   const worldScale = useTransform(scrollYProgress, [0, 1], [1.01, 1.07]);
   const worldY = useTransform(scrollYProgress, [0, 1], [0, -30]);
+  const foregroundOpacity = useTransform(
+    scrollYProgress,
+    [0, 0.66, 0.86, 1],
+    [1, 1, 0.28, 0],
+  );
 
   return (
     <>
@@ -509,6 +514,7 @@ function Hero() {
             style={{
               scale: worldScale,
               y: worldY,
+              opacity: foregroundOpacity,
               backgroundImage: "url('/resolvex-world.jpg')",
               maskImage:
                 "linear-gradient(to bottom, transparent 0%, transparent 82%, rgba(0,0,0,.16) 87%, black 96%, black 100%)",
@@ -559,8 +565,8 @@ function Hero() {
         </div>
       </section>
 
-      <section className="relative z-30 bg-[#f5f4ef] px-4 sm:px-6">
-        <div className="mx-auto grid max-w-[1380px] overflow-hidden rounded-[7px] border border-black/10 bg-white shadow-[0_18px_45px_rgba(24,28,38,.10)] sm:grid-cols-2 lg:grid-cols-4">
+      <section className="relative z-[60] bg-[#f5f4ef] px-4 sm:px-6 md:mt-[calc(752px-100svh)]">
+        <div className="mx-auto grid max-w-[1380px] overflow-hidden rounded-[7px] border border-black/10 border-t-[#111318] bg-white shadow-[0_18px_45px_rgba(24,28,38,.10)] sm:grid-cols-2 md:border-t-[5px] lg:grid-cols-4">
           {[
             ["< 1 minute", "to install the widget"],
             ["$15", "per full agent / month"],
