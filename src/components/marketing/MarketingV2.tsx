@@ -398,7 +398,7 @@ function Hero() {
   const dashboardY = useTransform(
     scrollYProgress,
     [0, 0.12, 0.42, 0.72, 1],
-    [525, 510, 250, 86, 82],
+    [565, 545, 250, 86, 82],
   );
   const worldScale = useTransform(scrollYProgress, [0, 1], [1.01, 1.07]);
   const worldY = useTransform(scrollYProgress, [0, 1], [0, -30]);
@@ -515,7 +515,6 @@ function Hero() {
             }}
             className="pointer-events-none absolute inset-0 z-50 bg-cover bg-center"
           />
-          <div className="pointer-events-none absolute inset-x-0 bottom-0 z-[60] h-6 bg-[#f5f4ef]" />
         </div>
       </section>
 
