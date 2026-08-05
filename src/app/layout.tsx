@@ -21,9 +21,7 @@ const instrumentSerif = Instrument_Serif({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL(
-    process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000",
-  ),
+  metadataBase: new URL("https://www.getresolvex.com"),
   title: {
     default: "ResolveX - Customer support that finishes the work",
     template: "%s | ResolveX",
@@ -32,6 +30,26 @@ export const metadata: Metadata = {
     "One customer support workspace for AI resolutions, human conversations, knowledge, workflows, and measurable service quality.",
   creator: "ResoluteX",
   publisher: "ResoluteX",
+  applicationName: "ResolveX",
+  category: "Customer support software",
+  keywords: [
+    "AI customer support",
+    "AI helpdesk",
+    "customer service software",
+    "support automation",
+    "customer support platform",
+  ],
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+      "max-video-preview": -1,
+    },
+  },
   icons: {
     icon: "/icon.svg",
     shortcut: "/icon.svg",
@@ -41,6 +59,7 @@ export const metadata: Metadata = {
     description:
       "AI resolves the routine. Your team gets the conversations that deserve a human.",
     type: "website",
+    siteName: "ResolveX",
   },
 };
 

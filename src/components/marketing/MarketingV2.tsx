@@ -15,6 +15,7 @@ import {
   AtSign,
   BookOpen,
   Bot,
+  CalendarDays,
   Check,
   CheckCircle2,
   FileText,
@@ -40,6 +41,7 @@ import { BillCalculator } from "@/components/marketing/BillCalculator";
 import { Header } from "@/components/marketing/Header";
 import { MarketingFooter } from "@/components/marketing/MarketingFooter";
 import { ResolveWidget } from "@/components/widget/ResolveWidget";
+import { blogPosts } from "@/lib/blog";
 import { pricing } from "@/lib/pricing";
 import { cn } from "@/lib/utils";
 
@@ -557,7 +559,7 @@ function Hero() {
         </div>
       </section>
 
-      <section className="relative z-30 bg-[#f5f4ef] px-4 pb-16 sm:px-6 md:pb-20">
+      <section className="relative z-30 bg-[#f5f4ef] px-4 sm:px-6">
         <div className="mx-auto grid max-w-[1380px] overflow-hidden rounded-[7px] border border-black/10 bg-white shadow-[0_18px_45px_rgba(24,28,38,.10)] sm:grid-cols-2 lg:grid-cols-4">
           {[
             ["< 1 minute", "to install the widget"],
@@ -580,7 +582,75 @@ function Hero() {
           ))}
         </div>
       </section>
+      <TrustMarquee />
     </>
+  );
+}
+
+const trustedCompanies = [
+  "OnePlus",
+  "ClearTax",
+  "RVCJ Media",
+  "eBay",
+  "Randstad",
+  "The Baker's Street",
+];
+
+function TrustMarquee() {
+  return (
+    <section
+      aria-labelledby="trusted-heading"
+      className="overflow-hidden bg-[#f5f4ef] px-4 pb-16 pt-10 sm:px-6 md:pb-24 md:pt-14"
+    >
+      <div className="mx-auto max-w-[1380px]">
+        <div className="flex flex-col gap-3 border-b border-black/10 pb-7 sm:flex-row sm:items-end sm:justify-between">
+          <h2
+            id="trusted-heading"
+            className="max-w-2xl text-balance text-3xl font-semibold leading-[1.02] tracking-[-.04em] md:text-5xl"
+          >
+            Trusted by teams at{" "}
+            <span className="font-display italic">100+ companies.</span>
+          </h2>
+          <p className="max-w-md text-sm leading-relaxed text-[#6b6e75] sm:text-right">
+            From fast-growing startups to global customer teams, ResolveX keeps
+            service moving without adding another layer of complexity.
+          </p>
+        </div>
+        <div
+          className="marquee-mask mt-7 overflow-hidden"
+          aria-label="Customer companies"
+        >
+          <div className="logo-marquee flex w-max items-center">
+            {[0, 1].map((copy) => (
+              <div
+                key={copy}
+                aria-hidden={copy === 1}
+                className="flex shrink-0 items-center"
+              >
+                {trustedCompanies.map((company, index) => (
+                  <div
+                    key={`${copy}-${company}`}
+                    className="flex min-w-[210px] items-center justify-center border-r border-black/10 px-8 py-5 md:min-w-[250px]"
+                  >
+                    <span
+                      className={cn(
+                        "whitespace-nowrap text-xl font-semibold tracking-[-.035em] text-[#222328] md:text-2xl",
+                        index === 2 &&
+                          "font-display text-2xl italic md:text-3xl",
+                        index === 3 && "tracking-[-.06em]",
+                        index === 5 && "font-display text-2xl md:text-3xl",
+                      )}
+                    >
+                      {company}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </section>
   );
 }
 
@@ -911,7 +981,9 @@ function ArloSection() {
               <div className="font-mono text-[10px] text-[#d8ff70]">
                 {number}
               </div>
-              <div className="mt-5 text-lg font-semibold text-white">{title}</div>
+              <div className="mt-5 text-lg font-semibold text-white">
+                {title}
+              </div>
               <div className="mt-2 text-xs leading-relaxed text-white/68">
                 {copy}
               </div>
@@ -990,210 +1062,229 @@ function KnowledgeSection() {
         </Reveal>
         <div ref={narrativeRef} className="relative mt-16 lg:h-[220vh]">
           <div className="grid overflow-hidden rounded-[12px] border border-white/12 bg-[#181a1f] shadow-[0_48px_140px_rgba(0,0,0,.38)] lg:sticky lg:top-24 lg:min-h-[620px] lg:grid-cols-[380px_1fr]">
-          <div className="relative border-b border-white/10 bg-[radial-gradient(circle_at_top_left,rgba(216,255,112,.08),transparent_48%)] p-3 lg:border-b-0 lg:border-r">
-            <div className="hidden px-4 pb-5 pt-4 lg:block">
-              <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-[.14em] text-white/35">
-                <span>Knowledge source</span>
-                <span>{String(knowledgeOptions.findIndex(([id]) => id === mode) + 1).padStart(2, "0")} / 03</span>
+            <div className="relative border-b border-white/10 bg-[radial-gradient(circle_at_top_left,rgba(216,255,112,.08),transparent_48%)] p-3 lg:border-b-0 lg:border-r">
+              <div className="hidden px-4 pb-5 pt-4 lg:block">
+                <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-[.14em] text-white/35">
+                  <span>Knowledge source</span>
+                  <span>
+                    {String(
+                      knowledgeOptions.findIndex(([id]) => id === mode) + 1,
+                    ).padStart(2, "0")}{" "}
+                    / 03
+                  </span>
+                </div>
+                <div className="mt-4 h-1 overflow-hidden rounded-full bg-white/8">
+                  <motion.div
+                    className="h-full origin-left rounded-full bg-[#d8ff70]"
+                    animate={{
+                      scaleX:
+                        (knowledgeOptions.findIndex(([id]) => id === mode) +
+                          1) /
+                        3,
+                    }}
+                    transition={{ duration: 0.45, ease }}
+                  />
+                </div>
+                <p className="mt-4 text-xs leading-relaxed text-white/38">
+                  Scroll to see each source become a controlled, citable answer
+                  layer.
+                </p>
               </div>
-              <div className="mt-4 h-1 overflow-hidden rounded-full bg-white/8">
-                <motion.div
-                  className="h-full origin-left rounded-full bg-[#d8ff70]"
-                  animate={{ scaleX: (knowledgeOptions.findIndex(([id]) => id === mode) + 1) / 3 }}
-                  transition={{ duration: 0.45, ease }}
-                />
-              </div>
-              <p className="mt-4 text-xs leading-relaxed text-white/38">
-                Scroll to see each source become a controlled, citable answer layer.
-              </p>
-            </div>
-            <div className="grid gap-2 sm:grid-cols-3 lg:grid-cols-1">
-              {knowledgeOptions.map(([id, Icon, title, copy], index) => {
-                const I = Icon as typeof Globe2;
-                return (
-                  <button
-                    key={id as string}
-                    onClick={() => selectMode(id)}
-                    className={cn(
-                      "group flex items-center gap-3 rounded-[8px] border p-4 text-left transition-all duration-300",
-                      mode === id
-                        ? "border-white bg-white text-[#151619] shadow-[0_18px_45px_rgba(0,0,0,.22)]"
-                        : "border-transparent text-white/48 hover:border-white/8 hover:bg-white/5 hover:text-white/72",
-                    )}
-                  >
-                    <span
+              <div className="grid gap-2 sm:grid-cols-3 lg:grid-cols-1">
+                {knowledgeOptions.map(([id, Icon, title, copy], index) => {
+                  const I = Icon as typeof Globe2;
+                  return (
+                    <button
+                      key={id as string}
+                      onClick={() => selectMode(id)}
                       className={cn(
-                        "grid size-10 shrink-0 place-items-center rounded-[6px]",
-                        mode === id ? "bg-[#d8ff70]" : "bg-white/7",
+                        "group flex items-center gap-3 rounded-[8px] border p-4 text-left transition-all duration-300",
+                        mode === id
+                          ? "border-white bg-white text-[#151619] shadow-[0_18px_45px_rgba(0,0,0,.22)]"
+                          : "border-transparent text-white/48 hover:border-white/8 hover:bg-white/5 hover:text-white/72",
                       )}
                     >
-                      <I size={18} />
-                    </span>
-                    <div>
-                      <div className={cn("mb-1 font-mono text-[9px]", mode === id ? "text-[#66842c]" : "text-white/22")}>
-                        0{index + 1}
-                      </div>
-                      <div className="text-sm font-semibold">
-                        {title as string}
-                      </div>
-                      <div
+                      <span
                         className={cn(
-                          "mt-1 text-[10px]",
-                          mode === id ? "text-[#777a82]" : "text-white/28",
+                          "grid size-10 shrink-0 place-items-center rounded-[6px]",
+                          mode === id ? "bg-[#d8ff70]" : "bg-white/7",
                         )}
                       >
-                        {copy as string}
-                      </div>
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-          <div className="relative min-h-[520px] overflow-hidden p-5 sm:p-8 lg:p-12">
-            <div aria-hidden="true" className="pointer-events-none absolute -right-24 -top-24 size-72 rounded-full bg-[#d8ff70]/5 blur-3xl" />
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={mode}
-                initial={{ opacity: 0, y: 18, filter: "blur(8px)" }}
-                animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
-                exit={{ opacity: 0, y: -12, filter: "blur(6px)" }}
-                transition={{ duration: 0.42, ease }}
-                className="relative z-10"
-              >
-                {mode === "site" && (
-                  <div>
-                    <div className="flex items-center justify-between">
+                        <I size={18} />
+                      </span>
                       <div>
-                        <div className="text-xs font-bold uppercase tracking-[.12em] text-[#d8ff70]">
-                          Website source
-                        </div>
-                        <h3 className="mt-3 text-3xl font-semibold">
-                          acme.com/help
-                        </h3>
-                      </div>
-                      <span className="rounded-[5px] bg-[#d8ff70]/10 px-2.5 py-1.5 text-[10px] font-bold text-[#d8ff70]">
-                        Synced 2m ago
-                      </span>
-                    </div>
-                    <div className="mt-10 grid gap-3 sm:grid-cols-3">
-                      {[
-                        ["Pages indexed", "184"],
-                        ["Answers covered", "91%"],
-                        ["Changed today", "7"],
-                      ].map(([label, value]) => (
                         <div
-                          key={label}
-                          className="rounded-[6px] border border-white/10 p-4"
+                          className={cn(
+                            "mb-1 font-mono text-[9px]",
+                            mode === id ? "text-[#66842c]" : "text-white/22",
+                          )}
                         >
-                          <div className="text-[10px] text-white/30">
-                            {label}
-                          </div>
-                          <div className="mt-5 text-3xl font-semibold">
-                            {value}
-                          </div>
+                          0{index + 1}
                         </div>
-                      ))}
-                    </div>
-                    <div className="mt-4 space-y-2">
-                      {[
-                        "/help/billing/change-plan",
-                        "/docs/sso/saml-setup",
-                        "/policies/refund-timing",
-                        "/help/account/export-data",
-                      ].map((path, index) => (
+                        <div className="text-sm font-semibold">
+                          {title as string}
+                        </div>
                         <div
-                          key={path}
-                          className="flex items-center gap-3 rounded-[6px] border border-white/8 bg-black/15 p-3"
+                          className={cn(
+                            "mt-1 text-[10px]",
+                            mode === id ? "text-[#777a82]" : "text-white/28",
+                          )}
                         >
-                          <span className="grid size-8 place-items-center rounded-[5px] bg-white/5">
-                            <Link2 size={14} />
-                          </span>
-                          <span className="min-w-0 flex-1 truncate font-mono text-[10px] text-white/55">
-                            {path}
-                          </span>
-                          <span className="text-[9px] text-[#d8ff70]">
-                            {index === 0 ? "Updated" : "Healthy"}
-                          </span>
+                          {copy as string}
                         </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-                {mode === "pdf" && (
-                  <div>
-                    <div className="mx-auto grid max-w-xl place-items-center rounded-[8px] border border-dashed border-white/20 bg-black/10 px-6 py-16 text-center">
-                      <span className="grid size-16 place-items-center rounded-full bg-[#b7d7ff] text-[#15243a]">
-                        <FileText size={26} />
-                      </span>
-                      <h3 className="mt-6 text-2xl font-semibold">
-                        Drop approved documents here
-                      </h3>
-                      <p className="mt-3 max-w-sm text-sm leading-relaxed text-white/42">
-                        PDF and text files are extracted, chunked, and kept
-                        private to the workspace. Drafts require approval before
-                        the AI can cite them.
-                      </p>
-                      <button className="mt-7 flex h-11 items-center gap-2 rounded-[6px] bg-white px-4 text-xs font-semibold text-[#151619]">
-                        <Upload size={15} />
-                        Choose files
-                      </button>
-                      <div className="mt-4 text-[10px] text-white/25">
-                        25 files on One - 20 MB per file - 250 MB total
                       </div>
-                    </div>
-                  </div>
-                )}
-                {mode === "center" && (
-                  <div>
-                    <div className="rounded-[8px] bg-[#f6f4ed] p-5 text-[#151619] sm:p-7">
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+            <div className="relative min-h-[520px] overflow-hidden p-5 sm:p-8 lg:p-12">
+              <div
+                aria-hidden="true"
+                className="pointer-events-none absolute -right-24 -top-24 size-72 rounded-full bg-[#d8ff70]/5 blur-3xl"
+              />
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key={mode}
+                  initial={{ opacity: 0, y: 18, filter: "blur(8px)" }}
+                  animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+                  exit={{ opacity: 0, y: -12, filter: "blur(6px)" }}
+                  transition={{ duration: 0.42, ease }}
+                  className="relative z-10"
+                >
+                  {mode === "site" && (
+                    <div>
                       <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <Mark className="size-8 bg-white p-1.5" />
-                          <span className="text-sm font-semibold">
-                            Acme Help
-                          </span>
+                        <div>
+                          <div className="text-xs font-bold uppercase tracking-[.12em] text-[#d8ff70]">
+                            Website source
+                          </div>
+                          <h3 className="mt-3 text-3xl font-semibold">
+                            acme.com/help
+                          </h3>
                         </div>
-                        <span className="text-[10px] text-[#777]">
-                          help.acme.com
+                        <span className="rounded-[5px] bg-[#d8ff70]/10 px-2.5 py-1.5 text-[10px] font-bold text-[#d8ff70]">
+                          Synced 2m ago
                         </span>
                       </div>
-                      <div className="mx-auto max-w-lg py-14 text-center">
-                        <h3 className="font-display text-4xl">
-                          How can we help?
-                        </h3>
-                        <div className="mt-6 flex h-13 items-center gap-3 rounded-[7px] border border-black/10 bg-white px-4 text-sm text-[#898b90] shadow-sm">
-                          <Search size={16} />
-                          Search or ask a question
-                        </div>
-                      </div>
-                      <div className="grid gap-2 sm:grid-cols-3">
+                      <div className="mt-10 grid gap-3 sm:grid-cols-3">
                         {[
-                          "Getting started",
-                          "Billing and plans",
-                          "Account security",
-                        ].map((item) => (
+                          ["Pages indexed", "184"],
+                          ["Answers covered", "91%"],
+                          ["Changed today", "7"],
+                        ].map(([label, value]) => (
                           <div
-                            key={item}
-                            className="rounded-[6px] border border-black/8 bg-white p-4"
+                            key={label}
+                            className="rounded-[6px] border border-white/10 p-4"
                           >
-                            <BookOpen size={16} />
-                            <div className="mt-8 text-sm font-semibold">
-                              {item}
+                            <div className="text-[10px] text-white/30">
+                              {label}
                             </div>
-                            <div className="mt-1 text-[10px] text-[#85878c]">
-                              12 articles
+                            <div className="mt-5 text-3xl font-semibold">
+                              {value}
                             </div>
                           </div>
                         ))}
                       </div>
+                      <div className="mt-4 space-y-2">
+                        {[
+                          "/help/billing/change-plan",
+                          "/docs/sso/saml-setup",
+                          "/policies/refund-timing",
+                          "/help/account/export-data",
+                        ].map((path, index) => (
+                          <div
+                            key={path}
+                            className="flex items-center gap-3 rounded-[6px] border border-white/8 bg-black/15 p-3"
+                          >
+                            <span className="grid size-8 place-items-center rounded-[5px] bg-white/5">
+                              <Link2 size={14} />
+                            </span>
+                            <span className="min-w-0 flex-1 truncate font-mono text-[10px] text-white/55">
+                              {path}
+                            </span>
+                            <span className="text-[9px] text-[#d8ff70]">
+                              {index === 0 ? "Updated" : "Healthy"}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
                     </div>
-                  </div>
-                )}
-              </motion.div>
-            </AnimatePresence>
+                  )}
+                  {mode === "pdf" && (
+                    <div>
+                      <div className="mx-auto grid max-w-xl place-items-center rounded-[8px] border border-dashed border-white/20 bg-black/10 px-6 py-16 text-center">
+                        <span className="grid size-16 place-items-center rounded-full bg-[#b7d7ff] text-[#15243a]">
+                          <FileText size={26} />
+                        </span>
+                        <h3 className="mt-6 text-2xl font-semibold">
+                          Drop approved documents here
+                        </h3>
+                        <p className="mt-3 max-w-sm text-sm leading-relaxed text-white/42">
+                          PDF and text files are extracted, chunked, and kept
+                          private to the workspace. Drafts require approval
+                          before the AI can cite them.
+                        </p>
+                        <button className="mt-7 flex h-11 items-center gap-2 rounded-[6px] bg-white px-4 text-xs font-semibold text-[#151619]">
+                          <Upload size={15} />
+                          Choose files
+                        </button>
+                        <div className="mt-4 text-[10px] text-white/25">
+                          25 files on One - 20 MB per file - 250 MB total
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  {mode === "center" && (
+                    <div>
+                      <div className="rounded-[8px] bg-[#f6f4ed] p-5 text-[#151619] sm:p-7">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <Mark className="size-8 bg-white p-1.5" />
+                            <span className="text-sm font-semibold">
+                              Acme Help
+                            </span>
+                          </div>
+                          <span className="text-[10px] text-[#777]">
+                            help.acme.com
+                          </span>
+                        </div>
+                        <div className="mx-auto max-w-lg py-14 text-center">
+                          <h3 className="font-display text-4xl">
+                            How can we help?
+                          </h3>
+                          <div className="mt-6 flex h-13 items-center gap-3 rounded-[7px] border border-black/10 bg-white px-4 text-sm text-[#898b90] shadow-sm">
+                            <Search size={16} />
+                            Search or ask a question
+                          </div>
+                        </div>
+                        <div className="grid gap-2 sm:grid-cols-3">
+                          {[
+                            "Getting started",
+                            "Billing and plans",
+                            "Account security",
+                          ].map((item) => (
+                            <div
+                              key={item}
+                              className="rounded-[6px] border border-black/8 bg-white p-4"
+                            >
+                              <BookOpen size={16} />
+                              <div className="mt-8 text-sm font-semibold">
+                                {item}
+                              </div>
+                              <div className="mt-1 text-[10px] text-[#85878c]">
+                                12 articles
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </motion.div>
+              </AnimatePresence>
+            </div>
           </div>
-        </div>
         </div>
       </div>
     </section>
@@ -1318,7 +1409,9 @@ function Comparison() {
             <span className="border-x border-[#d8ff70]/20 bg-[#d8ff70]/10 px-4 py-5 text-[#d8ff70] sm:px-6">
               ResolveX
             </span>
-            <span className="px-4 py-5 text-white/45 sm:px-6">Typical legacy stack</span>
+            <span className="px-4 py-5 text-white/45 sm:px-6">
+              Typical legacy stack
+            </span>
           </div>
           {rows.map(([label, ours, legacy]) => (
             <div
@@ -1399,6 +1492,107 @@ function PricingPreview() {
   );
 }
 
+function BlogSection() {
+  const [featured, ...articles] = blogPosts;
+
+  return (
+    <section className="bg-[#ece9e1] px-4 py-24 sm:px-6 md:py-32">
+      <div className="mx-auto max-w-[1380px]">
+        <Reveal className="flex flex-col gap-7 border-b border-black/10 pb-10 lg:flex-row lg:items-end lg:justify-between">
+          <div>
+            <Label>ResolveX field notes</Label>
+            <h2 className="mt-5 max-w-4xl text-balance text-5xl font-semibold leading-[.94] tracking-[-.055em] md:text-7xl">
+              Practical answers for
+              <br />
+              <span className="font-display font-normal italic text-[#777a80]">
+                modern support teams.
+              </span>
+            </h2>
+          </div>
+          <div className="max-w-lg">
+            <p className="text-base leading-relaxed text-[#63666d]">
+              Clear, sourceable guides on AI customer support, helpdesk costs,
+              automation boundaries, and implementation—written for people and
+              answer engines.
+            </p>
+            <Link
+              href="/blog"
+              className="mt-5 inline-flex items-center gap-2 text-sm font-semibold"
+            >
+              Read all field notes <ArrowRight size={15} />
+            </Link>
+          </div>
+        </Reveal>
+
+        <div className="mt-8 grid gap-3 lg:grid-cols-[1.25fr_.75fr]">
+          <Reveal>
+            <Link
+              href={`/blog/${featured.slug}`}
+              className="group flex min-h-[530px] flex-col overflow-hidden rounded-[9px] bg-[#111318] p-6 text-white transition-transform hover:-translate-y-1 sm:p-9"
+            >
+              <div className="flex items-center justify-between gap-4 text-[10px] font-bold uppercase tracking-[.13em] text-[#d8ff70]">
+                <span>{featured.category}</span>
+                <span>{featured.readTime}</span>
+              </div>
+              <div className="relative my-10 flex-1 overflow-hidden rounded-[7px] border border-white/10 bg-[radial-gradient(circle_at_25%_35%,rgba(255,92,53,.52),transparent_28%),radial-gradient(circle_at_68%_56%,rgba(216,255,112,.26),transparent_30%),linear-gradient(135deg,#16191f,#090a0d)]">
+                <div className="absolute left-[18%] top-[24%] size-36 rounded-full border border-white/20 shadow-[0_0_80px_rgba(255,92,53,.32)] sm:size-52" />
+                <div className="absolute bottom-[18%] right-[15%] size-24 rounded-full bg-[#d8ff70] text-[#111318] shadow-[0_0_70px_rgba(216,255,112,.22)] sm:size-32">
+                  <Sparkles className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2" />
+                </div>
+                <div className="absolute inset-x-[15%] top-1/2 h-px bg-white/18" />
+              </div>
+              <h3 className="max-w-3xl text-balance text-3xl font-semibold leading-[1.02] tracking-[-.04em] sm:text-5xl">
+                {featured.title}
+              </h3>
+              <p className="mt-4 max-w-2xl text-sm leading-relaxed text-white/54">
+                {featured.description}
+              </p>
+              <span className="mt-7 inline-flex items-center gap-2 text-xs font-bold uppercase tracking-[.1em] text-[#d8ff70]">
+                Read the guide
+                <ArrowRight
+                  size={14}
+                  className="transition-transform group-hover:translate-x-1"
+                />
+              </span>
+            </Link>
+          </Reveal>
+
+          <div className="grid gap-3">
+            {articles.slice(0, 2).map((post, index) => (
+              <Reveal key={post.slug} delay={index * 0.06}>
+                <Link
+                  href={`/blog/${post.slug}`}
+                  className={cn(
+                    "group flex min-h-[258px] flex-col rounded-[9px] border border-black/10 p-6 transition-transform hover:-translate-y-1 sm:p-7",
+                    index === 0 ? "bg-[#c5dcff]" : "bg-[#fff7cf]",
+                  )}
+                >
+                  <div className="flex items-center justify-between gap-3 text-[10px] font-bold uppercase tracking-[.12em] text-black/48">
+                    <span>{post.category}</span>
+                    <span className="flex items-center gap-1.5">
+                      <CalendarDays size={12} /> {post.readTime}
+                    </span>
+                  </div>
+                  <h3 className="mt-auto text-balance text-2xl font-semibold leading-[1.03] tracking-[-.035em] sm:text-3xl">
+                    {post.title}
+                  </h3>
+                  <p className="mt-3 text-sm leading-relaxed text-black/56">
+                    {post.description}
+                  </p>
+                  <ArrowUpRight
+                    size={19}
+                    className="mt-5 transition-transform group-hover:-translate-y-1 group-hover:translate-x-1"
+                  />
+                </Link>
+              </Reveal>
+            ))}
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
 function BigCTA() {
   return (
     <section className="bg-[#ff5c35] px-4 py-24 text-white sm:px-6 md:py-36">
@@ -1448,6 +1642,7 @@ export function MarketingV2() {
       <VoiceSection />
       <PricingPreview />
       <Comparison />
+      <BlogSection />
       <BigCTA />
       <MarketingFooter />
       <ResolveWidget />

@@ -48,6 +48,7 @@ const explore = [
 
 const learn = [
   { label: "Resource library", href: "/resources", icon: BookOpen },
+  { label: "Field notes", href: "/blog", icon: FileText },
   { label: "Use cases", href: "/use-cases", icon: Sparkles },
   { label: "Help center", href: "/help", icon: LifeBuoy },
   { label: "FAQ", href: "/faq", icon: FileText },
@@ -242,6 +243,7 @@ export function Header() {
             {[
               ...marketingNav,
               { label: "Resources", href: "/resources" },
+              { label: "Field notes", href: "/blog" },
               { label: "FAQ", href: "/faq" },
             ]
               .filter(

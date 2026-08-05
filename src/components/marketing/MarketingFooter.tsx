@@ -15,6 +15,7 @@ const columns = [
       ["Install messenger", "/install"],
       ["Help center", "/help"],
       ["Resources", "/resources"],
+      ["Field notes", "/blog"],
       ["FAQ", "/faq"],
     ],
   },

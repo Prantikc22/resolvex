@@ -9,7 +9,10 @@
   padding: 0 0.875rem;
   color: white;
   outline: none;
-  transition: border-color 180ms ease, box-shadow 180ms ease, background 180ms ease;
+  transition:
+    border-color 180ms ease,
+    box-shadow 180ms ease,
+    background 180ms ease;
 }
 
 .auth-input::placeholder {
@@ -181,6 +184,37 @@ a {
   color: #151619;
 }
 
+.marquee-mask {
+  mask-image: linear-gradient(
+    to right,
+    transparent,
+    black 7%,
+    black 93%,
+    transparent
+  );
+  -webkit-mask-image: linear-gradient(
+    to right,
+    transparent,
+    black 7%,
+    black 93%,
+    transparent
+  );
+}
+
+.logo-marquee {
+  animation: logo-marquee 30s linear infinite;
+}
+
+.logo-marquee:hover {
+  animation-play-state: paused;
+}
+
+@keyframes logo-marquee {
+  to {
+    transform: translateX(-50%);
+  }
+}
+
 @keyframes shimmer {
   0% {
     background-position: 180% 0;
@@ -216,5 +250,8 @@ a {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
+  }
+  .logo-marquee {
+    animation: none !important;
   }
 }
