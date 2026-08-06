@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { askArlo } from "@/lib/ai/arlo";
+import { runMessageAutomations } from "@/lib/automation/run";
+import { sendWorkspaceWebhooks } from "@/lib/integrations/webhooks";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 const schema = z.object({
@@ -108,14 +110,26 @@ export async function POST(request: Request) {
         { status: 429 },
       );
 
-    await supabase
-      .from("messages")
-      .insert({
-        organization_id: organization.id,
-        conversation_id: conversation.id,
-        sender_type: "contact",
-        body: input.message,
-      });
+    const { error: incomingError } = await supabase.from("messages").insert({
+      organization_id: organization.id,
+      conversation_id: conversation.id,
+      sender_type: "contact",
+      body: input.message,
+    });
+    if (incomingError) throw incomingError;
+
+    await runMessageAutomations({
+      supabase,
+      organizationId: organization.id,
+      conversationId: conversation.id,
+      message: input.message,
+    });
+    await sendWorkspaceWebhooks({
+      supabase,
+      organizationId: organization.id,
+      event: "message.created",
+      data: { conversation_id: conversation.id, message: input.message },
+    });
 
     const [{ data: articles }, { data: sources }, { data: history }] =
       await Promise.all([
@@ -164,18 +178,16 @@ export async function POST(request: Request) {
     });
 
     await Promise.all([
-      supabase
-        .from("messages")
-        .insert({
-          organization_id: organization.id,
-          conversation_id: conversation.id,
-          sender_type: "ai",
-          body: result.message,
-          ai_metadata: {
-            model: result.model,
-            grounded: Boolean(approvedContext),
-          },
-        }),
+      supabase.from("messages").insert({
+        organization_id: organization.id,
+        conversation_id: conversation.id,
+        sender_type: "ai",
+        body: result.message,
+        ai_metadata: {
+          model: result.model,
+          grounded: Boolean(approvedContext),
+        },
+      }),
       supabase
         .from("conversations")
         .update({
@@ -183,13 +195,11 @@ export async function POST(request: Request) {
           ai_state: approvedContext ? "drafting" : "handed_off",
         })
         .eq("id", conversation.id),
-      supabase
-        .from("usage_events")
-        .insert({
-          organization_id: organization.id,
-          event_type: "ai_reply",
-          metadata: { conversation_id: conversation.id, model: result.model },
-        }),
+      supabase.from("usage_events").insert({
+        organization_id: organization.id,
+        event_type: "ai_reply",
+        metadata: { conversation_id: conversation.id, model: result.model },
+      }),
     ]);
 
     return NextResponse.json({

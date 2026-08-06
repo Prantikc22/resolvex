@@ -8,9 +8,7 @@ import {
   Loader2,
   MessageSquareText,
   Send,
-  Sparkles,
 } from "lucide-react";
-import Link from "next/link";
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -41,7 +39,11 @@ type LiveConversation = {
   messages: LiveMessage[];
 };
 
-export function LiveInbox() {
+export function LiveInbox({
+  onNavigate,
+}: {
+  onNavigate: (view: "knowledge" | "settings") => void;
+}) {
   const [items, setItems] = useState<LiveConversation[]>([]);
   const [selected, setSelected] = useState("");
   const [loading, setLoading] = useState(true);
@@ -117,7 +119,7 @@ export function LiveInbox() {
         <Loader2 className="animate-spin text-[#355cff]" />
       </div>
     );
-  if (!current) return <EmptyInbox />;
+  if (!current) return <EmptyInbox onNavigate={onNavigate} />;
 
   return (
     <div className="grid min-h-0 flex-1 grid-cols-1 bg-[#11151e] text-white lg:grid-cols-[300px_1fr] xl:grid-cols-[300px_1fr_280px]">
@@ -302,7 +304,11 @@ export function LiveInbox() {
   );
 }
 
-function EmptyInbox() {
+function EmptyInbox({
+  onNavigate,
+}: {
+  onNavigate: (view: "knowledge" | "settings") => void;
+}) {
   return (
     <div className="grid min-h-0 flex-1 place-items-center bg-[#f5f6f8] p-6 text-[#171a20]">
       <div className="max-w-lg text-center">
@@ -315,23 +321,19 @@ function EmptyInbox() {
           conversations will appear here with Arlo’s answer and source attached.
         </p>
         <div className="mt-7 flex flex-col justify-center gap-2 sm:flex-row">
-          <Link
-            href="/install"
+          <button
+            onClick={() => onNavigate("settings")}
             className="flex h-11 items-center justify-center gap-2 rounded-[6px] bg-[#101114] px-4 text-xs font-semibold text-white"
           >
             Install messenger <ArrowRight size={14} />
-          </Link>
-          <Link
-            href="/help"
+          </button>
+          <button
+            onClick={() => onNavigate("knowledge")}
             className="flex h-11 items-center justify-center gap-2 rounded-[6px] border border-black/10 bg-white px-4 text-xs font-semibold"
           >
             <MessageSquareText size={14} />
-            Open setup guide
-          </Link>
-        </div>
-        <div className="mt-7 flex items-center justify-center gap-2 text-[10px] text-[#858b95]">
-          <Sparkles size={13} className="text-[#ff5c35]" />
-          Demo records are available only in the interactive demo.
+            Add approved knowledge
+          </button>
         </div>
       </div>
     </div>

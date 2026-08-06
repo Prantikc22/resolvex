@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getCurrentOrganization } from "@/lib/supabase/current-org";
+import { sendWorkspaceWebhooks } from "@/lib/integrations/webhooks";
 
 const schema = z.discriminatedUnion("action", [
   z.object({
@@ -69,6 +70,12 @@ export async function POST(
           });
         if (usageError && usageError.code !== "23505") throw usageError;
       }
+      await sendWorkspaceWebhooks({
+        supabase,
+        organizationId,
+        event: "conversation.resolved",
+        data: { conversation_id: id },
+      });
       return NextResponse.json({ resolved: true });
     }
     const { data, error } = await supabase
@@ -90,6 +97,12 @@ export async function POST(
         ai_state: "disabled",
       })
       .eq("id", id);
+    await sendWorkspaceWebhooks({
+      supabase,
+      organizationId,
+      event: "conversation.replied",
+      data: { conversation_id: id, message: input.body, sender_id: user.id },
+    });
     return NextResponse.json({ message: data });
   } catch (error) {
     return NextResponse.json(

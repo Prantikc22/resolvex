@@ -88,26 +88,28 @@ export async function POST() {
     process.env.RESEND_NOTIFY_EMAIL ?? "prantik.chatterjee@resolutex.com";
 
   try {
-    await Promise.all([
-      sendEmail({
-        to: user.email,
-        subject: `${workspace} is ready on ResolveX`,
-        html: welcomeMarkup(name, workspace, appUrl),
-        text: `Welcome, ${name}. ${workspace} is ready on ResolveX. Add one approved answer, install the messenger, and send yourself a real question. Open ${appUrl}/app`,
-        idempotencyKey: `resolvex-welcome-${user.id}`,
-      }),
-      sendEmail({
+    await sendEmail({
+      to: user.email,
+      subject: `${workspace} is ready on ResolveX`,
+      html: welcomeMarkup(name, workspace, appUrl),
+      text: `Welcome, ${name}. ${workspace} is ready on ResolveX. Add one approved answer, install the messenger, and send yourself a real question. Open ${appUrl}/app`,
+      idempotencyKey: `resolvex-welcome-${user.id}`,
+    });
+    await admin
+      .from("profiles")
+      .update({ welcome_email_sent_at: new Date().toISOString() })
+      .eq("id", user.id);
+    try {
+      await sendEmail({
         to: founderEmail,
         subject: `New ResolveX workspace: ${workspace}`,
         html: founderMarkup(user.email, workspace),
         text: `${user.email} completed onboarding and created ${workspace}.`,
         idempotencyKey: `resolvex-founder-notice-${organizationId}`,
-      }),
-    ]);
-    await admin
-      .from("profiles")
-      .update({ welcome_email_sent_at: new Date().toISOString() })
-      .eq("id", user.id);
+      });
+    } catch (notificationError) {
+      console.error("Founder notification failed", notificationError);
+    }
     return NextResponse.json({ sent: true });
   } catch (error) {
     console.error("Welcome email failed", error);

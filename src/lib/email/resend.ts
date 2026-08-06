@@ -29,8 +29,12 @@ export async function sendEmail(input: SendEmailInput) {
   });
 
   if (!response.ok) {
+    const detail = (await response.json().catch(() => null)) as {
+      message?: string;
+    } | null;
     throw new Error(
-      `Resend rejected the email with status ${response.status}.`,
+      detail?.message ??
+        `Resend rejected the email with status ${response.status}.`,
     );
   }
 

@@ -64,7 +64,14 @@ import { cn } from "@/lib/utils";
 import { KnowledgeManager } from "@/components/workspace/KnowledgeManager";
 import { LiveInbox } from "@/components/workspace/LiveInbox";
 import { TeamBillingView } from "@/components/workspace/TeamBillingView";
-import { SubscriptionBillingView } from "@/components/workspace/SubscriptionBillingView";
+import { TeamManagementView } from "@/components/workspace/TeamManagementView";
+import {
+  ArloLiveView,
+  AutomationsLiveView,
+  CustomersLiveView,
+  IntegrationsLiveView,
+  ReportsLiveView,
+} from "@/components/workspace/WorkspaceOperations";
 
 type View =
   | "inbox"
@@ -122,6 +129,7 @@ function Sidebar({
   setCollapsed,
   userName,
   workspaceName,
+  demo,
 }: {
   active: View;
   onChange: (view: View) => void;
@@ -129,6 +137,7 @@ function Sidebar({
   setCollapsed: (value: boolean) => void;
   userName: string;
   workspaceName: string;
+  demo: boolean;
 }) {
   return (
     <aside
@@ -183,7 +192,7 @@ function Sidebar({
             >
               <Icon size={17} />
               {!collapsed && <span>{item.label}</span>}
-              {!collapsed && item.id === "inbox" && (
+              {!collapsed && demo && item.id === "inbox" && (
                 <span className="ml-auto rounded-full bg-[#355cff] px-1.5 py-0.5 text-[9px] font-bold text-white">
                   3
                 </span>
@@ -205,7 +214,12 @@ function Sidebar({
           )}
         >
           <span className="grid size-8 shrink-0 place-items-center rounded-full bg-[#c8ff73] text-xs font-bold text-[#183308]">
-            PM
+            {userName
+              .split(/\s+/)
+              .map((part) => part[0])
+              .join("")
+              .slice(0, 2)
+              .toUpperCase()}
           </span>
           {!collapsed && (
             <div className="min-w-0">
@@ -245,7 +259,7 @@ function Topbar({
         <div>
           <h1 className="text-sm font-semibold">{title}</h1>
           <p className="hidden text-[10px] text-[#858b95] sm:block">
-            {workspaceName} · All systems healthy
+            {workspaceName} · {demo ? "All systems healthy" : "Live workspace"}
           </p>
         </div>
         {demo && (
@@ -254,69 +268,71 @@ function Topbar({
           </span>
         )}
       </div>
-      <div className="flex items-center gap-1.5">
-        <button className="hidden h-9 items-center gap-2 rounded-[5px] border border-black/10 px-3 text-xs text-[#717783] lg:flex">
-          <Search size={14} /> Search{" "}
-          <span className="ml-7 flex items-center gap-0.5 rounded-[3px] bg-[#f1f2f4] px-1.5 py-0.5 font-mono text-[9px]">
-            <Command size={9} />K
-          </span>
-        </button>
-        <div className="relative">
-          <button
-            onClick={() => setNotifications((value) => !value)}
-            className="relative grid size-9 place-items-center rounded-[5px] border border-black/10"
-          >
-            <Bell size={16} />
-            <span className="absolute right-1.5 top-1.5 size-1.5 rounded-full bg-[#ff5b45] ring-2 ring-white" />
+      {demo && (
+        <div className="flex items-center gap-1.5">
+          <button className="hidden h-9 items-center gap-2 rounded-[5px] border border-black/10 px-3 text-xs text-[#717783] lg:flex">
+            <Search size={14} /> Search{" "}
+            <span className="ml-7 flex items-center gap-0.5 rounded-[3px] bg-[#f1f2f4] px-1.5 py-0.5 font-mono text-[9px]">
+              <Command size={9} />K
+            </span>
           </button>
-          <AnimatePresence>
-            {notifications && (
-              <motion.div
-                initial={{ opacity: 0, y: -8, scale: 0.98 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, y: -8, scale: 0.98 }}
-                className="absolute right-0 top-11 w-[310px] rounded-[7px] border border-black/10 bg-white p-2 shadow-2xl"
-              >
-                <div className="flex items-center justify-between px-2 py-2">
-                  <b className="text-xs">Notifications</b>
-                  <span className="text-[10px] text-[#355cff]">
-                    Mark all read
-                  </span>
-                </div>
-                {[
-                  ["SLA needs attention", "Sana Khan · 18 minutes remaining"],
-                  [
-                    "AI resolved a conversation",
-                    "Lena Park · data export prepared",
-                  ],
-                  ["Knowledge gap detected", "Team invite permissions"],
-                ].map(([title, copy], i) => (
-                  <div
-                    key={title}
-                    className="flex gap-3 rounded-[5px] p-2.5 hover:bg-[#f5f6f8]"
-                  >
-                    <span
-                      className={cn(
-                        "mt-1 size-2 shrink-0 rounded-full",
-                        i === 0 ? "bg-[#ff735c]" : "bg-[#355cff]",
-                      )}
-                    />
-                    <div>
-                      <div className="text-xs font-semibold">{title}</div>
-                      <div className="mt-1 text-[10px] text-[#7b818b]">
-                        {copy}
+          <div className="relative">
+            <button
+              onClick={() => setNotifications((value) => !value)}
+              className="relative grid size-9 place-items-center rounded-[5px] border border-black/10"
+            >
+              <Bell size={16} />
+              <span className="absolute right-1.5 top-1.5 size-1.5 rounded-full bg-[#ff5b45] ring-2 ring-white" />
+            </button>
+            <AnimatePresence>
+              {notifications && (
+                <motion.div
+                  initial={{ opacity: 0, y: -8, scale: 0.98 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: -8, scale: 0.98 }}
+                  className="absolute right-0 top-11 w-[310px] rounded-[7px] border border-black/10 bg-white p-2 shadow-2xl"
+                >
+                  <div className="flex items-center justify-between px-2 py-2">
+                    <b className="text-xs">Notifications</b>
+                    <span className="text-[10px] text-[#355cff]">
+                      Mark all read
+                    </span>
+                  </div>
+                  {[
+                    ["SLA needs attention", "Sana Khan · 18 minutes remaining"],
+                    [
+                      "AI resolved a conversation",
+                      "Lena Park · data export prepared",
+                    ],
+                    ["Knowledge gap detected", "Team invite permissions"],
+                  ].map(([title, copy], i) => (
+                    <div
+                      key={title}
+                      className="flex gap-3 rounded-[5px] p-2.5 hover:bg-[#f5f6f8]"
+                    >
+                      <span
+                        className={cn(
+                          "mt-1 size-2 shrink-0 rounded-full",
+                          i === 0 ? "bg-[#ff735c]" : "bg-[#355cff]",
+                        )}
+                      />
+                      <div>
+                        <div className="text-xs font-semibold">{title}</div>
+                        <div className="mt-1 text-[10px] text-[#7b818b]">
+                          {copy}
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))}
-              </motion.div>
-            )}
-          </AnimatePresence>
+                  ))}
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+          <button className="grid size-9 place-items-center rounded-[5px] border border-black/10">
+            <CircleHelp size={16} />
+          </button>
         </div>
-        <button className="grid size-9 place-items-center rounded-[5px] border border-black/10">
-          <CircleHelp size={16} />
-        </button>
-      </div>
+      )}
     </header>
   );
 }
@@ -1421,6 +1437,46 @@ function SettingsView({
   onManageBilling: () => void;
 }) {
   const [retention, setRetention] = useState("18 months");
+  const [workspaceName, setWorkspaceName] = useState(identity.workspaceName);
+  const [supportEmail, setSupportEmail] = useState(identity.supportEmail);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    fetch("/api/workspace/settings", { cache: "no-store" })
+      .then((response) => response.json().then((data) => ({ response, data })))
+      .then(({ response, data }) => {
+        if (!response.ok) throw new Error(data.error);
+        setWorkspaceName(data.name);
+        setSupportEmail(data.supportEmail);
+        setRetention(data.retention);
+      })
+      .catch((error) =>
+        toast.error(
+          error instanceof Error ? error.message : "Could not load settings.",
+        ),
+      );
+  }, []);
+
+  async function save() {
+    setSaving(true);
+    try {
+      const response = await fetch("/api/workspace/settings", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: workspaceName, supportEmail, retention }),
+      });
+      const data = await response.json();
+      if (!response.ok)
+        throw new Error(data.error ?? "Could not save settings.");
+      toast.success("Workspace settings saved");
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "Could not save settings.",
+      );
+    } finally {
+      setSaving(false);
+    }
+  }
   return (
     <div className="scrollbar-none min-h-0 flex-1 overflow-y-auto bg-[#f5f6f8] p-4 text-[#171a20] md:p-7">
       <div className="mx-auto max-w-4xl">
@@ -1440,7 +1496,8 @@ function SettingsView({
                   Workspace name
                 </span>
                 <input
-                  defaultValue={identity.workspaceName}
+                  value={workspaceName}
+                  onChange={(event) => setWorkspaceName(event.target.value)}
                   className="h-10 w-full rounded-[5px] border border-black/10 px-3 text-xs outline-none focus:border-[#355cff]"
                 />
               </label>
@@ -1449,7 +1506,8 @@ function SettingsView({
                   Support email
                 </span>
                 <input
-                  defaultValue={identity.supportEmail}
+                  value={supportEmail}
+                  onChange={(event) => setSupportEmail(event.target.value)}
                   className="h-10 w-full rounded-[5px] border border-black/10 px-3 text-xs outline-none focus:border-[#355cff]"
                 />
               </label>
@@ -1513,10 +1571,11 @@ function SettingsView({
             </div>
           </section>
           <button
-            onClick={() => toast.success("Workspace settings saved")}
+            disabled={saving}
+            onClick={() => void save()}
             className="h-11 rounded-[6px] bg-[#101114] px-5 text-xs font-semibold text-white"
           >
-            Save changes
+            {saving ? "Saving…" : "Save changes"}
           </button>
         </div>
       </div>
@@ -1746,36 +1805,32 @@ export function Workspace({
   const content = useMemo(() => {
     switch (view) {
       case "inbox":
-        return demo ? <InboxView /> : <LiveInbox />;
+        return demo ? <InboxView /> : <LiveInbox onNavigate={setView} />;
       case "ai":
-        return demo ? <AIView /> : <WorkspaceSetupView view="ai" />;
+        return demo ? (
+          <AIView />
+        ) : (
+          <ArloLiveView onOpenKnowledge={() => setView("knowledge")} />
+        );
       case "knowledge":
         return <KnowledgeManager demo={demo} />;
       case "automations":
-        return demo ? (
-          <AutomationsView />
-        ) : (
-          <WorkspaceSetupView view="automations" />
-        );
+        return demo ? <AutomationsView /> : <AutomationsLiveView />;
       case "customers":
         return demo ? (
           <CustomersView />
         ) : (
-          <WorkspaceSetupView view="customers" />
+          <CustomersLiveView onInstall={() => setView("settings")} />
         );
       case "reports":
-        return demo ? <ReportsView /> : <WorkspaceSetupView view="reports" />;
+        return demo ? <ReportsView /> : <ReportsLiveView />;
       case "integrations":
-        return demo ? (
-          <IntegrationsView />
-        ) : (
-          <WorkspaceSetupView view="integrations" />
-        );
+        return demo ? <IntegrationsView /> : <IntegrationsLiveView />;
       case "team":
         return demo ? (
           <TeamBillingView />
         ) : (
-          <SubscriptionBillingView billingConfigured={capabilities.billing} />
+          <TeamManagementView billingConfigured={capabilities.billing} />
         );
       case "settings":
         return (
@@ -1796,6 +1851,7 @@ export function Workspace({
         setCollapsed={setCollapsed}
         userName={identity.userName}
         workspaceName={identity.workspaceName}
+        demo={demo}
       />
       <AnimatePresence>
         {mobile && (

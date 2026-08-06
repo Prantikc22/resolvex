@@ -31,6 +31,7 @@ type BillingResponse = {
   keyId?: string;
   customer?: { email?: string; name?: string };
   subscription?: Subscription | null;
+  requiredAgents?: number;
   usage?: {
     resolutions: number;
     includedResolutions: number;
@@ -130,6 +131,7 @@ export function SubscriptionBillingView({
   const [usage, setUsage] = useState<BillingResponse["usage"]>();
   const [configured, setConfigured] = useState(billingConfigured);
   const [agents, setAgents] = useState(1);
+  const [requiredAgents, setRequiredAgents] = useState(1);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const estimatedTotal = useMemo(() => agents * pricing.agent, [agents]);
@@ -148,7 +150,9 @@ export function SubscriptionBillingView({
       setConfigured(Boolean(data.configured));
       setSubscription(data.subscription ?? null);
       setUsage(data.usage);
-      setAgents(data.subscription?.agents ?? 1);
+      const minimum = data.requiredAgents ?? 1;
+      setRequiredAgents(minimum);
+      setAgents(Math.max(data.subscription?.agents ?? 1, minimum));
     } catch (error) {
       toast.error(
         error instanceof Error ? error.message : "Could not load billing.",
@@ -249,7 +253,11 @@ export function SubscriptionBillingView({
       if (!response.ok)
         throw new Error(data.error ?? "Could not update seats.");
       setSubscription(data.subscription ?? null);
-      toast.success("Seat change scheduled for the next billing cycle.");
+      toast.success(
+        agents > (subscription?.agents ?? 1)
+          ? "Paid seats updated now. Razorpay will apply proration."
+          : "Seat decrease scheduled for the next billing cycle.",
+      );
     } catch (error) {
       toast.error(
         error instanceof Error ? error.message : "Could not update seats.",
@@ -370,8 +378,10 @@ export function SubscriptionBillingView({
                   <button
                     type="button"
                     aria-label="Remove agent"
-                    disabled={busy || agents <= 1}
-                    onClick={() => setAgents((value) => Math.max(1, value - 1))}
+                    disabled={busy || agents <= requiredAgents}
+                    onClick={() =>
+                      setAgents((value) => Math.max(requiredAgents, value - 1))
+                    }
                     className="grid size-9 place-items-center rounded-[5px] hover:bg-black/[.04] disabled:opacity-30"
                   >
                     <Minus size={15} />
@@ -379,14 +389,17 @@ export function SubscriptionBillingView({
                   <input
                     aria-label="Paid agents"
                     type="number"
-                    min={1}
+                    min={requiredAgents}
                     max={500}
                     value={agents}
                     onChange={(event) =>
                       setAgents(
                         Math.min(
                           500,
-                          Math.max(1, Number(event.target.value) || 1),
+                          Math.max(
+                            requiredAgents,
+                            Number(event.target.value) || requiredAgents,
+                          ),
                         ),
                       )
                     }
@@ -461,7 +474,7 @@ export function SubscriptionBillingView({
                   className="mt-6 flex h-11 w-full items-center justify-center gap-2 rounded-[6px] bg-[#17191d] text-xs font-semibold text-white disabled:cursor-not-allowed disabled:opacity-35"
                 >
                   {busy ? <Loader2 size={15} className="animate-spin" /> : null}
-                  Schedule seat change
+                  Update paid seats
                 </button>
               ) : (
                 <button

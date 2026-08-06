@@ -3,6 +3,7 @@ import Razorpay from "razorpay";
 import { z } from "zod";
 import { pricing } from "@/lib/pricing";
 import { getCurrentOrganization } from "@/lib/supabase/current-org";
+import { requiredPaidSeats } from "@/lib/billing/seats";
 
 const agentsSchema = z.object({ agents: z.number().int().min(1).max(500) });
 const activeStatuses = new Set([
@@ -152,9 +153,11 @@ export async function GET() {
   try {
     const row = await currentSubscription(supabase, organizationId);
     const usage = await currentUsage(supabase, organizationId, row);
+    const requiredAgents = await requiredPaidSeats(supabase, organizationId);
     return NextResponse.json({
       configured: configuration().configured,
       subscription: publicSubscription(row),
+      requiredAgents,
       usage,
     });
   } catch {
@@ -189,6 +192,15 @@ export async function POST(request: Request) {
     return NextResponse.json(
       { error: "Invalid agent count." },
       { status: 400 },
+    );
+  }
+  const requiredAgents = await requiredPaidSeats(supabase, organizationId);
+  if (parsed.data.agents < requiredAgents) {
+    return NextResponse.json(
+      {
+        error: `This workspace currently requires ${requiredAgents} paid seats.`,
+      },
+      { status: 409 },
     );
   }
 
@@ -313,6 +325,15 @@ export async function PATCH(request: Request) {
       { status: 400 },
     );
   }
+  const requiredAgents = await requiredPaidSeats(supabase, organizationId);
+  if (parsed.data.agents < requiredAgents) {
+    return NextResponse.json(
+      {
+        error: `Remove or convert paid teammates before reducing below ${requiredAgents} seats.`,
+      },
+      { status: 409 },
+    );
+  }
   const razorpay = provider();
   if (!razorpay) {
     return NextResponse.json(
@@ -337,19 +358,29 @@ export async function PATCH(request: Request) {
       );
     }
 
+    const currentAgents = Number(current.metadata?.agents ?? 1);
+    const increasing = parsed.data.agents > currentAgents;
     const updated = await razorpay.subscriptions.update(subscriptionId, {
       quantity: parsed.data.agents,
-      schedule_change_at: "cycle_end",
+      schedule_change_at: increasing ? "now" : "cycle_end",
+      customer_notify: true,
     });
     const metadata = current.metadata ?? {};
     const { error } = await supabase
       .from("subscriptions")
       .update({
-        metadata: {
-          ...metadata,
-          pending_agents: parsed.data.agents,
-          seat_change_scheduled: true,
-        },
+        metadata: increasing
+          ? {
+              ...metadata,
+              agents: parsed.data.agents,
+              pending_agents: null,
+              seat_change_scheduled: false,
+            }
+          : {
+              ...metadata,
+              pending_agents: parsed.data.agents,
+              seat_change_scheduled: true,
+            },
       })
       .eq("organization_id", organizationId);
     if (error) throw error;
@@ -357,7 +388,8 @@ export async function PATCH(request: Request) {
     return NextResponse.json({
       subscription: {
         ...publicSubscription(current),
-        pendingAgents: parsed.data.agents,
+        agents: increasing ? parsed.data.agents : currentAgents,
+        pendingAgents: increasing ? null : parsed.data.agents,
         status: updated.status,
       },
     });
