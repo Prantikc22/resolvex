@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getCurrentOrganization } from "@/lib/supabase/current-org";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 const schema = z.object({
   name: z.string().trim().min(2).max(80),
@@ -52,7 +53,8 @@ export async function PATCH(request: Request) {
     .select("settings")
     .eq("id", organizationId)
     .single();
-  const { error } = await supabase
+  const admin = createAdminClient();
+  const { error } = await admin
     .from("organizations")
     .update({
       name: parsed.data.name,

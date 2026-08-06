@@ -186,7 +186,8 @@ export async function PATCH(request: Request) {
       { error: "Invalid role change." },
       { status: 400 },
     );
-  const { data: previous } = await supabase
+  const admin = createAdminClient();
+  const { data: previous } = await admin
     .from("memberships")
     .select("role")
     .eq("organization_id", organizationId)
@@ -197,7 +198,7 @@ export async function PATCH(request: Request) {
       { error: "The workspace owner role cannot be changed." },
       { status: 409 },
     );
-  const { error } = await supabase
+  const { error } = await admin
     .from("memberships")
     .update({ role: parsed.data.role })
     .eq("organization_id", organizationId)
@@ -212,7 +213,7 @@ export async function PATCH(request: Request) {
     await syncSubscriptionSeats(supabase, organizationId, seats);
     return NextResponse.json({ updated: true, paidSeats: seats });
   } catch (seatError) {
-    await supabase
+    await admin
       .from("memberships")
       .update({ role: previous.role })
       .eq("organization_id", organizationId)
@@ -244,7 +245,8 @@ export async function DELETE(request: Request) {
       .eq("organization_id", organizationId)
       .eq("id", invitationId);
   else if (userId && userId !== user.id) {
-    const { data: member } = await supabase
+    const admin = createAdminClient();
+    const { data: member } = await admin
       .from("memberships")
       .select("role")
       .eq("organization_id", organizationId)
@@ -255,7 +257,7 @@ export async function DELETE(request: Request) {
         { error: "The workspace owner cannot be removed." },
         { status: 409 },
       );
-    await supabase
+    await admin
       .from("memberships")
       .delete()
       .eq("organization_id", organizationId)
