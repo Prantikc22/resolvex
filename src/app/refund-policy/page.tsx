@@ -44,9 +44,9 @@ export default function RefundPolicyPage() {
       </p>
       <h2>Usage and carrier charges</h2>
       <p>
-        Consumed AI resolutions, connected voice minutes, carrier charges, taxes
-        already remitted, custom migration work, and separately delivered
-        professional services are not refundable except where charged in error.
+        Connected voice minutes, carrier charges, taxes already remitted, custom
+        migration work, and separately delivered professional services are not
+        refundable except where charged in error.
       </p>
       <h2>Charge disputes</h2>
       <p>

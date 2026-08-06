@@ -3,7 +3,10 @@ import { PricingPage } from "@/components/marketing/PricingPage";
 
 export const metadata: Metadata = {
   title: "Pricing",
-  description: "ResolveX costs $15 per full agent each month, includes 50 AI resolutions, and charges $0.39 per additional AI-resolved conversation.",
+  description:
+    "ResolveX costs $15 per full agent each month and includes 50 AI resolutions with human handoff after the monthly allowance.",
 };
 
-export default function Page() { return <PricingPage/>; }
+export default function Page() {
+  return <PricingPage />;
+}

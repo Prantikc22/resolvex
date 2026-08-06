@@ -169,13 +169,39 @@ export async function POST(request: Request) {
             : ("assistant" as const),
         content: item.body,
       }));
-    const result = await askArlo({
-      workspace: organization.name,
-      context:
-        approvedContext ||
-        "No approved knowledge is available. Offer a human handoff without answering factual questions.",
-      messages,
-    });
+    const aiReplies = (history ?? []).filter(
+      (item) => item.sender_type === "ai",
+    ).length;
+    let allowanceAvailable = false;
+    if (approvedContext && aiReplies < 5) {
+      const monthStart = new Date();
+      monthStart.setUTCDate(1);
+      monthStart.setUTCHours(0, 0, 0, 0);
+      const { data: reserved, error: reservationError } = await supabase.rpc(
+        "reserve_ai_allowance",
+        {
+          p_organization_id: organization.id,
+          p_conversation_id: conversation.id,
+          p_period_start: monthStart.toISOString(),
+          p_period_key: monthStart.toISOString().slice(0, 7),
+          p_limit: 50,
+        },
+      );
+      if (reservationError) throw reservationError;
+      allowanceAvailable = reserved === true;
+    }
+    const handoffMessage = !approvedContext
+      ? "I don’t have an approved source for that yet. I’ve handed this to a teammate who can help."
+      : aiReplies >= 5
+        ? "I’m handing this conversation to a teammate so you get a careful answer."
+        : "This workspace has used its included AI allowance for the month. A teammate will reply instead.";
+    const result = allowanceAvailable
+      ? await askArlo({
+          workspace: organization.name,
+          context: approvedContext,
+          messages,
+        })
+      : { message: handoffMessage, model: "human-handoff" };
 
     await Promise.all([
       supabase.from("messages").insert({
@@ -185,26 +211,28 @@ export async function POST(request: Request) {
         body: result.message,
         ai_metadata: {
           model: result.model,
-          grounded: Boolean(approvedContext),
+          grounded: allowanceAvailable,
         },
       }),
       supabase
         .from("conversations")
         .update({
           last_message_at: new Date().toISOString(),
-          ai_state: approvedContext ? "drafting" : "handed_off",
+          ai_state: allowanceAvailable ? "drafting" : "handed_off",
         })
         .eq("id", conversation.id),
-      supabase.from("usage_events").insert({
-        organization_id: organization.id,
-        event_type: "ai_reply",
-        metadata: { conversation_id: conversation.id, model: result.model },
-      }),
+      allowanceAvailable
+        ? supabase.from("usage_events").insert({
+            organization_id: organization.id,
+            event_type: "ai_reply",
+            metadata: { conversation_id: conversation.id, model: result.model },
+          })
+        : Promise.resolve({ error: null }),
     ]);
 
     return NextResponse.json({
       message: result.message,
-      source: approvedContext
+      source: allowanceAvailable
         ? "Approved workspace knowledge"
         : "Human handoff recommended",
     });

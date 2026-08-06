@@ -167,11 +167,8 @@ export function BillCalculator({ compact = false }: { compact?: boolean }) {
             <span className="font-mono text-[#d8ff70]">Included</span>
           </div>
           <div className="flex justify-between gap-4">
-            <span className="text-white/50">
-              {estimate.billableResolutions} AI resolutions x $
-              {pricing.resolution}
-            </span>
-            <span className="font-mono">{money(estimate.aiCost)}</span>
+            <span className="text-white/50">After the included allowance</span>
+            <span className="font-mono">Human handoff · no overage</span>
           </div>
           <div className="flex justify-between gap-4">
             <span className="text-white/50">Voice platform usage</span>

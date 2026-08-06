@@ -570,7 +570,7 @@ function Hero() {
           {[
             ["< 1 minute", "to install the widget"],
             ["$15", "per full agent / month"],
-            ["$0.39", "per AI resolution"],
+            ["50", "AI resolutions included"],
             ["24 / 7", "AI coverage, human control"],
           ].map(([value, label], index) => (
             <div
@@ -1387,7 +1387,7 @@ function VoiceSection() {
 function Comparison() {
   const rows = [
     ["Full agent seat", "$15 / month", "Often $50-$100+"],
-    ["AI resolution", "$0.39 after 50", "Often $0.99"],
+    ["AI allowance", "50 included · then human handoff", "Often usage-priced"],
     ["Collaborators", "Unlimited", "Often paid"],
     ["Help center + widget", "Included", "Plan or add-on dependent"],
     ["Standard migration", "Included", "Often services-led"],
@@ -1475,9 +1475,9 @@ function PricingPreview() {
               </span>
             </div>
             <p className="mt-3 max-w-lg text-sm leading-relaxed text-[#666970]">
-              Everything is included. Pay ${pricing.resolution} only when AI
-              closes a conversation after the first{" "}
-              {pricing.includedResolutions} each month.
+              Everything is included. Arlo can complete up to{" "}
+              {pricing.includedResolutions} conversations each month, then
+              safely hands new requests to your team without an overage.
             </p>
           </div>
         </Reveal>

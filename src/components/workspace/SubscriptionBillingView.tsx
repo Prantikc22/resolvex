@@ -34,6 +34,8 @@ type BillingResponse = {
   requiredAgents?: number;
   usage?: {
     resolutions: number;
+    allowanceUsed: number;
+    allowanceRemaining: number;
     includedResolutions: number;
     billableResolutions: number;
     estimatedOverage: number;
@@ -452,12 +454,11 @@ export function SubscriptionBillingView({
                     AI resolutions
                   </div>
                   <div className="mt-2 text-sm font-semibold">
-                    {usage?.resolutions ?? 0} / {pricing.includedResolutions}
+                    {usage?.allowanceUsed ?? 0} / {pricing.includedResolutions}
                   </div>
                   <div className="mt-1 text-[9px] text-[#92959c]">
-                    {usage?.billableResolutions
-                      ? `${usage.billableResolutions} over · ${money(usage.estimatedOverage)}`
-                      : "Included allowance"}
+                    {usage?.allowanceRemaining ?? pricing.includedResolutions}{" "}
+                    remaining · then human handoff
                   </div>
                 </div>
               </div>

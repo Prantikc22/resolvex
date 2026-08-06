@@ -22,10 +22,11 @@ export default function TermsPage() {
       <h2>Subscriptions and usage</h2>
       <p>
         Paid subscriptions renew for the selected billing period until
-        cancelled. Full-agent seats, AI resolutions, voice usage, taxes, and any
-        separately agreed enterprise services are charged as shown at checkout
-        or in an order form. Pricing details are published on the{" "}
-        <a href="/pricing">Pricing page</a>.
+        cancelled. Full-agent seats, voice usage, taxes, and any separately
+        agreed enterprise services are charged as shown at checkout or in an
+        order form. The included AI allowance does not create an overage.
+        Pricing details are published on the <a href="/pricing">Pricing page</a>
+        .
       </p>
       <h2>Trials, cancellation, and refunds</h2>
       <p>

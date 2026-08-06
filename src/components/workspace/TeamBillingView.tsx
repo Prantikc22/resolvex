@@ -151,9 +151,9 @@ export function TeamBillingView() {
                 </div>
                 <div className="flex justify-between">
                   <span className="text-white/42">
-                    210 billable AI resolutions
+                    50 AI resolutions included
                   </span>
-                  <span>{money(estimate.aiCost)}</span>
+                  <span>No overage</span>
                 </div>
                 <div className="h-px bg-white/10" />
                 <div className="flex justify-between text-base font-semibold">

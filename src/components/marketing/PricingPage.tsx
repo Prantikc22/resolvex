@@ -26,7 +26,7 @@ const included = [
       "Website messenger",
       "Contact forms and API",
       "Branded help center",
-      "Click-to-call from a conversation",
+      "Human handoff from every conversation",
     ],
   ],
   [
@@ -68,7 +68,7 @@ const questions = [
   ],
   [
     "What counts as an AI resolution?",
-    "A resolution is charged only when the AI answers and closes the conversation without a human reply. Drafts, summaries, searches, and handoffs are included.",
+    "A resolution is counted when AI answers and closes the conversation without a human reply. The first 50 are included; after the allowance, new conversations are handed to your team without an overage charge.",
   ],
   [
     "How is voice billed?",
@@ -115,7 +115,8 @@ export function PricingPage() {
               <p className="mt-7 max-w-2xl text-lg leading-relaxed text-white/52">
                 Every channel, workflow, report, and AI Copilot feature is
                 included. Full agents cost money. Collaborators do not. AI is
-                billed only when it closes the conversation.
+                capped at 50 completed resolutions each month, then hands new
+                conversations to your team.
               </p>
             </motion.div>
             <motion.div
@@ -137,7 +138,7 @@ export function PricingPage() {
               <div className="mt-6 space-y-3 text-sm text-white/65">
                 {[
                   `${pricing.includedResolutions} AI resolutions included`,
-                  `$${pricing.resolution} per additional AI resolution`,
+                  "No overage charges · human handoff after 50",
                   "Unlimited collaborators",
                   "No setup fee or annual lock-in",
                 ].map((item) => (
@@ -174,7 +175,7 @@ export function PricingPage() {
             </div>
             <p className="max-w-xl text-lg leading-relaxed text-[#666970] lg:justify-self-end">
               Change every input. The result updates instantly and separates
-              agents, successful AI resolutions, and voice usage.
+              agents, the included AI allowance, and voice usage.
             </p>
           </div>
           <BillCalculator />
@@ -230,7 +231,7 @@ export function PricingPage() {
             [
               Sparkles,
               "AI resolution",
-              "A charge appears only when AI completes the answer and closes the conversation.",
+              "The first 50 are included. After that, Arlo hands new conversations to your team without an overage.",
             ],
             [
               Phone,

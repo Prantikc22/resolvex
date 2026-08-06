@@ -101,32 +101,39 @@ async function currentUsage(
 ) {
   const metadata = subscription?.metadata ?? {};
   const storedStart = metadata.period_start ?? metadata.trial_start;
-  const periodStart =
+  const storedPeriodStart =
     typeof storedStart === "number"
       ? new Date(storedStart * 1000)
       : typeof storedStart === "string"
         ? new Date(storedStart)
         : new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+  const periodStart =
+    Number.isNaN(storedPeriodStart.getTime()) || storedPeriodStart > new Date()
+      ? new Date(new Date().getFullYear(), new Date().getMonth(), 1)
+      : storedPeriodStart;
   const { data, error } = await supabase
     .from("usage_events")
-    .select("quantity")
+    .select("event_type,quantity")
     .eq("organization_id", organizationId)
-    .eq("event_type", "ai_resolution")
+    .in("event_type", ["ai_resolution", "ai_allowance"])
     .gte("created_at", periodStart.toISOString());
   if (error) throw error;
-  const resolutions = (data ?? []).reduce(
-    (total, event) => total + Number(event.quantity ?? 0),
-    0,
-  );
-  const billableResolutions = Math.max(
-    0,
-    resolutions - pricing.includedResolutions,
-  );
+  const resolutions = (data ?? [])
+    .filter((event) => event.event_type === "ai_resolution")
+    .reduce((total, event) => total + Number(event.quantity ?? 0), 0);
+  const allowanceUsed = (data ?? [])
+    .filter((event) => event.event_type === "ai_allowance")
+    .reduce((total, event) => total + Number(event.quantity ?? 0), 0);
   return {
     resolutions,
     includedResolutions: pricing.includedResolutions,
-    billableResolutions,
-    estimatedOverage: billableResolutions * pricing.resolution,
+    allowanceUsed,
+    allowanceRemaining: Math.max(
+      0,
+      pricing.includedResolutions - allowanceUsed,
+    ),
+    billableResolutions: 0,
+    estimatedOverage: 0,
     periodStart: periodStart.toISOString(),
   };
 }
