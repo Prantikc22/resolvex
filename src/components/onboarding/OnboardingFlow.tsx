@@ -76,7 +76,7 @@ export function OnboardingFlow() {
       await fetch("/api/onboarding/welcome", { method: "POST" }).catch(
         () => null,
       );
-      toast.success("Your workspace is ready.");
+      toast.success("Workspace created. Activate ResolveX One to continue.");
       router.push("/app");
       router.refresh();
     } catch (error) {

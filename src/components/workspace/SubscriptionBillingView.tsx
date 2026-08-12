@@ -79,6 +79,7 @@ function statusLabel(status: string | null) {
     trialing: "Trial active",
     active: "Active",
     pending: "Payment retry pending",
+    past_due: "Payment action required",
     halted: "Payment action required",
     cancelled: "Cancelled",
     canceled: "Cancelled",
@@ -145,8 +146,10 @@ function loadCheckout() {
 
 export function SubscriptionBillingView({
   billingConfigured,
+  activationGate = false,
 }: {
   billingConfigured: boolean;
+  activationGate?: boolean;
 }) {
   const [subscription, setSubscription] = useState<Subscription | null>(null);
   const [usage, setUsage] = useState<BillingResponse["usage"]>();
@@ -161,6 +164,8 @@ export function SubscriptionBillingView({
     subscription?.status === "active" ||
     subscription?.status === "authenticated" ||
     subscription?.status === "trialing";
+  const canManageSubscription =
+    canEditSeats || subscription?.status === "past_due";
 
   const load = useCallback(async () => {
     try {
@@ -234,7 +239,13 @@ export function SubscriptionBillingView({
               toast.success(
                 "Subscription authorised. Paddle is syncing the workspace.",
               );
-              window.setTimeout(() => void load(), 1500);
+              window.setTimeout(() => {
+                if (activationGate) {
+                  window.location.replace("/app");
+                  return;
+                }
+                void load();
+              }, 2500);
               setBusy(false);
             }
             if (
@@ -322,8 +333,8 @@ export function SubscriptionBillingView({
           provider === "paddle"
             ? "Paddle collected the prorated seat amount and activated the seat."
             : data.paymentPending
-            ? "Razorpay is collecting the prorated amount. The seat activates after payment confirmation."
-            : "The trial seat is authorised and will be included in the first monthly charge.",
+              ? "Razorpay is collecting the prorated amount. The seat activates after payment confirmation."
+              : "The trial seat is authorised and will be included in the first monthly charge.",
         );
       } else {
         toast.success("Seat decrease scheduled for the next billing cycle.");
@@ -403,8 +414,9 @@ export function SubscriptionBillingView({
             Subscription and payment
           </h2>
           <p className="mt-2 max-w-2xl text-sm leading-relaxed text-[#74777f]">
-            Authorise recurring billing through {provider === "paddle" ? "Paddle" : "Razorpay"}, manage paid seats, and
-            cancel at the end of a billing cycle from one place.
+            Authorise recurring billing through{" "}
+            {provider === "paddle" ? "Paddle" : "Razorpay"}, manage paid seats,
+            and cancel at the end of a billing cycle from one place.
           </p>
         </div>
 
@@ -412,10 +424,16 @@ export function SubscriptionBillingView({
           <section className="mt-7 flex flex-col justify-between gap-5 rounded-[10px] border border-[#dbb96d]/45 bg-[#fff7df] p-5 sm:flex-row sm:items-center">
             <div>
               <h3 className="text-sm font-semibold">
-                {provider === "paddle" ? "Paddle catalog required" : "Razorpay Plan ID required"}
+                {provider === "paddle"
+                  ? "Paddle catalog required"
+                  : "Razorpay Plan ID required"}
               </h3>
               <p className="mt-1 text-xs leading-relaxed text-[#766331]">
-                Complete the {provider === "paddle" ? "Paddle product, price, and client-token" : "Razorpay plan"} configuration before enabling checkout.
+                Complete the{" "}
+                {provider === "paddle"
+                  ? "Paddle product, price, and client-token"
+                  : "Razorpay plan"}{" "}
+                configuration before enabling checkout.
               </p>
             </div>
             <span className="shrink-0 rounded-[5px] bg-white px-3 py-2 text-[10px] font-bold uppercase tracking-[.08em] text-[#765d20] shadow-sm">
@@ -574,7 +592,7 @@ export function SubscriptionBillingView({
                   {busy ? <Loader2 size={15} className="animate-spin" /> : null}
                   {subscription?.status === "created"
                     ? "Complete payment setup"
-                    : "Start 7-day free trial"}
+                    : "Start ResolveX One"}
                   {!busy && <ArrowRight size={14} />}
                 </button>
               )}
@@ -622,7 +640,7 @@ export function SubscriptionBillingView({
                   {dateLabel(subscription.currentPeriodEnd)}.
                 </div>
               )}
-              {canEditSeats && !subscription?.cancelAtPeriodEnd && (
+              {canManageSubscription && !subscription?.cancelAtPeriodEnd && (
                 <div className="mt-6 grid gap-2">
                   {provider === "paddle" && (
                     <button
@@ -631,7 +649,7 @@ export function SubscriptionBillingView({
                       onClick={() => void managePayment()}
                       className="h-10 w-full rounded-[6px] bg-white text-xs font-semibold text-[#17191d] disabled:opacity-35"
                     >
-                      Manage payment and invoices
+                      Manage subscription & invoices
                     </button>
                   )}
                   <button
@@ -640,7 +658,7 @@ export function SubscriptionBillingView({
                     onClick={() => void cancel()}
                     className="h-10 w-full rounded-[6px] border border-white/12 text-xs font-semibold text-white/62 hover:border-white/25 hover:text-white disabled:opacity-35"
                   >
-                    Cancel at period end
+                    End subscription at period end
                   </button>
                 </div>
               )}
@@ -653,8 +671,9 @@ export function SubscriptionBillingView({
                   <h3 className="text-sm font-semibold">Payment controls</h3>
                   <p className="mt-2 text-xs leading-relaxed text-[#74777f]">
                     ResolveX never receives raw card or mandate details.
-                    Checkout authorisation happens on {provider === "paddle" ? "Paddle" : "Razorpay"}, then a signed
-                    response and signed webhooks update this workspace.
+                    Checkout authorisation happens on{" "}
+                    {provider === "paddle" ? "Paddle" : "Razorpay"}, then a
+                    signed response and signed webhooks update this workspace.
                   </p>
                 </div>
               </div>

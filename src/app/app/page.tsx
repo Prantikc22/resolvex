@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
+import { BillingActivationGate } from "@/components/workspace/BillingActivationGate";
 import { Workspace } from "@/components/workspace/Workspace";
 import { getCurrentOrganization } from "@/lib/supabase/current-org";
 import { billingConfigured } from "@/lib/billing/provider";
@@ -7,21 +8,44 @@ import { billingConfigured } from "@/lib/billing/provider";
 export const metadata: Metadata = { title: "Workspace" };
 
 export default async function AppPage() {
-  const { supabase, user, organizationId } = await getCurrentOrganization();
+  const { supabase, user, organizationId, membershipRole } =
+    await getCurrentOrganization();
   if (!user) redirect("/login");
   if (!organizationId) redirect("/onboarding");
-  const [{ data: organization }, { data: profile }] = await Promise.all([
-    supabase
-      .from("organizations")
-      .select("name,support_email")
-      .eq("id", organizationId)
-      .single(),
-    supabase
-      .from("profiles")
-      .select("full_name")
-      .eq("id", user.id)
-      .maybeSingle(),
+  const [{ data: organization }, { data: profile }, { data: subscription }] =
+    await Promise.all([
+      supabase
+        .from("organizations")
+        .select("name,support_email")
+        .eq("id", organizationId)
+        .single(),
+      supabase
+        .from("profiles")
+        .select("full_name")
+        .eq("id", user.id)
+        .maybeSingle(),
+      supabase
+        .from("subscriptions")
+        .select("status")
+        .eq("organization_id", organizationId)
+        .maybeSingle(),
+    ]);
+
+  const workspaceStatuses = new Set([
+    "authenticated",
+    "trialing",
+    "active",
+    "pending",
+    "past_due",
   ]);
+  const requiresActivation =
+    (membershipRole === "owner" || membershipRole === "admin") &&
+    !workspaceStatuses.has(subscription?.status ?? "");
+
+  if (requiresActivation) {
+    return <BillingActivationGate billingConfigured={billingConfigured()} />;
+  }
+
   return (
     <Workspace
       identity={{
