@@ -1,8 +1,0 @@
-{
-  "crons": [
-    {
-      "path": "/api/billing/paddle/usage",
-      "schedule": "0 * * * *"
-    }
-  ]
-}
