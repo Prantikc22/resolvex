@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { askArlo } from "@/lib/ai/arlo";
 import { runMessageAutomations } from "@/lib/automation/run";
-import { WORKSPACE_ACCESS_STATUSES } from "@/lib/billing/access";
+import { subscriptionHasWorkspaceAccess } from "@/lib/billing/access";
 import { sendWorkspaceWebhooks } from "@/lib/integrations/webhooks";
 import { createAdminClient } from "@/lib/supabase/admin";
 
@@ -28,10 +28,10 @@ export async function POST(request: Request) {
       );
     const { data: subscription } = await supabase
       .from("subscriptions")
-      .select("status")
+      .select("status,provider,metadata")
       .eq("organization_id", organization.id)
       .maybeSingle();
-    if (!WORKSPACE_ACCESS_STATUSES.has(subscription?.status ?? "")) {
+    if (!subscriptionHasWorkspaceAccess(subscription)) {
       return NextResponse.json(
         { error: "This messenger is no longer active." },
         { status: 402 },

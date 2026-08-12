@@ -2,6 +2,7 @@ import { EventName, type EventEntity } from "@paddle/paddle-node-sdk";
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getPaddle } from "@/lib/billing/paddle";
+import { paddleConfiguration } from "@/lib/billing/provider";
 
 const subscriptionEvents = new Set<string>([
   EventName.SubscriptionCreated,
@@ -59,6 +60,7 @@ async function syncSubscription(event: EventEntity) {
       current_period_end: periodEnd,
       metadata: {
         ...existing,
+        paddle_environment: paddleConfiguration().environment,
         agents,
         period_start: periodStart,
         price_id: asRecord(first.price).id,

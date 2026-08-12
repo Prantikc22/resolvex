@@ -31,6 +31,12 @@ async function processUsage(request: Request) {
   let submitted = 0;
   for (const subscription of subscriptions ?? []) {
     const metadata = (subscription.metadata ?? {}) as Record<string, unknown>;
+    const storedEnvironment = metadata.paddle_environment;
+    if (
+      storedEnvironment !== config.environment &&
+      !(storedEnvironment == null && config.environment === "sandbox")
+    )
+      continue;
     const periodStart =
       typeof metadata.period_start === "string" ? metadata.period_start : null;
     if (!periodStart) continue;

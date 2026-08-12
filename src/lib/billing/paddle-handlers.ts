@@ -12,6 +12,7 @@ const manageable = (role: string | null) =>
   role === "owner" || role === "admin";
 
 type StoredSubscription = {
+  provider: string | null;
   provider_customer_id: string | null;
   provider_subscription_id: string | null;
   plan: string | null;
@@ -44,12 +45,22 @@ async function currentSubscription(
   const { data, error } = await supabase
     .from("subscriptions")
     .select(
-      "provider_customer_id,provider_subscription_id,plan,status,current_period_end,metadata",
+      "provider,provider_customer_id,provider_subscription_id,plan,status,current_period_end,metadata",
     )
     .eq("organization_id", organizationId)
     .maybeSingle();
   if (error) throw error;
   return data as StoredSubscription | null;
+}
+
+function currentEnvironmentSubscription(row: StoredSubscription | null) {
+  if (!row || row.provider !== "paddle") return null;
+  const configuredEnvironment = paddleConfiguration().environment;
+  const storedEnvironment = row.metadata?.paddle_environment;
+  return storedEnvironment === configuredEnvironment ||
+    (storedEnvironment == null && configuredEnvironment === "sandbox")
+    ? row
+    : null;
 }
 
 async function usageSummary(
@@ -116,7 +127,9 @@ export async function paddleGet() {
       { status: 403 },
     );
   try {
-    const row = await currentSubscription(supabase, organizationId);
+    const row = currentEnvironmentSubscription(
+      await currentSubscription(supabase, organizationId),
+    );
     return NextResponse.json({
       provider: "paddle",
       configured: paddleConfiguration().configured,
@@ -166,7 +179,9 @@ export async function paddlePost(request: Request) {
       { error: "Paddle checkout is not configured." },
       { status: 503 },
     );
-  const existing = await currentSubscription(supabase, organizationId);
+  const existing = currentEnvironmentSubscription(
+    await currentSubscription(supabase, organizationId),
+  );
   if (
     existing &&
     ["active", "trialing", "past_due"].includes(existing.status ?? "")
@@ -185,6 +200,7 @@ export async function paddlePost(request: Request) {
       user_id: user.id,
       plan: "one",
       agents: parsed.data.agents,
+      paddle_environment: config.environment,
     },
   });
   return NextResponse.json({

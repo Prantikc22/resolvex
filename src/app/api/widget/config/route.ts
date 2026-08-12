@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { WORKSPACE_ACCESS_STATUSES } from "@/lib/billing/access";
+import { subscriptionHasWorkspaceAccess } from "@/lib/billing/access";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 const keySchema = z.string().uuid();
@@ -21,10 +21,10 @@ export async function GET(request: Request) {
       );
     const { data: subscription } = await supabase
       .from("subscriptions")
-      .select("status")
+      .select("status,provider,metadata")
       .eq("organization_id", data.id)
       .maybeSingle();
-    if (!WORKSPACE_ACCESS_STATUSES.has(subscription?.status ?? "")) {
+    if (!subscriptionHasWorkspaceAccess(subscription)) {
       return NextResponse.json(
         { error: "Messenger unavailable." },
         { status: 402 },

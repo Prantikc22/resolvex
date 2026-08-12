@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { BillingActivationGate } from "@/components/workspace/BillingActivationGate";
 import { Workspace } from "@/components/workspace/Workspace";
-import { WORKSPACE_ACCESS_STATUSES } from "@/lib/billing/access";
+import { subscriptionHasWorkspaceAccess } from "@/lib/billing/access";
 import { getCurrentOrganization } from "@/lib/supabase/current-org";
 import { billingConfigured } from "@/lib/billing/provider";
 
@@ -27,14 +27,12 @@ export default async function AppPage() {
         .maybeSingle(),
       supabase
         .from("subscriptions")
-        .select("status")
+        .select("status,provider,metadata")
         .eq("organization_id", organizationId)
         .maybeSingle(),
     ]);
 
-  const requiresActivation = !WORKSPACE_ACCESS_STATUSES.has(
-    subscription?.status ?? "",
-  );
+  const requiresActivation = !subscriptionHasWorkspaceAccess(subscription);
 
   if (requiresActivation) {
     return (
