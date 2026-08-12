@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { BillingActivationGate } from "@/components/workspace/BillingActivationGate";
 import { Workspace } from "@/components/workspace/Workspace";
+import { WORKSPACE_ACCESS_STATUSES } from "@/lib/billing/access";
 import { getCurrentOrganization } from "@/lib/supabase/current-org";
 import { billingConfigured } from "@/lib/billing/provider";
 
@@ -31,19 +32,17 @@ export default async function AppPage() {
         .maybeSingle(),
     ]);
 
-  const workspaceStatuses = new Set([
-    "authenticated",
-    "trialing",
-    "active",
-    "pending",
-    "past_due",
-  ]);
-  const requiresActivation =
-    (membershipRole === "owner" || membershipRole === "admin") &&
-    !workspaceStatuses.has(subscription?.status ?? "");
+  const requiresActivation = !WORKSPACE_ACCESS_STATUSES.has(
+    subscription?.status ?? "",
+  );
 
   if (requiresActivation) {
-    return <BillingActivationGate billingConfigured={billingConfigured()} />;
+    return (
+      <BillingActivationGate
+        billingConfigured={billingConfigured()}
+        canManage={membershipRole === "owner" || membershipRole === "admin"}
+      />
+    );
   }
 
   return (

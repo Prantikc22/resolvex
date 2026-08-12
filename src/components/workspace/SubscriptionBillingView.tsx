@@ -470,14 +470,19 @@ export function SubscriptionBillingView({
               <div className="flex flex-col justify-between gap-6 rounded-[8px] bg-[#f5f4ef] p-5 sm:flex-row sm:items-center">
                 <div>
                   <div className="text-[10px] font-bold uppercase tracking-[.1em] text-[#858891]">
-                    Agents billed monthly
+                    {activationGate ? "Due today" : "Agents billed monthly"}
                   </div>
                   <div className="mt-2 text-2xl font-semibold">
-                    {money(pricing.agent)}
+                    {money(activationGate ? 0 : pricing.agent)}
                     <span className="ml-1 text-xs font-normal text-[#858891]">
-                      / agent
+                      {activationGate ? " now" : " / agent"}
                     </span>
                   </div>
+                  {activationGate && (
+                    <div className="mt-1 text-[10px] text-[#858891]">
+                      Billing starts after the seven-day trial.
+                    </div>
+                  )}
                 </div>
                 <div className="flex items-center rounded-[7px] border border-black/10 bg-white p-1 shadow-sm">
                   <button
@@ -535,15 +540,22 @@ export function SubscriptionBillingView({
               <div className="mt-6 grid gap-3 sm:grid-cols-3">
                 <div className="rounded-[7px] border border-black/8 p-4">
                   <div className="text-[9px] font-bold uppercase tracking-[.1em] text-[#92959c]">
-                    Estimated base
+                    {activationGate ? "Today" : "Estimated base"}
                   </div>
                   <div className="mt-2 text-xl font-semibold">
-                    {money(estimatedTotal)}
-                    <span className="text-xs font-normal text-[#92959c]">
-                      {" "}
-                      / month
-                    </span>
+                    {activationGate ? money(0) : money(estimatedTotal)}
+                    {!activationGate && (
+                      <span className="text-xs font-normal text-[#92959c]">
+                        {" "}
+                        / month
+                      </span>
+                    )}
                   </div>
+                  {activationGate && (
+                    <div className="mt-1 text-[9px] text-[#92959c]">
+                      No charge until the trial ends
+                    </div>
+                  )}
                 </div>
                 <div className="rounded-[7px] border border-black/8 p-4">
                   <div className="text-[9px] font-bold uppercase tracking-[.1em] text-[#92959c]">

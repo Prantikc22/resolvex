@@ -8,7 +8,8 @@ import { getPaddle } from "@/lib/billing/paddle";
 import { pricing } from "@/lib/pricing";
 
 const agentsSchema = z.object({ agents: z.number().int().min(1).max(500) });
-const manageable = (role: string | null) => role === "owner" || role === "admin";
+const manageable = (role: string | null) =>
+  role === "owner" || role === "admin";
 
 type StoredSubscription = {
   provider_customer_id: string | null;
@@ -102,11 +103,18 @@ function paddleError(error: unknown) {
 export async function paddleGet() {
   const { supabase, user, organizationId, membershipRole } =
     await getCurrentOrganization();
-  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!user)
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   if (!organizationId)
-    return NextResponse.json({ error: "Complete workspace setup first." }, { status: 409 });
+    return NextResponse.json(
+      { error: "Complete workspace setup first." },
+      { status: 409 },
+    );
   if (!manageable(membershipRole))
-    return NextResponse.json({ error: "Only owners and admins can manage billing." }, { status: 403 });
+    return NextResponse.json(
+      { error: "Only owners and admins can manage billing." },
+      { status: 403 },
+    );
   try {
     const row = await currentSubscription(supabase, organizationId);
     return NextResponse.json({
@@ -118,34 +126,60 @@ export async function paddleGet() {
     });
   } catch (error) {
     console.error("Paddle billing read failed", error);
-    return NextResponse.json({ error: "Could not load billing." }, { status: 500 });
+    return NextResponse.json(
+      { error: "Could not load billing." },
+      { status: 500 },
+    );
   }
 }
 
 export async function paddlePost(request: Request) {
   const { supabase, user, organizationId, membershipRole } =
     await getCurrentOrganization();
-  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!user)
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   if (!organizationId)
-    return NextResponse.json({ error: "Complete workspace setup first." }, { status: 409 });
+    return NextResponse.json(
+      { error: "Complete workspace setup first." },
+      { status: 409 },
+    );
   if (!manageable(membershipRole))
-    return NextResponse.json({ error: "Only owners and admins can manage billing." }, { status: 403 });
+    return NextResponse.json(
+      { error: "Only owners and admins can manage billing." },
+      { status: 403 },
+    );
   const parsed = agentsSchema.safeParse(await request.json());
   if (!parsed.success)
-    return NextResponse.json({ error: "Invalid agent count." }, { status: 400 });
+    return NextResponse.json(
+      { error: "Invalid agent count." },
+      { status: 400 },
+    );
   const requiredAgents = await requiredPaidSeats(supabase, organizationId);
   if (parsed.data.agents < requiredAgents)
-    return NextResponse.json({ error: `This workspace requires ${requiredAgents} paid seats.` }, { status: 409 });
+    return NextResponse.json(
+      { error: `This workspace requires ${requiredAgents} paid seats.` },
+      { status: 409 },
+    );
   const config = paddleConfiguration();
   if (!config.configured || !config.clientToken || !config.seatPriceId)
-    return NextResponse.json({ error: "Paddle checkout is not configured." }, { status: 503 });
+    return NextResponse.json(
+      { error: "Paddle checkout is not configured." },
+      { status: 503 },
+    );
   const existing = await currentSubscription(supabase, organizationId);
-  if (existing && ["active", "trialing", "past_due"].includes(existing.status ?? "")) {
-    return NextResponse.json({ reused: true, provider: "paddle", subscription: publicSubscription(existing) });
+  if (
+    existing &&
+    ["active", "trialing", "past_due"].includes(existing.status ?? "")
+  ) {
+    return NextResponse.json({
+      reused: true,
+      provider: "paddle",
+      subscription: publicSubscription(existing),
+    });
   }
   const transaction = await getPaddle().transactions.create({
     items: [{ priceId: config.seatPriceId, quantity: parsed.data.agents }],
-    checkout: { url: "https://www.getresolvex.com/checkout" },
+    checkout: { url: "https://getresolvex.com/checkout" },
     customData: {
       organization_id: organizationId,
       user_id: user.id,
@@ -166,27 +200,51 @@ export async function paddlePost(request: Request) {
 export async function paddlePatch(request: Request) {
   const { supabase, user, organizationId, membershipRole } =
     await getCurrentOrganization();
-  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!user)
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   if (!organizationId)
-    return NextResponse.json({ error: "Workspace not found." }, { status: 409 });
+    return NextResponse.json(
+      { error: "Workspace not found." },
+      { status: 409 },
+    );
   if (!manageable(membershipRole))
-    return NextResponse.json({ error: "Only owners and admins can manage billing." }, { status: 403 });
+    return NextResponse.json(
+      { error: "Only owners and admins can manage billing." },
+      { status: 403 },
+    );
   const parsed = agentsSchema.safeParse(await request.json());
   if (!parsed.success)
-    return NextResponse.json({ error: "Invalid agent count." }, { status: 400 });
+    return NextResponse.json(
+      { error: "Invalid agent count." },
+      { status: 400 },
+    );
   const requiredAgents = await requiredPaidSeats(supabase, organizationId);
   if (parsed.data.agents < requiredAgents)
-    return NextResponse.json({ error: `Remove paid teammates before reducing below ${requiredAgents} seats.` }, { status: 409 });
+    return NextResponse.json(
+      {
+        error: `Remove paid teammates before reducing below ${requiredAgents} seats.`,
+      },
+      { status: 409 },
+    );
   const config = paddleConfiguration();
   if (!config.seatPriceId)
-    return NextResponse.json({ error: "Paddle seat pricing is not configured." }, { status: 503 });
+    return NextResponse.json(
+      { error: "Paddle seat pricing is not configured." },
+      { status: 503 },
+    );
   try {
     const current = await currentSubscription(supabase, organizationId);
     const id = current?.provider_subscription_id;
     if (!current || !id?.startsWith("sub_"))
-      return NextResponse.json({ error: "No Paddle subscription is available." }, { status: 404 });
+      return NextResponse.json(
+        { error: "No Paddle subscription is available." },
+        { status: 404 },
+      );
     if (!["active", "trialing"].includes(current.status ?? ""))
-      return NextResponse.json({ error: "Resolve payment status before changing seats." }, { status: 409 });
+      return NextResponse.json(
+        { error: "Resolve payment status before changing seats." },
+        { status: 409 },
+      );
     const currentAgents = Number(current.metadata?.agents ?? 1);
     const increasing = parsed.data.agents > currentAgents;
     const updated = await getPaddle().subscriptions.update(id, {
@@ -209,13 +267,24 @@ export async function paddlePatch(request: Request) {
     };
     const { error } = await supabase
       .from("subscriptions")
-      .update({ status: updated.status, current_period_end: updated.currentBillingPeriod?.endsAt ?? current.current_period_end, metadata })
+      .update({
+        status: updated.status,
+        current_period_end:
+          updated.currentBillingPeriod?.endsAt ?? current.current_period_end,
+        metadata,
+      })
       .eq("organization_id", organizationId)
       .eq("provider_subscription_id", id);
     if (error) throw error;
     return NextResponse.json({
       provider: "paddle",
-      subscription: publicSubscription({ ...current, status: updated.status, current_period_end: updated.currentBillingPeriod?.endsAt ?? current.current_period_end, metadata }),
+      subscription: publicSubscription({
+        ...current,
+        status: updated.status,
+        current_period_end:
+          updated.currentBillingPeriod?.endsAt ?? current.current_period_end,
+        metadata,
+      }),
       chargedImmediately: increasing,
     });
   } catch (error) {
@@ -226,18 +295,31 @@ export async function paddlePatch(request: Request) {
 export async function paddleDelete() {
   const { supabase, user, organizationId, membershipRole } =
     await getCurrentOrganization();
-  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!user)
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   if (!organizationId)
-    return NextResponse.json({ error: "Workspace not found." }, { status: 409 });
+    return NextResponse.json(
+      { error: "Workspace not found." },
+      { status: 409 },
+    );
   if (!manageable(membershipRole))
-    return NextResponse.json({ error: "Only owners and admins can manage billing." }, { status: 403 });
+    return NextResponse.json(
+      { error: "Only owners and admins can manage billing." },
+      { status: 403 },
+    );
   try {
     const current = await currentSubscription(supabase, organizationId);
     const id = current?.provider_subscription_id;
     if (!current || !id?.startsWith("sub_"))
-      return NextResponse.json({ error: "No Paddle subscription is available." }, { status: 404 });
+      return NextResponse.json(
+        { error: "No Paddle subscription is available." },
+        { status: 404 },
+      );
     if (current.metadata?.cancel_at_period_end)
-      return NextResponse.json({ provider: "paddle", subscription: publicSubscription(current) });
+      return NextResponse.json({
+        provider: "paddle",
+        subscription: publicSubscription(current),
+      });
     const canceled = await getPaddle().subscriptions.cancel(id, {
       effectiveFrom: "next_billing_period",
     });
@@ -248,11 +330,18 @@ export async function paddleDelete() {
     };
     const { error } = await supabase
       .from("subscriptions")
-      .update({ current_period_end: canceled.currentBillingPeriod?.endsAt ?? current.current_period_end, metadata })
+      .update({
+        current_period_end:
+          canceled.currentBillingPeriod?.endsAt ?? current.current_period_end,
+        metadata,
+      })
       .eq("organization_id", organizationId)
       .eq("provider_subscription_id", id);
     if (error) throw error;
-    return NextResponse.json({ provider: "paddle", subscription: publicSubscription({ ...current, metadata }) });
+    return NextResponse.json({
+      provider: "paddle",
+      subscription: publicSubscription({ ...current, metadata }),
+    });
   } catch (error) {
     return NextResponse.json({ error: paddleError(error) }, { status: 502 });
   }
