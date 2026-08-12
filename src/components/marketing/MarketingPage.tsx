@@ -341,7 +341,7 @@ function Hero() {
             transition={{ delay: 0.65 }}
             className="mt-4 text-xs text-[#7a808c]"
           >
-            7 days free · No card · Setup in minutes
+            7 days free · Cancel before renewal · Setup in minutes
           </motion.p>
         </div>
         <div className="relative mx-auto mt-14 max-w-6xl [perspective:1800px] md:mt-16">
@@ -725,8 +725,8 @@ function Pricing() {
             <span className="text-[#8a909a]">Not every person you invite.</span>
           </h2>
           <p className="mx-auto mt-6 max-w-2xl text-lg leading-relaxed text-[#666d78]">
-            Unlimited teammates on every plan. AI resolutions are included with
-            a hard monthly allowance and human handoff after the cap.
+            Unlimited teammates on every plan. The first 50 AI resolutions are
+            included, then completed AI resolutions are billed transparently.
           </p>
         </Reveal>
         <div className="mt-14 grid gap-4 lg:grid-cols-3">
@@ -839,8 +839,8 @@ function Pricing() {
           ))}
         </div>
         <p className="mt-5 text-center text-xs text-[#858b95]">
-          Prices exclude applicable taxes. Razorpay checkout activates when
-          payment keys are added.
+          Prices exclude applicable taxes. Secure checkout and subscription
+          management are provided by our billing partner.
         </p>
       </div>
     </section>

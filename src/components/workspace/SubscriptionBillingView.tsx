@@ -1,5 +1,7 @@
 "use client";
 
+import { initializePaddle } from "@paddle/paddle-js";
+
 import {
   ArrowRight,
   CalendarClock,
@@ -28,6 +30,7 @@ type Subscription = {
 };
 
 type BillingResponse = {
+  provider?: "paddle" | "razorpay";
   configured?: boolean;
   keyId?: string;
   customer?: { email?: string; name?: string };
@@ -44,6 +47,13 @@ type BillingResponse = {
   };
   error?: string;
   paymentPending?: boolean;
+  reused?: boolean;
+  chargedImmediately?: boolean;
+  clientToken?: string;
+  environment?: "sandbox" | "production";
+  priceId?: string;
+  agents?: number;
+  customData?: Record<string, unknown>;
 };
 
 type CheckoutResponse = {
@@ -65,10 +75,12 @@ function statusLabel(status: string | null) {
   const labels: Record<string, string> = {
     created: "Payment setup pending",
     authenticated: "Authorised",
+    trialing: "Trial active",
     active: "Active",
     pending: "Payment retry pending",
     halted: "Payment action required",
     cancelled: "Cancelled",
+    canceled: "Cancelled",
     completed: "Completed",
     expired: "Expired",
     failed: "Payment failed",
@@ -77,7 +89,11 @@ function statusLabel(status: string | null) {
 }
 
 function statusTone(status: string | null) {
-  if (status === "active" || status === "authenticated") {
+  if (
+    status === "active" ||
+    status === "authenticated" ||
+    status === "trialing"
+  ) {
     return "bg-[#dff8bc] text-[#315b13]";
   }
   if (status === "created") return "bg-[#fff1c9] text-[#73520a]";
@@ -134,6 +150,7 @@ export function SubscriptionBillingView({
   const [subscription, setSubscription] = useState<Subscription | null>(null);
   const [usage, setUsage] = useState<BillingResponse["usage"]>();
   const [configured, setConfigured] = useState(billingConfigured);
+  const [provider, setProvider] = useState<"paddle" | "razorpay">("razorpay");
   const [agents, setAgents] = useState(1);
   const [requiredAgents, setRequiredAgents] = useState(1);
   const [loading, setLoading] = useState(true);
@@ -141,7 +158,8 @@ export function SubscriptionBillingView({
   const estimatedTotal = useMemo(() => agents * pricing.agent, [agents]);
   const canEditSeats =
     subscription?.status === "active" ||
-    subscription?.status === "authenticated";
+    subscription?.status === "authenticated" ||
+    subscription?.status === "trialing";
 
   const load = useCallback(async () => {
     try {
@@ -152,6 +170,7 @@ export function SubscriptionBillingView({
       if (!response.ok)
         throw new Error(data.error ?? "Could not load billing.");
       setConfigured(Boolean(data.configured));
+      setProvider(data.provider ?? "razorpay");
       setSubscription(data.subscription ?? null);
       setUsage(data.usage);
       const minimum = data.requiredAgents ?? 1;
@@ -197,6 +216,50 @@ export function SubscriptionBillingView({
       const data = (await response.json()) as BillingResponse;
       if (!response.ok)
         throw new Error(data.error ?? "Could not start checkout.");
+      if (data.provider === "paddle") {
+        if (data.reused && data.subscription) {
+          setSubscription(data.subscription);
+          toast.info("This workspace already has a Paddle subscription.");
+          return;
+        }
+        if (!data.clientToken || !data.priceId || !data.environment) {
+          throw new Error("Paddle checkout configuration is incomplete.");
+        }
+        const paddle = await initializePaddle({
+          token: data.clientToken,
+          environment: data.environment,
+          eventCallback(event) {
+            if (event.name === "checkout.completed") {
+              toast.success(
+                "Subscription authorised. Paddle is syncing the workspace.",
+              );
+              window.setTimeout(() => void load(), 1500);
+              setBusy(false);
+            }
+            if (
+              event.name === "checkout.error" ||
+              event.name === "checkout.payment.error"
+            ) {
+              toast.error("Paddle could not complete checkout. Please retry.");
+              setBusy(false);
+            }
+          },
+        });
+        if (!paddle) throw new Error("Paddle Checkout did not initialize.");
+        paddle.Checkout.open({
+          items: [{ priceId: data.priceId, quantity: data.agents ?? agents }],
+          ...(data.customer?.email
+            ? { customer: { email: data.customer.email } }
+            : {}),
+          customData: data.customData,
+          settings: {
+            variant: "one-page",
+            successUrl: `${window.location.origin}/app`,
+          },
+        });
+        setBusy(false);
+        return;
+      }
       if (!data.subscription?.id || !data.keyId) {
         throw new Error("Razorpay did not return a subscription.");
       }
@@ -259,7 +322,9 @@ export function SubscriptionBillingView({
       setSubscription(data.subscription ?? null);
       if (agents > (subscription?.agents ?? 1)) {
         toast.success(
-          data.paymentPending
+          provider === "paddle"
+            ? "Paddle collected the prorated seat amount and activated the seat."
+            : data.paymentPending
             ? "Razorpay is collecting the prorated amount. The seat activates after payment confirmation."
             : "The trial seat is authorised and will be included in the first monthly charge.",
         );
@@ -304,6 +369,24 @@ export function SubscriptionBillingView({
     }
   }
 
+  async function managePayment() {
+    setBusy(true);
+    try {
+      const response = await fetch("/api/billing/portal", { method: "POST" });
+      const data = (await response.json()) as { url?: string; error?: string };
+      if (!response.ok || !data.url)
+        throw new Error(data.error ?? "Could not open payment management.");
+      window.location.assign(data.url);
+    } catch (error) {
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Could not open payment management.",
+      );
+      setBusy(false);
+    }
+  }
+
   if (loading) {
     return (
       <div className="grid min-h-0 flex-1 place-items-center bg-[#f5f4ef]">
@@ -323,7 +406,7 @@ export function SubscriptionBillingView({
             Subscription and payment
           </h2>
           <p className="mt-2 max-w-2xl text-sm leading-relaxed text-[#74777f]">
-            Authorise recurring billing through Razorpay, manage paid seats, and
+            Authorise recurring billing through {provider === "paddle" ? "Paddle" : "Razorpay"}, manage paid seats, and
             cancel at the end of a billing cycle from one place.
           </p>
         </div>
@@ -332,11 +415,10 @@ export function SubscriptionBillingView({
           <section className="mt-7 flex flex-col justify-between gap-5 rounded-[10px] border border-[#dbb96d]/45 bg-[#fff7df] p-5 sm:flex-row sm:items-center">
             <div>
               <h3 className="text-sm font-semibold">
-                Razorpay Plan ID required
+                {provider === "paddle" ? "Paddle catalog required" : "Razorpay Plan ID required"}
               </h3>
               <p className="mt-1 text-xs leading-relaxed text-[#766331]">
-                Add RAZORPAY_PLAN_ID with a monthly ResolveX One plan before
-                enabling checkout. No payment action is available until then.
+                Complete the {provider === "paddle" ? "Paddle product, price, and client-token" : "Razorpay plan"} configuration before enabling checkout.
               </p>
             </div>
             <span className="shrink-0 rounded-[5px] bg-white px-3 py-2 text-[10px] font-bold uppercase tracking-[.08em] text-[#765d20] shadow-sm">
@@ -431,7 +513,7 @@ export function SubscriptionBillingView({
                 <div className="mt-4 flex items-center gap-2 text-xs text-[#6e5c27]">
                   <CalendarClock size={14} />
                   {subscription.seatPaymentPending
-                    ? `${subscription.pendingAgents} seats pending Razorpay payment confirmation.`
+                    ? `${subscription.pendingAgents} seats pending payment confirmation.`
                     : `${subscription.pendingAgents} seats scheduled for the next cycle.`}
                 </div>
               )}
@@ -461,11 +543,12 @@ export function SubscriptionBillingView({
                     AI resolutions
                   </div>
                   <div className="mt-2 text-sm font-semibold">
-                    {usage?.allowanceUsed ?? 0} / {pricing.includedResolutions}
+                    {usage?.resolutions ?? 0} completed
                   </div>
                   <div className="mt-1 text-[9px] text-[#92959c]">
-                    {usage?.allowanceRemaining ?? pricing.includedResolutions}{" "}
-                    remaining · then human handoff
+                    {usage?.billableResolutions
+                      ? `${usage.billableResolutions} billable · ${money(usage.estimatedOverage)}`
+                      : `${usage?.allowanceRemaining ?? pricing.includedResolutions} included remaining`}
                   </div>
                 </div>
               </div>
@@ -518,7 +601,10 @@ export function SubscriptionBillingView({
                 {[
                   "7 days free before the first billing cycle",
                   "First 50 AI resolutions included",
-                  "Razorpay stores and secures payment details",
+                  `${provider === "paddle" ? "Paddle" : "Razorpay"} stores and secures payment details`,
+                  provider === "paddle"
+                    ? `${money(pricing.resolution)} per completed AI resolution after 50`
+                    : "Human handoff after the included allowance",
                   "Cancel at the end of the current cycle",
                 ].map((item) => (
                   <div
@@ -540,14 +626,26 @@ export function SubscriptionBillingView({
                 </div>
               )}
               {canEditSeats && !subscription?.cancelAtPeriodEnd && (
-                <button
-                  type="button"
-                  disabled={busy}
-                  onClick={() => void cancel()}
-                  className="mt-6 h-10 w-full rounded-[6px] border border-white/12 text-xs font-semibold text-white/62 hover:border-white/25 hover:text-white disabled:opacity-35"
-                >
-                  Cancel at period end
-                </button>
+                <div className="mt-6 grid gap-2">
+                  {provider === "paddle" && (
+                    <button
+                      type="button"
+                      disabled={busy}
+                      onClick={() => void managePayment()}
+                      className="h-10 w-full rounded-[6px] bg-white text-xs font-semibold text-[#17191d] disabled:opacity-35"
+                    >
+                      Manage payment and invoices
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onClick={() => void cancel()}
+                    className="h-10 w-full rounded-[6px] border border-white/12 text-xs font-semibold text-white/62 hover:border-white/25 hover:text-white disabled:opacity-35"
+                  >
+                    Cancel at period end
+                  </button>
+                </div>
               )}
             </section>
 
@@ -558,7 +656,7 @@ export function SubscriptionBillingView({
                   <h3 className="text-sm font-semibold">Payment controls</h3>
                   <p className="mt-2 text-xs leading-relaxed text-[#74777f]">
                     ResolveX never receives raw card or mandate details.
-                    Checkout authorisation happens on Razorpay, then a signed
+                    Checkout authorisation happens on {provider === "paddle" ? "Paddle" : "Razorpay"}, then a signed
                     response and signed webhooks update this workspace.
                   </p>
                 </div>

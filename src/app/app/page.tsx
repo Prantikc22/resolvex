@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { Workspace } from "@/components/workspace/Workspace";
 import { getCurrentOrganization } from "@/lib/supabase/current-org";
+import { billingConfigured } from "@/lib/billing/provider";
 
 export const metadata: Metadata = { title: "Workspace" };
 
@@ -33,11 +34,7 @@ export default async function AppPage() {
           "Workspace owner",
       }}
       capabilities={{
-        billing: Boolean(
-          process.env.RAZORPAY_KEY_ID &&
-          process.env.RAZORPAY_KEY_SECRET &&
-          process.env.RAZORPAY_PLAN_ID,
-        ),
+        billing: billingConfigured(),
       }}
     />
   );

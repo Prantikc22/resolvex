@@ -16,7 +16,7 @@ import { BillCalculator } from "@/components/marketing/BillCalculator";
 import { Header } from "@/components/marketing/Header";
 import { MarketingFooter } from "@/components/marketing/MarketingFooter";
 import { ResolveWidget } from "@/components/widget/ResolveWidget";
-import { pricing } from "@/lib/pricing";
+import { money, pricing } from "@/lib/pricing";
 
 const included = [
   [
@@ -68,7 +68,7 @@ const questions = [
   ],
   [
     "What counts as an AI resolution?",
-    "A resolution is counted when AI answers and closes the conversation without a human reply. The first 50 are included; after the allowance, new conversations are handed to your team without an overage charge.",
+    `A resolution is counted when AI answers and closes the conversation without a human reply. The first ${pricing.includedResolutions} are included each month; additional completed resolutions are ${money(pricing.resolution)} each. Drafts and human handoffs are not billed.`,
   ],
   [
     "How is voice billed?",
@@ -84,7 +84,7 @@ const questions = [
   ],
   [
     "Does the trial need a card?",
-    "No. The 7-day trial includes the complete product and 50 AI resolutions. Add payment details only when you decide to continue.",
+    "The 7-day trial includes the complete product and 50 AI resolutions. Paddle securely authorises a payment method at checkout, and the first subscription charge is due after the trial unless you cancel.",
   ],
 ];
 
@@ -115,8 +115,8 @@ export function PricingPage() {
               <p className="mt-7 max-w-2xl text-lg leading-relaxed text-white/52">
                 Every channel, workflow, report, and AI Copilot feature is
                 included. Full agents cost money. Collaborators do not. AI is
-                capped at 50 completed resolutions each month, then hands new
-                conversations to your team.
+                includes 50 completed resolutions each month, with transparent
+                usage pricing after that.
               </p>
             </motion.div>
             <motion.div
@@ -138,7 +138,7 @@ export function PricingPage() {
               <div className="mt-6 space-y-3 text-sm text-white/65">
                 {[
                   `${pricing.includedResolutions} AI resolutions included`,
-                  "No overage charges · human handoff after 50",
+                  `${money(pricing.resolution)} per completed resolution after 50`,
                   "Unlimited collaborators",
                   "No setup fee or annual lock-in",
                 ].map((item) => (
@@ -231,7 +231,7 @@ export function PricingPage() {
             [
               Sparkles,
               "AI resolution",
-              "The first 50 are included. After that, Arlo hands new conversations to your team without an overage.",
+              `The first 50 are included. Additional completed resolutions are ${money(pricing.resolution)} each; drafts and human handoffs are not billed.`,
             ],
             [
               Phone,

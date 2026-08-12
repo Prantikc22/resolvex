@@ -42,7 +42,7 @@ import { Header } from "@/components/marketing/Header";
 import { MarketingFooter } from "@/components/marketing/MarketingFooter";
 import { ResolveWidget } from "@/components/widget/ResolveWidget";
 import { blogPosts } from "@/lib/blog";
-import { pricing } from "@/lib/pricing";
+import { money, pricing } from "@/lib/pricing";
 import { cn } from "@/lib/utils";
 
 const ease = [0.22, 1, 0.36, 1] as const;
@@ -486,7 +486,7 @@ function Hero() {
                   href="/signup"
                   className="button-bright flex h-14 items-center justify-center gap-3 rounded-[6px] bg-[#ff5c35] px-7 text-sm font-semibold text-white shadow-[0_18px_50px_rgba(255,92,53,.28)]"
                 >
-                  Start free - no card <ArrowRight size={18} />
+                  Start 7-day free trial <ArrowRight size={18} />
                 </Link>
                 <Link
                   href="/demo"
@@ -549,7 +549,7 @@ function Hero() {
               href="/signup"
               className="button-bright flex h-14 items-center justify-center gap-2 rounded-[6px] bg-[#ff5c35] px-6 text-sm font-semibold text-white shadow-[0_18px_44px_rgba(255,92,53,.25)]"
             >
-              Start free - no card <ArrowRight size={16} />
+              Start 7-day free trial <ArrowRight size={16} />
             </Link>
             <Link
               href="/demo"
@@ -1387,7 +1387,7 @@ function VoiceSection() {
 function Comparison() {
   const rows = [
     ["Full agent seat", "$15 / month", "Often $50-$100+"],
-    ["AI allowance", "50 included · then human handoff", "Often usage-priced"],
+    ["AI resolutions", "50 included · then $0.39 each", "Often usage-priced"],
     ["Collaborators", "Unlimited", "Often paid"],
     ["Help center + widget", "Included", "Plan or add-on dependent"],
     ["Standard migration", "Included", "Often services-led"],
@@ -1475,9 +1475,9 @@ function PricingPreview() {
               </span>
             </div>
             <p className="mt-3 max-w-lg text-sm leading-relaxed text-[#666970]">
-              Everything is included. Arlo can complete up to{" "}
-              {pricing.includedResolutions} conversations each month, then
-              safely hands new requests to your team without an overage.
+              Everything is included. The first {pricing.includedResolutions}{" "}
+              completed AI resolutions each month are included, then each
+              additional completed resolution is {money(pricing.resolution)}.
             </p>
           </div>
         </Reveal>

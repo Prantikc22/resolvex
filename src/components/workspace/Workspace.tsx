@@ -1593,8 +1593,8 @@ function SettingsView({
                   <p className="mt-1 text-[10px] text-[#858b95]">
                     ResolveX One · USD ·{" "}
                     {billingConfigured
-                      ? "Razorpay connected"
-                      : "Razorpay keys required"}
+                      ? "Billing connected"
+                      : "Billing setup required"}
                   </p>
                 </div>
               </div>

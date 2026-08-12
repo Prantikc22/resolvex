@@ -243,7 +243,7 @@ export const helpArticles: HelpArticle[] = [
       {
         heading: "What affects the bill",
         paragraphs: [
-          "ResolveX charges for full agent seats and connected voice usage. Fifty AI resolutions are included each month; after that Arlo hands new conversations to people without an AI overage. Collaborators do not consume paid seats.",
+          "ResolveX charges for full agent seats and connected voice usage. Fifty AI resolutions are included each month; additional completed AI resolutions are $0.39 each. Drafts and human handoffs are not billed. Collaborators do not consume paid seats.",
         ],
       },
       {
@@ -289,7 +289,7 @@ export const helpArticles: HelpArticle[] = [
       {
         heading: "What counts",
         paragraphs: [
-          "A counted resolution requires a customer question, an Arlo answer grounded in approved knowledge, and a completed outcome without agent intervention. The monthly allowance is capped at 50 and does not create an overage.",
+          "A counted resolution requires a customer question, an Arlo answer grounded in approved knowledge, and a completed outcome without agent intervention. The first 50 each month are included and additional completed resolutions are billed at $0.39 each.",
         ],
       },
       {

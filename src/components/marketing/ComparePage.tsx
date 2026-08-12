@@ -13,7 +13,7 @@ const competitors = {
   freshdesk: {
     name: "Freshdesk",
     headline: "Freshdesk capability without the tier-by-tier assembly.",
-    copy: "ResolveX is built for teams that want the complete support operation from day one, with one paid-agent rate and a capped included AI allowance.",
+    copy: "ResolveX is built for teams that want the complete support operation from day one, with one paid-agent rate and transparent AI usage pricing.",
   },
 };
 
@@ -27,7 +27,7 @@ export function ComparePage({
     ["Published full-agent price", "$15 / month", "Varies by plan"],
     [
       "AI allowance",
-      "50 included · then human handoff",
+      "50 included · then $0.39 each",
       "Varies by AI product and plan",
     ],
     ["Collaborators", "Unlimited and free", "Plan dependent"],

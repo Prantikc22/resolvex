@@ -62,7 +62,7 @@ export async function POST(request: Request) {
     const requiredSeats = Math.max(1, (paidMembers ?? 0) + (paidInvites ?? 0));
     const purchasedSeats = Number(subscription?.metadata?.agents ?? 0);
     if (
-      !new Set(["active", "authenticated"]).has(subscription?.status ?? "") ||
+      !new Set(["active", "authenticated", "trialing"]).has(subscription?.status ?? "") ||
       purchasedSeats < requiredSeats
     ) {
       return NextResponse.json(

@@ -1,7 +1,7 @@
 export const pricing = {
   agent: 15,
   includedResolutions: 50,
-  resolution: 0,
+  resolution: 0.39,
   voicePlatformMinute: 0.02,
   trialDays: 7,
 };
@@ -12,8 +12,11 @@ export function estimateResolveX(
   voiceMinutes = 0,
 ) {
   const seatCost = Math.max(1, agents) * pricing.agent;
-  const billableResolutions = 0;
-  const aiCost = 0;
+  const billableResolutions = Math.max(
+    0,
+    resolutions - pricing.includedResolutions,
+  );
+  const aiCost = billableResolutions * pricing.resolution;
   const voicePlatformCost =
     Math.max(0, voiceMinutes) * pricing.voicePlatformMinute;
   return {

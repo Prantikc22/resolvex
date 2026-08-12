@@ -153,7 +153,7 @@ export function TeamBillingView() {
                   <span className="text-white/42">
                     50 AI resolutions included
                   </span>
-                  <span>No overage</span>
+                  <span>{money(estimate.aiCost)} overage</span>
                 </div>
                 <div className="h-px bg-white/10" />
                 <div className="flex justify-between text-base font-semibold">
@@ -163,7 +163,7 @@ export function TeamBillingView() {
               </div>
               <button
                 onClick={() =>
-                  toast.info("Add Razorpay keys to activate checkout")
+                  toast.info("Open the Billing tab to manage payment")
                 }
                 className="mt-6 h-11 w-full rounded-[5px] bg-white text-xs font-semibold text-[#17191d]"
               >

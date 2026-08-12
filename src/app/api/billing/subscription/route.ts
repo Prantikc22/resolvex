@@ -4,6 +4,13 @@ import { z } from "zod";
 import { pricing } from "@/lib/pricing";
 import { getCurrentOrganization } from "@/lib/supabase/current-org";
 import { requiredPaidSeats } from "@/lib/billing/seats";
+import { billingProvider } from "@/lib/billing/provider";
+import {
+  paddleDelete,
+  paddleGet,
+  paddlePatch,
+  paddlePost,
+} from "@/lib/billing/paddle-handlers";
 
 const agentsSchema = z.object({ agents: z.number().int().min(1).max(500) });
 const activeStatuses = new Set([
@@ -140,6 +147,7 @@ async function currentUsage(
 }
 
 export async function GET() {
+  if (billingProvider() === "paddle") return paddleGet();
   const { supabase, user, organizationId, membershipRole } =
     await getCurrentOrganization();
   if (!user) {
@@ -177,6 +185,7 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
+  if (billingProvider() === "paddle") return paddlePost(request);
   const { supabase, user, organizationId, membershipRole } =
     await getCurrentOrganization();
   if (!user) {
@@ -309,6 +318,7 @@ export async function POST(request: Request) {
 }
 
 export async function PATCH(request: Request) {
+  if (billingProvider() === "paddle") return paddlePatch(request);
   const { supabase, user, organizationId, membershipRole } =
     await getCurrentOrganization();
   if (!user) {
@@ -439,6 +449,7 @@ export async function PATCH(request: Request) {
 }
 
 export async function DELETE() {
+  if (billingProvider() === "paddle") return paddleDelete();
   const { supabase, user, organizationId, membershipRole } =
     await getCurrentOrganization();
   if (!user) {

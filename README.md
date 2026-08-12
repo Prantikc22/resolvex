@@ -9,7 +9,7 @@ ResolveX is a standalone customer-support platform that combines a shared inbox,
 - `/signup` and `/login` - Supabase-backed authentication
 - `/onboarding` - workspace, inbox, and AI-policy setup
 - `/app` - authenticated support workspace
-- `/api/billing/*` - Razorpay order, verification, and webhook endpoints
+- `/api/billing/*` - Paddle checkout, usage billing, portal, and webhook endpoints, with Razorpay compatibility during migration
 
 ## Local setup
 
@@ -38,7 +38,7 @@ NEXT_PUBLIC_RAZORPAY_KEY_ID=
 RAZORPAY_WEBHOOK_SECRET=
 ```
 
-Never expose the Supabase service-role key or Razorpay secret to browser code. The `NEXT_PUBLIC_*` values are the only client-readable variables.
+Never expose the Supabase service-role key, Paddle API key, webhook secret, or Razorpay secret to browser code. The `NEXT_PUBLIC_*` values are the only client-readable variables.
 
 ## Database
 
@@ -53,6 +53,14 @@ npm run db:migrate
 ## Razorpay
 
 Add the Razorpay keys to `.env.local`, configure the webhook URL as `/api/billing/webhook`, and set the same webhook secret in Razorpay and `RAZORPAY_WEBHOOK_SECRET`. Checkout can call `/api/billing/create-order`, then submit the returned payment details to `/api/billing/verify`.
+
+## Paddle
+
+Set `BILLING_PROVIDER=paddle`, add the Paddle API key, browser client token,
+seat price, overage price, and notification secret shown in `.env.example`.
+Configure signed notifications at `/api/billing/paddle/webhook`. The hourly
+usage job submits one idempotent charge per subscription period for completed
+AI resolutions above the 50 included allowance.
 
 ## Welcome email
 

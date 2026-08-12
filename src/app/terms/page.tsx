@@ -24,15 +24,16 @@ export default function TermsPage() {
         Paid subscriptions renew for the selected billing period until
         cancelled. Full-agent seats, voice usage, taxes, and any separately
         agreed enterprise services are charged as shown at checkout or in an
-        order form. The included AI allowance does not create an overage.
+        order form. Completed AI resolutions above the included monthly
+        allowance are usage-billed at the price displayed at checkout.
         Pricing details are published on the <a href="/pricing">Pricing page</a>
         .
       </p>
       <h2>Trials, cancellation, and refunds</h2>
       <p>
-        The standard trial does not require a card. Cancellation stops future
-        renewal and access continues through the paid period unless the account
-        is terminated for misuse. Refund eligibility and processing are
+        Paddle may securely authorise a payment method when a trial begins.
+        Cancellation stops future renewal and access continues through the paid
+        period unless the account is terminated for misuse. Refund eligibility and processing are
         described in our{" "}
         <a href="/refund-policy">Cancellation and refund policy</a>.
       </p>

@@ -148,7 +148,7 @@ export async function POST(request: Request) {
       Number(previousInvitationWasPaid),
   );
   const purchasedSeats = Number(subscription?.metadata?.agents ?? 0);
-  const subscriptionReady = new Set(["active", "authenticated"]).has(
+  const subscriptionReady = new Set(["active", "authenticated", "trialing"]).has(
     subscription?.status ?? "",
   );
   if (
@@ -254,7 +254,7 @@ export async function PATCH(request: Request) {
     const purchasedSeats = Number(subscription?.metadata?.agents ?? 0);
     const requiredAfterPromotion = currentRequiredSeats + 1;
     if (
-      !new Set(["active", "authenticated"]).has(subscription?.status ?? "") ||
+      !new Set(["active", "authenticated", "trialing"]).has(subscription?.status ?? "") ||
       purchasedSeats < requiredAfterPromotion
     ) {
       return NextResponse.json(
