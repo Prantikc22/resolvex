@@ -23,6 +23,7 @@ type Subscription = {
   pendingAgents: number | null;
   currentPeriodEnd: string | null;
   cancelAtPeriodEnd: boolean;
+  seatPaymentPending: boolean;
   shortUrl: string | null;
 };
 
@@ -42,6 +43,7 @@ type BillingResponse = {
     periodStart: string;
   };
   error?: string;
+  paymentPending?: boolean;
 };
 
 type CheckoutResponse = {
@@ -255,11 +257,15 @@ export function SubscriptionBillingView({
       if (!response.ok)
         throw new Error(data.error ?? "Could not update seats.");
       setSubscription(data.subscription ?? null);
-      toast.success(
-        agents > (subscription?.agents ?? 1)
-          ? "Paid seats updated now. Razorpay will apply proration."
-          : "Seat decrease scheduled for the next billing cycle.",
-      );
+      if (agents > (subscription?.agents ?? 1)) {
+        toast.success(
+          data.paymentPending
+            ? "Razorpay is collecting the prorated amount. The seat activates after payment confirmation."
+            : "The trial seat is authorised and will be included in the first monthly charge.",
+        );
+      } else {
+        toast.success("Seat decrease scheduled for the next billing cycle.");
+      }
     } catch (error) {
       toast.error(
         error instanceof Error ? error.message : "Could not update seats.",
@@ -424,8 +430,9 @@ export function SubscriptionBillingView({
               {subscription?.pendingAgents && (
                 <div className="mt-4 flex items-center gap-2 text-xs text-[#6e5c27]">
                   <CalendarClock size={14} />
-                  {subscription.pendingAgents} seats scheduled for the next
-                  cycle.
+                  {subscription.seatPaymentPending
+                    ? `${subscription.pendingAgents} seats pending Razorpay payment confirmation.`
+                    : `${subscription.pendingAgents} seats scheduled for the next cycle.`}
                 </div>
               )}
               <div className="mt-6 grid gap-3 sm:grid-cols-3">

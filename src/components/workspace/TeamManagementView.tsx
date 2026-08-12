@@ -22,6 +22,13 @@ type TeamData = {
   error?: string;
 };
 
+type TeamMutationResponse = {
+  error?: string;
+  warning?: string;
+  code?: string;
+  requiredSeats?: number;
+};
+
 export function TeamManagementView({
   billingConfigured,
 }: {
@@ -51,13 +58,15 @@ export function TeamManagementView({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, role }),
       });
-      const result = await response.json();
-      if (!response.ok)
+      const result = (await response.json()) as TeamMutationResponse;
+      if (!response.ok) {
+        if (result.code === "PAID_SEAT_REQUIRED") setTab("billing");
         throw new Error(result.error ?? "Could not send invitation.");
+      }
       setEmail("");
       await load();
       if (result.warning) toast.warning(result.warning);
-      else toast.success("Invitation sent and paid seats updated.");
+      else toast.success("Invitation sent using a purchased paid seat.");
     } catch (error) {
       toast.error(
         error instanceof Error ? error.message : "Could not invite teammate.",
@@ -74,10 +83,13 @@ export function TeamManagementView({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ userId, role: nextRole }),
       });
-      const result = await response.json();
-      if (!response.ok) throw new Error(result.error);
+      const result = (await response.json()) as TeamMutationResponse;
+      if (!response.ok) {
+        if (result.code === "PAID_SEAT_REQUIRED") setTab("billing");
+        throw new Error(result.error);
+      }
       await load();
-      toast.success("Role and billing seats updated.");
+      toast.success("Role updated within the purchased seat capacity.");
     } catch (error) {
       toast.error(
         error instanceof Error ? error.message : "Could not change role.",
@@ -131,7 +143,7 @@ export function TeamManagementView({
             </h2>
             <p className="mt-2 text-sm text-[#74777f]">
               Owners, admins, and agents are ${pricing.agent}/month. Viewers are
-              free.
+              free. Purchase capacity before inviting a paid teammate.
             </p>
           </div>
           <div className="rounded-lg bg-[#17191d] px-5 py-3 text-white">
@@ -154,6 +166,10 @@ export function TeamManagementView({
         </div>
         <section className="mt-6 rounded-lg border border-black/10 bg-white p-5">
           <h3 className="text-sm font-semibold">Invite a teammate</h3>
+          <p className="mt-1 text-[11px] leading-relaxed text-[#7b7f87]">
+            Paid invitations use an already-purchased seat. If none is
+            available, we will take you to Billing first.
+          </p>
           <div className="mt-4 grid gap-3 sm:grid-cols-[1fr_150px_auto]">
             <input
               type="email"

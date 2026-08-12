@@ -22,6 +22,7 @@ import {
   Filter,
   Inbox,
   Link2,
+  Loader2,
   Menu,
   MoreHorizontal,
   PanelRightClose,
@@ -34,12 +35,14 @@ import {
   SlidersHorizontal,
   Sparkles,
   RefreshCw,
+  LogOut,
   Users,
   WandSparkles,
   Workflow,
   X,
 } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import {
   Area,
@@ -51,6 +54,7 @@ import {
   YAxis,
 } from "recharts";
 import { toast } from "sonner";
+import { createClient as createBrowserClient } from "@/lib/supabase/client";
 import { Logo, Mark } from "@/components/brand/Logo";
 import {
   automations,
@@ -139,6 +143,21 @@ function Sidebar({
   workspaceName: string;
   demo: boolean;
 }) {
+  const router = useRouter();
+  const [signingOut, setSigningOut] = useState(false);
+  async function signOut() {
+    setSigningOut(true);
+    try {
+      const supabase = createBrowserClient();
+      const { error } = await supabase.auth.signOut();
+      if (error) throw error;
+      router.replace("/login");
+      router.refresh();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Could not log out");
+      setSigningOut(false);
+    }
+  }
   return (
     <aside
       className={cn(
@@ -229,6 +248,23 @@ function Sidebar({
               </div>
             </div>
           )}
+          <button
+            type="button"
+            disabled={signingOut}
+            onClick={() => void signOut()}
+            title="Log out"
+            aria-label="Log out"
+            className={cn(
+              "grid size-8 shrink-0 place-items-center rounded-[5px] text-white/40 hover:bg-white/8 hover:text-white disabled:opacity-40",
+              collapsed ? "hidden" : "ml-auto",
+            )}
+          >
+            {signingOut ? (
+              <Loader2 size={14} className="animate-spin" />
+            ) : (
+              <LogOut size={14} />
+            )}
+          </button>
         </div>
       </div>
     </aside>
@@ -1799,6 +1835,7 @@ export function Workspace({
   identity?: WorkspaceIdentity;
   capabilities?: WorkspaceCapabilities;
 }) {
+  const router = useRouter();
   const [view, setView] = useState<View>("inbox");
   const [collapsed, setCollapsed] = useState(false);
   const [mobile, setMobile] = useState(false);
@@ -1910,6 +1947,31 @@ export function Workspace({
                   <ArrowLeft size={14} />
                   Exit demo
                 </Link>
+              )}
+              {!demo && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    void createBrowserClient()
+                      .auth.signOut()
+                      .then(({ error }) => {
+                        if (error) throw error;
+                        router.replace("/login");
+                        router.refresh();
+                      })
+                      .catch((error) =>
+                        toast.error(
+                          error instanceof Error
+                            ? error.message
+                            : "Could not log out",
+                        ),
+                      );
+                  }}
+                  className="mt-8 flex h-10 w-full items-center gap-2 rounded-[5px] border border-white/10 px-3 text-xs text-white/55"
+                >
+                  <LogOut size={14} />
+                  Log out
+                </button>
               )}
             </motion.aside>
           </motion.div>

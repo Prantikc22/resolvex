@@ -102,10 +102,28 @@ export async function POST(request: Request) {
       { status: 400 },
     );
   const email = parsed.data.email.toLowerCase();
-  const { data: existingMembers } = await supabase
-    .from("memberships")
-    .select("user_id")
-    .eq("organization_id", organizationId);
+  const [
+    { data: existingMembers },
+    { data: existingInvitation },
+    { data: subscription },
+  ] = await Promise.all([
+    supabase
+      .from("memberships")
+      .select("user_id")
+      .eq("organization_id", organizationId),
+    supabase
+      .from("invitations")
+      .select("id,role")
+      .eq("organization_id", organizationId)
+      .eq("email", email)
+      .is("accepted_at", null)
+      .maybeSingle(),
+    supabase
+      .from("subscriptions")
+      .select("status,metadata")
+      .eq("organization_id", organizationId)
+      .maybeSingle(),
+  ]);
   const admin = createAdminClient();
   for (const member of existingMembers ?? []) {
     const { data } = await admin.auth.admin.getUserById(member.user_id);
@@ -114,6 +132,40 @@ export async function POST(request: Request) {
         { error: "That person is already a member." },
         { status: 409 },
       );
+  }
+  const currentRequiredSeats = await requiredPaidSeats(
+    supabase,
+    organizationId,
+  );
+  const previousInvitationWasPaid = Boolean(
+    existingInvitation && PAID_ROLES.has(existingInvitation.role),
+  );
+  const requestedRoleIsPaid = PAID_ROLES.has(parsed.data.role);
+  const requiredAfterInvite = Math.max(
+    1,
+    currentRequiredSeats +
+      Number(requestedRoleIsPaid) -
+      Number(previousInvitationWasPaid),
+  );
+  const purchasedSeats = Number(subscription?.metadata?.agents ?? 0);
+  const subscriptionReady = new Set(["active", "authenticated"]).has(
+    subscription?.status ?? "",
+  );
+  if (
+    requestedRoleIsPaid &&
+    (!subscriptionReady || purchasedSeats < requiredAfterInvite)
+  ) {
+    return NextResponse.json(
+      {
+        error: subscriptionReady
+          ? `Purchase ${requiredAfterInvite} paid seats before sending this invitation.`
+          : "Start or authorise the subscription before inviting a paid agent.",
+        code: "PAID_SEAT_REQUIRED",
+        requiredSeats: requiredAfterInvite,
+        purchasedSeats,
+      },
+      { status: 402 },
+    );
   }
   const { data: invitation, error } = await supabase
     .from("invitations")
@@ -136,16 +188,6 @@ export async function POST(request: Request) {
       { status: 500 },
     );
   const seats = await requiredPaidSeats(supabase, organizationId);
-  try {
-    if (PAID_ROLES.has(parsed.data.role))
-      await syncSubscriptionSeats(supabase, organizationId, seats);
-  } catch (seatError) {
-    await supabase.from("invitations").delete().eq("id", invitation.id);
-    return NextResponse.json(
-      { error: providerMessage(seatError) },
-      { status: 502 },
-    );
-  }
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
   try {
     await sendEmail({
@@ -198,6 +240,34 @@ export async function PATCH(request: Request) {
       { error: "The workspace owner role cannot be changed." },
       { status: 409 },
     );
+  const wasPaid = PAID_ROLES.has(previous.role);
+  const willBePaid = PAID_ROLES.has(parsed.data.role);
+  if (!wasPaid && willBePaid) {
+    const [{ data: subscription }, currentRequiredSeats] = await Promise.all([
+      supabase
+        .from("subscriptions")
+        .select("status,metadata")
+        .eq("organization_id", organizationId)
+        .maybeSingle(),
+      requiredPaidSeats(supabase, organizationId),
+    ]);
+    const purchasedSeats = Number(subscription?.metadata?.agents ?? 0);
+    const requiredAfterPromotion = currentRequiredSeats + 1;
+    if (
+      !new Set(["active", "authenticated"]).has(subscription?.status ?? "") ||
+      purchasedSeats < requiredAfterPromotion
+    ) {
+      return NextResponse.json(
+        {
+          error: `Purchase ${requiredAfterPromotion} paid seats before promoting this teammate.`,
+          code: "PAID_SEAT_REQUIRED",
+          requiredSeats: requiredAfterPromotion,
+          purchasedSeats,
+        },
+        { status: 402 },
+      );
+    }
+  }
   const { error } = await admin
     .from("memberships")
     .update({ role: parsed.data.role })
@@ -210,7 +280,8 @@ export async function PATCH(request: Request) {
     );
   try {
     const seats = await requiredPaidSeats(supabase, organizationId);
-    await syncSubscriptionSeats(supabase, organizationId, seats);
+    if (wasPaid && !willBePaid)
+      await syncSubscriptionSeats(supabase, organizationId, seats);
     return NextResponse.json({ updated: true, paidSeats: seats });
   } catch (seatError) {
     await admin

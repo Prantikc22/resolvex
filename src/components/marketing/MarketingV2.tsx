@@ -1484,10 +1484,16 @@ function PricingPreview() {
         <div className="mt-14">
           <BillCalculator />
         </div>
-        <div className="mt-6 text-center">
+        <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
+          <Link
+            href="/signup"
+            className="inline-flex h-12 items-center justify-center gap-2 rounded-[6px] bg-[#ff5c35] px-6 text-sm font-semibold text-white"
+          >
+            Get ResolveX now <ArrowRight size={15} />
+          </Link>
           <Link
             href="/pricing"
-            className="inline-flex items-center gap-2 text-sm font-semibold"
+            className="inline-flex h-12 items-center justify-center gap-2 rounded-[6px] border border-black/12 px-6 text-sm font-semibold"
           >
             See limits, voice rates, and every included feature{" "}
             <ArrowRight size={15} />

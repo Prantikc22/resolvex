@@ -48,6 +48,7 @@ function publicSubscription(row: StoredSubscription | null) {
             : Number(metadata.pending_agents),
         currentPeriodEnd: row.current_period_end,
         cancelAtPeriodEnd: Boolean(metadata.cancel_at_period_end),
+        seatPaymentPending: Boolean(metadata.seat_payment_pending),
         shortUrl:
           typeof metadata.short_url === "string" ? metadata.short_url : null,
       }
@@ -365,40 +366,72 @@ export async function PATCH(request: Request) {
       );
     }
 
-    const currentAgents = Number(current.metadata?.agents ?? 1);
-    const increasing = parsed.data.agents > currentAgents;
-    const updated = await razorpay.subscriptions.update(subscriptionId, {
-      quantity: parsed.data.agents,
-      schedule_change_at: increasing ? "now" : "cycle_end",
-      customer_notify: true,
-    });
     const metadata = current.metadata ?? {};
-    const { error } = await supabase
+    const currentAgents = Number(metadata.agents ?? 1);
+    const increasing = parsed.data.agents > currentAgents;
+    const trialAuthorised = current.status === "authenticated";
+    const pendingMetadata = increasing
+      ? {
+          ...metadata,
+          pending_agents: parsed.data.agents,
+          seat_change_scheduled: false,
+          seat_payment_pending: !trialAuthorised,
+          seat_change_requested_at: new Date().toISOString(),
+        }
+      : {
+          ...metadata,
+          pending_agents: parsed.data.agents,
+          seat_change_scheduled: true,
+          seat_payment_pending: false,
+        };
+    const { error: pendingError } = await supabase
       .from("subscriptions")
-      .update({
-        metadata: increasing
-          ? {
-              ...metadata,
-              agents: parsed.data.agents,
-              pending_agents: null,
-              seat_change_scheduled: false,
-            }
-          : {
-              ...metadata,
-              pending_agents: parsed.data.agents,
-              seat_change_scheduled: true,
-            },
-      })
+      .update({ metadata: pendingMetadata })
       .eq("organization_id", organizationId);
-    if (error) throw error;
+    if (pendingError) throw pendingError;
+
+    let updated;
+    try {
+      updated = await razorpay.subscriptions.update(subscriptionId, {
+        quantity: parsed.data.agents,
+        schedule_change_at: increasing ? "now" : "cycle_end",
+        customer_notify: true,
+      });
+    } catch (error) {
+      await supabase
+        .from("subscriptions")
+        .update({ metadata })
+        .eq("organization_id", organizationId);
+      throw error;
+    }
+
+    const effectiveMetadata =
+      increasing && trialAuthorised
+        ? {
+            ...pendingMetadata,
+            agents: parsed.data.agents,
+            pending_agents: null,
+            seat_payment_pending: false,
+          }
+        : pendingMetadata;
+    if (increasing && trialAuthorised) {
+      const { error } = await supabase
+        .from("subscriptions")
+        .update({ metadata: effectiveMetadata })
+        .eq("organization_id", organizationId);
+      if (error) throw error;
+    }
 
     return NextResponse.json({
       subscription: {
         ...publicSubscription(current),
-        agents: increasing ? parsed.data.agents : currentAgents,
-        pendingAgents: increasing ? null : parsed.data.agents,
+        agents:
+          increasing && trialAuthorised ? parsed.data.agents : currentAgents,
+        pendingAgents:
+          increasing && trialAuthorised ? null : parsed.data.agents,
         status: updated.status,
       },
+      paymentPending: increasing && !trialAuthorised,
     });
   } catch (error) {
     return NextResponse.json({ error: providerError(error) }, { status: 502 });

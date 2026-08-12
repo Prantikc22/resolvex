@@ -114,6 +114,18 @@ export async function POST(request: Request) {
   const nextEventIds = eventId
     ? [...processedEventIds.slice(-19), eventId]
     : processedEventIds;
+  const paymentConfirmed =
+    event.event === "payment.captured" ||
+    event.event === "order.paid" ||
+    event.event === "subscription.charged";
+  const confirmedAgents = paymentConfirmed
+    ? Number(
+        subscription?.quantity ??
+          metadata.pending_agents ??
+          metadata.agents ??
+          1,
+      )
+    : Number(metadata.agents ?? 1);
 
   const { error } = await admin.from("subscriptions").upsert(
     {
@@ -133,18 +145,17 @@ export async function POST(request: Request) {
         razorpay_payment_id: payment?.id,
         amount: payment?.amount ?? order?.amount,
         currency: payment?.currency ?? order?.currency,
-        agents: subscription?.quantity ?? notes.agents ?? metadata.agents,
+        agents: confirmedAgents,
         period_start: subscription?.current_start
           ? new Date(subscription.current_start * 1000).toISOString()
           : metadata.period_start,
-        pending_agents:
-          event.event === "subscription.updated"
-            ? null
-            : metadata.pending_agents,
-        seat_change_scheduled:
-          event.event === "subscription.updated"
-            ? false
-            : metadata.seat_change_scheduled,
+        pending_agents: paymentConfirmed ? null : metadata.pending_agents,
+        seat_payment_pending: paymentConfirmed
+          ? false
+          : metadata.seat_payment_pending,
+        seat_change_scheduled: paymentConfirmed
+          ? false
+          : metadata.seat_change_scheduled,
         cancel_at_period_end:
           event.event === "subscription.cancelled"
             ? false
