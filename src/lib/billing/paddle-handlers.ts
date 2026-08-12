@@ -143,19 +143,23 @@ export async function paddlePost(request: Request) {
   if (existing && ["active", "trialing", "past_due"].includes(existing.status ?? "")) {
     return NextResponse.json({ reused: true, provider: "paddle", subscription: publicSubscription(existing) });
   }
-  return NextResponse.json({
-    provider: "paddle",
-    clientToken: config.clientToken,
-    environment: config.environment,
-    priceId: config.seatPriceId,
-    agents: parsed.data.agents,
-    customer: { email: user.email ?? "" },
+  const transaction = await getPaddle().transactions.create({
+    items: [{ priceId: config.seatPriceId, quantity: parsed.data.agents }],
+    checkout: { url: "https://www.getresolvex.com/checkout" },
     customData: {
       organization_id: organizationId,
       user_id: user.id,
       plan: "one",
       agents: parsed.data.agents,
     },
+  });
+  return NextResponse.json({
+    provider: "paddle",
+    clientToken: config.clientToken,
+    environment: config.environment,
+    transactionId: transaction.id,
+    agents: parsed.data.agents,
+    customer: { email: user.email ?? "" },
   });
 }
 

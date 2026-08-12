@@ -52,6 +52,7 @@ type BillingResponse = {
   clientToken?: string;
   environment?: "sandbox" | "production";
   priceId?: string;
+  transactionId?: string;
   agents?: number;
   customData?: Record<string, unknown>;
 };
@@ -222,7 +223,7 @@ export function SubscriptionBillingView({
           toast.info("This workspace already has a Paddle subscription.");
           return;
         }
-        if (!data.clientToken || !data.priceId || !data.environment) {
+        if (!data.clientToken || !data.transactionId || !data.environment) {
           throw new Error("Paddle checkout configuration is incomplete.");
         }
         const paddle = await initializePaddle({
@@ -247,11 +248,7 @@ export function SubscriptionBillingView({
         });
         if (!paddle) throw new Error("Paddle Checkout did not initialize.");
         paddle.Checkout.open({
-          items: [{ priceId: data.priceId, quantity: data.agents ?? agents }],
-          ...(data.customer?.email
-            ? { customer: { email: data.customer.email } }
-            : {}),
-          customData: data.customData,
+          transactionId: data.transactionId,
           settings: {
             variant: "one-page",
             successUrl: `${window.location.origin}/app`,
