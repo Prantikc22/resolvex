@@ -87,10 +87,13 @@ function agentConfig(input: ElevenLabsAgentInput) {
       auth: { enable_auth: true },
       ...(postCallWebhookId
         ? {
-            webhooks: {
-              post_call_webhook_id: postCallWebhookId,
-              events: ["transcript", "call_initiation_failure"],
-              transcript_format: "resolve",
+            workspace_overrides: {
+              webhooks: {
+                post_call_webhook_id: postCallWebhookId,
+                events: ["transcript", "call_initiation_failure"],
+                transcript_format: "json",
+                send_audio: false,
+              },
             },
           }
         : {}),

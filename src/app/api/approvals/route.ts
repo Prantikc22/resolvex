@@ -202,7 +202,7 @@ export async function PATCH(request: Request) {
           executionError instanceof Error
             ? executionError.message
             : "Approved action failed.";
-        await Promise.all([
+        const failureUpdates = [
           supabase
             .from("approval_requests")
             .update({
@@ -219,7 +219,23 @@ export async function PATCH(request: Request) {
               completed_at: new Date().toISOString(),
             })
             .eq("approval_id", input.id),
-        ]);
+        ];
+        if (current.action_type === "phone_number_purchase") {
+          const phoneId = String(current.payload?.phone_number_id ?? "");
+          if (phoneId) {
+            failureUpdates.push(
+              supabase
+                .from("phone_numbers")
+                .update({
+                  status: "failed",
+                  updated_at: new Date().toISOString(),
+                })
+                .eq("id", phoneId)
+                .eq("organization_id", organizationId),
+            );
+          }
+        }
+        await Promise.all(failureUpdates);
         return NextResponse.json(
           { error: `Approval recorded, but execution failed: ${message}` },
           { status: 502 },
