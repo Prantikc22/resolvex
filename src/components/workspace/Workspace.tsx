@@ -1581,6 +1581,15 @@ function SettingsView({
         ),
       );
   }, []);
+  useEffect(() => {
+    const press = (event: PointerEvent) => {
+      const target = event.target as HTMLElement | null;
+      if (!target?.closest("button, a, [role='button']")) return;
+      if ("vibrate" in navigator) navigator.vibrate(8);
+    };
+    document.addEventListener("pointerdown", press, { passive: true });
+    return () => document.removeEventListener("pointerdown", press);
+  }, []);
 
   async function save() {
     setSaving(true);
@@ -1712,7 +1721,16 @@ function MessengerSettings() {
   const [key, setKey] = useState("");
   const [enabled, setEnabled] = useState(true);
   const [loading, setLoading] = useState(true);
-  const [origin, setOrigin] = useState("https://your-domain.com");
+  const [branding, setBranding] = useState({
+    accent: "#ff5c35",
+    headerColor: "#111318",
+    agentName: "Arlo",
+    welcomeTitle: "How can we help?",
+    welcomeMessage:
+      "Ask naturally. We answer from approved knowledge or bring in a person.",
+    logoUrl: "",
+    position: "right" as "left" | "right",
+  });
 
   useEffect(() => {
     fetch("/api/workspace/widget")
@@ -1720,9 +1738,17 @@ function MessengerSettings() {
       .then(({ response, data }) => {
         if (!response.ok)
           throw new Error(data.error ?? "Could not load messenger settings");
-        setOrigin(window.location.origin);
         setKey(data.key);
         setEnabled(data.enabled);
+        setBranding({
+          accent: data.accent ?? "#ff5c35",
+          headerColor: data.headerColor ?? "#111318",
+          agentName: data.agentName ?? "Arlo",
+          welcomeTitle: data.welcomeTitle ?? "How can we help?",
+          welcomeMessage: data.welcomeMessage ?? "",
+          logoUrl: data.logoUrl ?? "",
+          position: data.position === "left" ? "left" : "right",
+        });
       })
       .catch((error) =>
         toast.error(
@@ -1735,7 +1761,10 @@ function MessengerSettings() {
   }, []);
 
   async function update(
-    body: { action: "rotate" } | { action: "toggle"; enabled: boolean },
+    body:
+      | { action: "rotate" }
+      | { action: "toggle"; enabled: boolean }
+      | ({ action: "customize" } & typeof branding),
   ) {
     setLoading(true);
     try {
@@ -1748,12 +1777,18 @@ function MessengerSettings() {
       if (!response.ok) throw new Error(data.error ?? "Update failed");
       setKey(data.key);
       setEnabled(data.enabled);
+      if (body.action === "customize") {
+        const { action: _action, ...nextBranding } = body;
+        setBranding(nextBranding);
+      }
       toast.success(
         body.action === "rotate"
           ? "Messenger key rotated"
-          : data.enabled
-            ? "Messenger enabled"
-            : "Messenger paused",
+          : body.action === "customize"
+            ? "Messenger branding saved"
+            : data.enabled
+              ? "Messenger enabled"
+              : "Messenger paused",
       );
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Update failed");
@@ -1762,7 +1797,7 @@ function MessengerSettings() {
     }
   }
 
-  const snippet = `<script src="${origin}/resolvex-widget.js" data-workspace="${key || "YOUR_PUBLIC_WIDGET_KEY"}" async></script>`;
+  const snippet = `<script src="https://www.getresolvex.com/resolvex-widget.js" data-workspace="${key || "YOUR_PUBLIC_WIDGET_KEY"}" async></script>`;
 
   return (
     <section className="rounded-[7px] border border-black/10 bg-white p-5 md:p-6">
@@ -1791,6 +1826,134 @@ function MessengerSettings() {
         <code className="block break-all text-[10px] leading-relaxed">
           {loading ? "Loading workspace key..." : snippet}
         </code>
+      </div>
+      <div className="mt-5 border-t border-black/8 pt-5">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <h4 className="text-sm font-semibold">Brand and voice</h4>
+            <p className="mt-1 text-xs text-[#858b95]">
+              These settings update every installed widget without changing the
+              script tag.
+            </p>
+          </div>
+          <div
+            className="size-10 rounded-full border-4 border-white shadow-md"
+            style={{ backgroundColor: branding.accent }}
+          />
+        </div>
+        <div className="mt-4 grid gap-4 md:grid-cols-2">
+          <label className="text-xs font-semibold">
+            Assistant name
+            <input
+              value={branding.agentName}
+              onChange={(event) =>
+                setBranding((value) => ({
+                  ...value,
+                  agentName: event.target.value,
+                }))
+              }
+              className="mt-2 h-11 w-full rounded-[6px] border border-black/10 px-3 font-normal"
+            />
+          </label>
+          <label className="text-xs font-semibold">
+            Logo URL
+            <input
+              value={branding.logoUrl}
+              onChange={(event) =>
+                setBranding((value) => ({
+                  ...value,
+                  logoUrl: event.target.value,
+                }))
+              }
+              placeholder="https://…/logo.png"
+              className="mt-2 h-11 w-full rounded-[6px] border border-black/10 px-3 font-normal"
+            />
+          </label>
+          <label className="text-xs font-semibold">
+            Accent colour
+            <div className="mt-2 flex h-11 items-center gap-2 rounded-[6px] border border-black/10 px-2">
+              <input
+                type="color"
+                value={branding.accent}
+                onChange={(event) =>
+                  setBranding((value) => ({
+                    ...value,
+                    accent: event.target.value,
+                  }))
+                }
+                className="size-8 border-0 bg-transparent"
+              />
+              <span className="text-xs">{branding.accent}</span>
+            </div>
+          </label>
+          <label className="text-xs font-semibold">
+            Header colour
+            <div className="mt-2 flex h-11 items-center gap-2 rounded-[6px] border border-black/10 px-2">
+              <input
+                type="color"
+                value={branding.headerColor}
+                onChange={(event) =>
+                  setBranding((value) => ({
+                    ...value,
+                    headerColor: event.target.value,
+                  }))
+                }
+                className="size-8 border-0 bg-transparent"
+              />
+              <span className="text-xs">{branding.headerColor}</span>
+            </div>
+          </label>
+          <label className="text-xs font-semibold md:col-span-2">
+            Welcome heading
+            <input
+              value={branding.welcomeTitle}
+              onChange={(event) =>
+                setBranding((value) => ({
+                  ...value,
+                  welcomeTitle: event.target.value,
+                }))
+              }
+              className="mt-2 h-11 w-full rounded-[6px] border border-black/10 px-3 font-normal"
+            />
+          </label>
+          <label className="text-xs font-semibold md:col-span-2">
+            Welcome message
+            <textarea
+              rows={3}
+              value={branding.welcomeMessage}
+              onChange={(event) =>
+                setBranding((value) => ({
+                  ...value,
+                  welcomeMessage: event.target.value,
+                }))
+              }
+              className="mt-2 w-full rounded-[6px] border border-black/10 p-3 font-normal"
+            />
+          </label>
+          <label className="text-xs font-semibold">
+            Launcher position
+            <select
+              value={branding.position}
+              onChange={(event) =>
+                setBranding((value) => ({
+                  ...value,
+                  position: event.target.value === "left" ? "left" : "right",
+                }))
+              }
+              className="mt-2 h-11 w-full rounded-[6px] border border-black/10 px-3 font-normal"
+            >
+              <option value="right">Bottom right</option>
+              <option value="left">Bottom left</option>
+            </select>
+          </label>
+          <button
+            disabled={loading}
+            onClick={() => void update({ action: "customize", ...branding })}
+            className="mt-auto h-11 rounded-[6px] bg-[#101114] px-4 text-xs font-semibold text-white disabled:opacity-50"
+          >
+            {loading ? "Saving…" : "Save widget design"}
+          </button>
+        </div>
       </div>
       <div className="mt-3 flex flex-wrap gap-2">
         <button
@@ -2003,7 +2166,7 @@ export function Workspace({
     }
   }, [view, demo, capabilities, identity]);
   return (
-    <main className="flex h-screen overflow-hidden bg-[#0b0d12]">
+    <main className="workspace-ui flex h-screen overflow-hidden bg-[#0b0d12]">
       <Sidebar
         active={view}
         onChange={setView}

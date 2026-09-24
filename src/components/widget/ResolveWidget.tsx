@@ -40,6 +40,13 @@ export function WidgetPanel({
   const [sessionId, setSessionId] = useState("");
   const [workspaceName, setWorkspaceName] = useState("ResolveX");
   const [accent, setAccent] = useState("#ff5c35");
+  const [headerColor, setHeaderColor] = useState("#111318");
+  const [agentName, setAgentName] = useState("Arlo");
+  const [welcomeTitle, setWelcomeTitle] = useState("How can we help?");
+  const [welcomeMessage, setWelcomeMessage] = useState(
+    "Ask naturally. The answer cites approved knowledge or brings in a person with the context ready.",
+  );
+  const [logoUrl, setLogoUrl] = useState("");
 
   useEffect(() => {
     if (!workspaceKey) return;
@@ -60,6 +67,14 @@ export function WidgetPanel({
       .then((data) => {
         setWorkspaceName(data.name ?? "Support");
         setAccent(data.accent ?? "#ff5c35");
+        setHeaderColor(data.headerColor ?? "#111318");
+        setAgentName(data.agent ?? "Arlo");
+        setWelcomeTitle(data.welcomeTitle ?? "How can we help?");
+        setWelcomeMessage(
+          data.welcomeMessage ??
+            "Ask naturally. We answer from approved knowledge or bring in a person.",
+        );
+        setLogoUrl(data.logoUrl ?? "");
       })
       .catch(() => setWorkspaceName("Support"));
   }, [workspaceKey]);
@@ -135,15 +150,28 @@ export function WidgetPanel({
           : "h-[min(650px,calc(100vh-7rem))] w-[min(392px,calc(100vw-1.5rem))] flex-col",
       )}
     >
-      <header className="relative overflow-hidden bg-[#111318] px-5 pb-5 pt-5 text-white">
+      <header
+        className="relative overflow-hidden px-5 pb-5 pt-5 text-white"
+        style={{ backgroundColor: headerColor }}
+      >
         <div className="absolute -right-14 -top-20 size-52 rounded-full bg-[#ff5c35]/18 blur-3xl" />
         <div className="absolute -bottom-24 -left-14 size-44 rounded-full bg-[#d8ff70]/10 blur-3xl" />
         <div className="relative flex items-center justify-between gap-3">
           <div className="flex items-center gap-2">
-            <Mark className="size-10 rounded-[12px] ring-1 ring-white/15" />
+            {logoUrl ? (
+              <span
+                aria-label={`${workspaceName} logo`}
+                className="size-10 rounded-[12px] bg-white bg-contain bg-center bg-no-repeat ring-1 ring-white/15"
+                style={{
+                  backgroundImage: `url("${logoUrl.replaceAll('"', "%22")}")`,
+                }}
+              />
+            ) : (
+              <Mark className="size-10 rounded-[12px] ring-1 ring-white/15" />
+            )}
             <div>
               <div className="text-[15px] font-semibold tracking-[-.02em]">
-                Arlo from {workspaceName}
+                {agentName} from {workspaceName}
               </div>
               <div className="mt-0.5 flex items-center gap-1.5 text-[10px] text-white/48">
                 <span className="size-1.5 rounded-full bg-[#b9f46b] shadow-[0_0_12px_rgba(185,244,107,.7)]" />
@@ -184,11 +212,10 @@ export function WidgetPanel({
                 <Sparkles size={22} />
               </span>
               <h2 className="mt-5 font-display text-[2rem] leading-none">
-                How can we help?
+                {welcomeTitle}
               </h2>
               <p className="mx-auto mt-3 max-w-xs text-[13px] leading-relaxed text-[#74777e]">
-                Ask naturally. The answer cites approved knowledge or brings in
-                a person with the context ready.
+                {welcomeMessage}
               </p>
             </div>
             <div className="space-y-2 pb-2">
@@ -284,7 +311,7 @@ export function WidgetPanel({
           </div>
         </div>
         <div className="mt-2 text-center text-[10px] text-[#9a9ca1]">
-          Arlo AI · Powered by <b className="text-[#676970]">ResolveX</b>
+          {agentName} AI · Powered by <b className="text-[#676970]">ResolveX</b>
         </div>
       </form>
     </motion.section>

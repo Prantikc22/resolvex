@@ -104,6 +104,7 @@ type Employee = {
   knowledge_source_ids: string[];
   connected_toolkits: string[];
   assigned_channels: string[];
+  escalation_rules: { transfer_to_number?: string };
   usage_budget_cents: number;
   provider: string | null;
   external_agent_id: string | null;
@@ -146,6 +147,7 @@ export function AIEmployeesView() {
   const [name, setName] = useState("Arlo Support");
   const [instructions, setInstructions] = useState("");
   const [voice, setVoice] = useState(false);
+  const [transferToNumber, setTransferToNumber] = useState("");
   const [busy, setBusy] = useState<string | null>(null);
 
   const load = useCallback(async () => {
@@ -181,6 +183,12 @@ export function AIEmployeesView() {
         templateType: selectedTemplate,
         instructions: instructions || templates[selectedTemplate]?.instructions,
         assignedChannels: voice ? ["chat", "voice"] : ["chat"],
+        escalationRules: {
+          always_allow_human: true,
+          ...(transferToNumber.trim()
+            ? { transfer_to_number: transferToNumber.trim() }
+            : {}),
+        },
         connectedToolkits:
           templates[selectedTemplate]?.recommendedToolkits ?? [],
       }),
@@ -329,6 +337,23 @@ export function AIEmployeesView() {
               className="mt-2 w-full rounded-[6px] border border-black/10 p-3 font-normal leading-5 outline-none focus:border-[#355cff]"
             />
           </label>
+          {voice && (
+            <label className="mt-4 block text-xs font-semibold">
+              Human transfer number (optional)
+              <input
+                value={transferToNumber}
+                onChange={(event) => setTransferToNumber(event.target.value)}
+                placeholder="+14155550123"
+                pattern="^\+[1-9][0-9]{7,14}$"
+                className="mt-2 h-11 w-full rounded-[6px] border border-black/10 px-3 font-normal outline-none focus:border-[#355cff]"
+              />
+              <span className="mt-1 block text-[10px] font-normal text-[#777c85]">
+                Use E.164 format. Voice calls can conference-transfer here when
+                the caller asks for a human or the request needs human
+                authority.
+              </span>
+            </label>
+          )}
           <div className="mt-5 flex flex-wrap items-center justify-between gap-3 border-t border-black/8 pt-5">
             <p className="text-[10px] text-[#777c85]">
               Knowledge, apps, channels, testing, and activation stay editable
@@ -400,8 +425,19 @@ export function AIEmployeesView() {
                 {employee.last_error}
               </p>
             )}
+            {employee.escalation_rules?.transfer_to_number && (
+              <p className="mt-3 rounded-[6px] bg-[#eef3ff] p-3 text-[10px] text-[#35518f]">
+                Human transfer: {employee.escalation_rules.transfer_to_number}
+              </p>
+            )}
             {employee.external_agent_id && employee.status === "active" && (
               <div className="mt-4">
+                <div className="mb-3 rounded-[7px] border border-[#c8e99c] bg-[#f3ffe4] p-3 text-[10px] leading-5 text-[#345d17]">
+                  <b>{employee.name} is live.</b> Website chat now uses this
+                  employee’s instructions and approved knowledge. Add the widget
+                  in Channels → Messenger; use the panel below for a browser
+                  voice test.
+                </div>
                 <VoiceTester employee={employee} />
               </div>
             )}
@@ -412,7 +448,12 @@ export function AIEmployeesView() {
                   onClick={() => void action(employee, "activate")}
                   className="flex h-9 items-center gap-2 rounded-[5px] bg-[#15171b] px-3 text-[10px] font-semibold text-white disabled:opacity-50"
                 >
-                  <Play size={12} /> Activate
+                  {busy === employee.id ? (
+                    <Loader2 size={12} className="animate-spin" />
+                  ) : (
+                    <Play size={12} />
+                  )}{" "}
+                  Activate
                 </button>
               ) : (
                 <button
@@ -420,7 +461,12 @@ export function AIEmployeesView() {
                   onClick={() => void action(employee, "pause")}
                   className="flex h-9 items-center gap-2 rounded-[5px] border border-black/10 px-3 text-[10px] font-semibold"
                 >
-                  <Pause size={12} /> Pause
+                  {busy === employee.id ? (
+                    <Loader2 size={12} className="animate-spin" />
+                  ) : (
+                    <Pause size={12} />
+                  )}{" "}
+                  Pause
                 </button>
               )}
               <button
@@ -830,6 +876,7 @@ export function CRMView({
 
 type Approval = {
   id: string;
+  action_type: string;
   title: string;
   risk: string;
   status: string;
@@ -840,6 +887,7 @@ type Approval = {
 export function ApprovalsView() {
   const [items, setItems] = useState<Approval[]>([]);
   const [loading, setLoading] = useState(true);
+  const [deciding, setDeciding] = useState<string | null>(null);
   const load = useCallback(async () => {
     const response = await fetch("/api/approvals", { cache: "no-store" });
     const data = await response.json();
@@ -851,14 +899,33 @@ export function ApprovalsView() {
     queueMicrotask(() => void load());
   }, [load]);
   async function decide(id: string, decision: "approved" | "rejected") {
+    const item = items.find((approval) => approval.id === id);
+    if (
+      decision === "approved" &&
+      item?.action_type === "phone_number_purchase" &&
+      !window.confirm(
+        "Approve and purchase this number now? Provider rental and setup charges may be applied immediately.",
+      )
+    )
+      return;
+    setDeciding(id);
     const response = await fetch("/api/approvals", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ id, decision }),
     });
     const data = await response.json();
-    if (!response.ok) return toast.error(data.error);
-    toast.success(`Request ${decision}.`);
+    setDeciding(null);
+    if (!response.ok) {
+      toast.error(data.error);
+      await load();
+      return;
+    }
+    toast.success(
+      data.approval?.status === "executed"
+        ? "Approved action executed successfully."
+        : `Request ${decision}.`,
+    );
     await load();
   }
   if (loading) return <Loading />;
@@ -899,16 +966,22 @@ export function ApprovalsView() {
             {item.status === "pending" && (
               <div className="flex gap-2">
                 <button
+                  disabled={deciding === item.id}
                   onClick={() => void decide(item.id, "rejected")}
                   className="h-8 rounded-[5px] border border-black/10 px-3 text-[10px] font-semibold"
                 >
                   Reject
                 </button>
                 <button
+                  disabled={deciding === item.id}
                   onClick={() => void decide(item.id, "approved")}
                   className="h-8 rounded-[5px] bg-[#15171b] px-3 text-[10px] font-semibold text-white"
                 >
-                  Approve
+                  {deciding === item.id ? (
+                    <Loader2 size={13} className="animate-spin" />
+                  ) : (
+                    "Approve & run"
+                  )}
                 </button>
               </div>
             )}
@@ -1032,12 +1105,33 @@ type IntegrationData = {
   catalog: Array<{ slug: string; name: string; category: string }>;
   connections: Array<{ id: string; toolkit: string; status: string }>;
   pending: Array<{ provider: string; status: string }>;
+  employees?: Array<{
+    id: string;
+    name: string;
+    status: string;
+    connected_toolkits: string[];
+  }>;
+};
+
+type ComposioTool = {
+  slug: string;
+  name: string;
+  description: string;
+  inputParameters: Record<string, unknown>;
+  tags: string[];
 };
 
 export function ConnectView() {
   const [data, setData] = useState<IntegrationData | null>(null);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState<string | null>(null);
+  const [toolkit, setToolkit] = useState("");
+  const [tools, setTools] = useState<ComposioTool[]>([]);
+  const [selectedTool, setSelectedTool] = useState<ComposioTool | null>(null);
+  const [toolSearch, setToolSearch] = useState("");
+  const [toolArguments, setToolArguments] = useState("{}");
+  const [employeeId, setEmployeeId] = useState("");
+  const [toolResult, setToolResult] = useState<unknown>(null);
   const load = useCallback(async () => {
     const response = await fetch("/api/integrations/composio", {
       cache: "no-store",
@@ -1077,6 +1171,56 @@ export function ConnectView() {
     setBusy(null);
     if (!response.ok) return toast.error(result.error);
     await load();
+  }
+  async function browseActions(nextToolkit: string, search = "") {
+    setToolkit(nextToolkit);
+    setBusy(`tools:${nextToolkit}`);
+    setSelectedTool(null);
+    setToolResult(null);
+    const response = await fetch(
+      `/api/integrations/composio?toolkit=${encodeURIComponent(nextToolkit)}${search ? `&search=${encodeURIComponent(search)}` : ""}`,
+      { cache: "no-store" },
+    );
+    const result = await response.json();
+    setBusy(null);
+    if (!response.ok) return toast.error(result.error);
+    setTools(result.tools ?? []);
+    const eligible = (data?.employees ?? []).find((employee) =>
+      employee.connected_toolkits.includes(nextToolkit),
+    );
+    setEmployeeId(eligible?.id ?? "");
+  }
+  async function testAction() {
+    if (!selectedTool || !employeeId) return;
+    let parsedArguments: Record<string, unknown>;
+    try {
+      parsedArguments = JSON.parse(toolArguments) as Record<string, unknown>;
+    } catch {
+      return toast.error("Arguments must be valid JSON.");
+    }
+    setBusy(`run:${selectedTool.slug}`);
+    setToolResult(null);
+    const response = await fetch("/api/tools/execute", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        employeeId,
+        toolkit,
+        toolSlug: selectedTool.slug,
+        arguments: parsedArguments,
+        idempotencyKey: crypto.randomUUID(),
+      }),
+    });
+    const result = await response.json();
+    setBusy(null);
+    setToolResult(result);
+    if (!response.ok && response.status !== 202)
+      return toast.error(result.error ?? "Action failed.");
+    toast.success(
+      response.status === 202
+        ? "Approval requested. It will execute immediately after approval."
+        : "Action completed and logged.",
+    );
   }
   if (loading || !data) return <Loading />;
   const connections = new Map(
@@ -1161,10 +1305,171 @@ export function ConnectView() {
                     : "Connect"}
                 <ArrowRight size={13} />
               </button>
+              {connection?.status === "active" && (
+                <button
+                  disabled={busy === `tools:${item.slug}`}
+                  onClick={() => void browseActions(item.slug)}
+                  className="mt-3 flex h-9 items-center justify-center gap-2 rounded-[6px] bg-[#15171b] px-3 text-xs font-semibold text-white disabled:opacity-50"
+                >
+                  {busy === `tools:${item.slug}` ? (
+                    <Loader2 size={13} className="animate-spin" />
+                  ) : (
+                    <Search size={13} />
+                  )}
+                  Browse actions
+                </button>
+              )}
             </article>
           );
         })}
       </div>
+      {toolkit && (
+        <section className="mt-6 rounded-[12px] border border-black/10 bg-white p-5 shadow-sm md:p-6">
+          <div className="flex flex-wrap items-end justify-between gap-4">
+            <div>
+              <p className="text-xs font-bold uppercase tracking-[.12em] text-[#6f747d]">
+                Connected action runner
+              </p>
+              <h3 className="mt-2 text-xl font-semibold capitalize">
+                {toolkit} actions
+              </h3>
+              <p className="mt-2 text-sm text-[#717680]">
+                Read-only actions run now. Consequential actions stop in
+                Approvals and execute as soon as you approve them.
+              </p>
+            </div>
+            <button
+              onClick={() => {
+                setToolkit("");
+                setTools([]);
+                setSelectedTool(null);
+              }}
+              className="grid size-10 place-items-center rounded-full border border-black/10"
+              aria-label="Close action runner"
+            >
+              <X size={16} />
+            </button>
+          </div>
+          <form
+            className="mt-5 flex gap-2"
+            onSubmit={(event) => {
+              event.preventDefault();
+              void browseActions(toolkit, toolSearch);
+            }}
+          >
+            <input
+              value={toolSearch}
+              onChange={(event) => setToolSearch(event.target.value)}
+              placeholder="Search actions, for example list messages"
+              className="h-11 min-w-0 flex-1 rounded-[6px] border border-black/10 px-3 text-sm"
+            />
+            <button className="h-11 rounded-[6px] bg-[#355cff] px-4 text-sm font-semibold text-white">
+              Search
+            </button>
+          </form>
+          <div className="mt-5 grid gap-5 lg:grid-cols-[.85fr_1.15fr]">
+            <div className="max-h-[440px] space-y-2 overflow-y-auto pr-1">
+              {tools.map((tool) => (
+                <button
+                  key={tool.slug}
+                  onClick={() => {
+                    setSelectedTool(tool);
+                    setToolArguments("{}");
+                    setToolResult(null);
+                  }}
+                  className={cn(
+                    "w-full rounded-[8px] border p-4 text-left transition",
+                    selectedTool?.slug === tool.slug
+                      ? "border-[#355cff] bg-[#edf1ff]"
+                      : "border-black/10 hover:border-black/25",
+                  )}
+                >
+                  <b className="text-sm">{tool.name}</b>
+                  <span className="mt-1 block text-xs leading-5 text-[#737983]">
+                    {tool.description || tool.slug}
+                  </span>
+                </button>
+              ))}
+              {!tools.length && (
+                <Empty
+                  title="No matching actions"
+                  copy="Try a broader search or refresh the connected account."
+                />
+              )}
+            </div>
+            <div className="rounded-[9px] bg-[#f5f6f8] p-5">
+              {selectedTool ? (
+                <>
+                  <h4 className="text-lg font-semibold">{selectedTool.name}</h4>
+                  <p className="mt-1 break-all font-mono text-xs text-[#737983]">
+                    {selectedTool.slug}
+                  </p>
+                  <label className="mt-5 block text-xs font-semibold">
+                    Run as AI employee
+                    <select
+                      value={employeeId}
+                      onChange={(event) => setEmployeeId(event.target.value)}
+                      className="mt-2 h-11 w-full rounded-[6px] border border-black/10 bg-white px-3 font-normal"
+                    >
+                      <option value="">Choose an active employee</option>
+                      {(data.employees ?? [])
+                        .filter((employee) =>
+                          employee.connected_toolkits.includes(toolkit),
+                        )
+                        .map((employee) => (
+                          <option key={employee.id} value={employee.id}>
+                            {employee.name}
+                          </option>
+                        ))}
+                    </select>
+                  </label>
+                  <label className="mt-4 block text-xs font-semibold">
+                    JSON arguments
+                    <textarea
+                      rows={7}
+                      value={toolArguments}
+                      onChange={(event) => setToolArguments(event.target.value)}
+                      className="mt-2 w-full rounded-[6px] border border-black/10 bg-white p-3 font-mono text-xs leading-5"
+                    />
+                  </label>
+                  <details className="mt-3 text-xs text-[#68707c]">
+                    <summary className="cursor-pointer font-semibold">
+                      Input schema
+                    </summary>
+                    <pre className="mt-2 max-h-44 overflow-auto whitespace-pre-wrap rounded-[6px] bg-white p-3 text-xs">
+                      {JSON.stringify(selectedTool.inputParameters, null, 2)}
+                    </pre>
+                  </details>
+                  <button
+                    disabled={
+                      !employeeId || busy === `run:${selectedTool.slug}`
+                    }
+                    onClick={() => void testAction()}
+                    className="mt-4 flex h-11 w-full items-center justify-center gap-2 rounded-[6px] bg-[#15171b] text-sm font-semibold text-white disabled:opacity-40"
+                  >
+                    {busy === `run:${selectedTool.slug}` ? (
+                      <Loader2 size={15} className="animate-spin" />
+                    ) : (
+                      <Play size={15} />
+                    )}
+                    Run test
+                  </button>
+                  {toolResult !== null && (
+                    <pre className="mt-4 max-h-60 overflow-auto whitespace-pre-wrap rounded-[6px] bg-[#101114] p-4 text-xs leading-5 text-[#d8ff70]">
+                      {JSON.stringify(toolResult, null, 2)}
+                    </pre>
+                  )}
+                </>
+              ) : (
+                <Empty
+                  title="Choose an action"
+                  copy="Its parameters and guarded test runner will appear here."
+                />
+              )}
+            </div>
+          </div>
+        </section>
+      )}
     </ModuleShell>
   );
 }
@@ -1189,11 +1494,20 @@ type StoredNumber = {
   monthly_cost_minor: number | null;
   currency: string | null;
 };
+type VoiceEmployeeOption = { id: string; name: string };
 
 export function PhoneNumbersView() {
   const [numbers, setNumbers] = useState<StoredNumber[]>([]);
   const [available, setAvailable] = useState<AvailableNumber[]>([]);
   const [country, setCountry] = useState("US");
+  const [numberType, setNumberType] = useState("local");
+  const [voiceEmployees, setVoiceEmployees] = useState<VoiceEmployeeOption[]>(
+    [],
+  );
+  const [employeeId, setEmployeeId] = useState("");
+  const [complianceApplicationId, setComplianceApplicationId] = useState("");
+  const [searchMessage, setSearchMessage] = useState("");
+  const [requesting, setRequesting] = useState<string | null>(null);
   const [configured, setConfigured] = useState(false);
   const [loading, setLoading] = useState(true);
   const [searching, setSearching] = useState(false);
@@ -1204,6 +1518,8 @@ export function PhoneNumbersView() {
         if (response.ok) {
           setNumbers(data.numbers ?? []);
           setConfigured(data.configured);
+          setVoiceEmployees(data.voiceEmployees ?? []);
+          setEmployeeId(data.voiceEmployees?.[0]?.id ?? "");
         } else toast.error(data.error);
       })
       .finally(() => setLoading(false));
@@ -1211,21 +1527,29 @@ export function PhoneNumbersView() {
   async function search() {
     setSearching(true);
     const response = await fetch(
-      `/api/phone-numbers?country=${encodeURIComponent(country)}`,
+      `/api/phone-numbers?country=${encodeURIComponent(country)}&type=${encodeURIComponent(numberType)}`,
       { cache: "no-store" },
     );
     const data = await response.json();
     setSearching(false);
     if (!response.ok) return toast.error(data.error);
     setAvailable(data.available ?? []);
+    setSearchMessage(data.message ?? "");
   }
   async function requestActivation(item: AvailableNumber) {
     if (
       !window.confirm(
-        `Request activation for ${item.number}? ResolveX will not purchase it until billing and compliance are verified.`,
+        `Create an approval for ${item.number}? No purchase happens until an owner presses “Approve & run” in Approvals.`,
       )
     )
       return;
+    if (!employeeId)
+      return toast.error(
+        "Activate a voice AI employee before requesting a number.",
+      );
+    if (country === "IN" && !complianceApplicationId.trim())
+      return toast.error("Enter the accepted Plivo compliance application ID.");
+    setRequesting(item.number);
     const decimal = Number(item.monthlyRentalRate ?? 0);
     const response = await fetch("/api/phone-numbers", {
       method: "POST",
@@ -1239,10 +1563,14 @@ export function PhoneNumbersView() {
           : undefined,
         currency: item.currency ?? undefined,
         providerMetadata: item,
+        employeeId,
+        complianceApplicationId:
+          country === "IN" ? complianceApplicationId.trim() : undefined,
         confirmation: "REQUEST ACTIVATION",
       }),
     });
     const data = await response.json();
+    setRequesting(null);
     if (!response.ok) return toast.error(data.error);
     setNumbers((rows) => [
       data.number,
@@ -1269,6 +1597,36 @@ export function PhoneNumbersView() {
               className="mt-2 block h-10 w-28 rounded-[5px] border border-black/10 px-3 text-xs font-normal"
             />
           </label>
+          <label className="text-[10px] font-bold uppercase tracking-[.1em] text-[#767b84]">
+            Number type
+            <select
+              value={numberType}
+              onChange={(event) => setNumberType(event.target.value)}
+              className="mt-2 block h-10 rounded-[5px] border border-black/10 bg-white px-3 text-xs font-normal normal-case"
+            >
+              <option value="local">Local</option>
+              <option value="tollfree">Toll-free</option>
+              <option value="mobile">Mobile</option>
+              <option value="fixed">Fixed</option>
+            </select>
+          </label>
+          <label className="min-w-56 text-[10px] font-bold uppercase tracking-[.1em] text-[#767b84]">
+            Route to AI employee
+            <select
+              value={employeeId}
+              onChange={(event) => setEmployeeId(event.target.value)}
+              className="mt-2 block h-10 w-full rounded-[5px] border border-black/10 bg-white px-3 text-xs font-normal normal-case"
+            >
+              {!voiceEmployees.length && (
+                <option value="">No active voice employee</option>
+              )}
+              {voiceEmployees.map((employee) => (
+                <option key={employee.id} value={employee.id}>
+                  {employee.name}
+                </option>
+              ))}
+            </select>
+          </label>
           <button
             disabled={!configured || searching || country.length !== 2}
             onClick={() => void search()}
@@ -1291,7 +1649,20 @@ export function PhoneNumbersView() {
           <div className="mt-4 rounded-[7px] bg-[#fff5db] p-4 text-[10px] leading-5 text-[#7a5504]">
             <b>India compliance review required.</b> KYC, number eligibility,
             data region, SIP routing, calling consent, and inbound/outbound
-            tests must be accepted before activation.
+            tests must be accepted before activation. Plivo remains the carrier
+            and India-resident number provider; ElevenLabs receives the AI audio
+            over the provisioned SIP route.
+            <label className="mt-3 block font-bold">
+              Accepted Plivo compliance application ID
+              <input
+                value={complianceApplicationId}
+                onChange={(event) =>
+                  setComplianceApplicationId(event.target.value)
+                }
+                placeholder="Enter the approved application ID"
+                className="mt-2 block h-10 w-full rounded-[5px] border border-[#d5b86f] bg-white px-3 font-normal text-[#15171b]"
+              />
+            </label>
           </div>
         )}
       </div>
@@ -1320,17 +1691,29 @@ export function PhoneNumbersView() {
                   )}
                 </div>
                 <button
+                  disabled={requesting === item.number || !employeeId}
                   onClick={() => void requestActivation(item)}
                   className="h-8 rounded-[5px] border border-black/10 px-3 text-[9px] font-semibold"
                 >
-                  Request
+                  {requesting === item.number ? (
+                    <Loader2 size={13} className="animate-spin" />
+                  ) : (
+                    "Request"
+                  )}
                 </button>
               </div>
             ))}
             {!available.length && (
               <Empty
-                title="Search live inventory"
-                copy="ResolveX never fabricates availability or price. Results come directly from the configured telephony provider."
+                title={
+                  searchMessage
+                    ? "No provider inventory"
+                    : "Search live inventory"
+                }
+                copy={
+                  searchMessage ||
+                  "ResolveX never fabricates availability or price. Results come directly from the configured telephony provider."
+                }
               />
             )}
           </div>

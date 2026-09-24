@@ -18,7 +18,7 @@ export async function POST(request: Request) {
     const supabase = createAdminClient();
     const { data: organization, error: organizationError } = await supabase
       .from("organizations")
-      .select("id,name,widget_enabled")
+      .select("id,name,widget_enabled,settings")
       .eq("public_widget_key", input.key)
       .single();
     if (organizationError || !organization?.widget_enabled)
@@ -37,6 +37,23 @@ export async function POST(request: Request) {
         { status: 402 },
       );
     }
+
+    const { data: employee } = await supabase
+      .from("ai_employees")
+      .select(
+        "id,name,instructions,knowledge_source_ids,connected_toolkits,assigned_channels",
+      )
+      .eq("organization_id", organization.id)
+      .eq("status", "active")
+      .contains("assigned_channels", ["chat"])
+      .order("provisioned_at", { ascending: false, nullsFirst: false })
+      .limit(1)
+      .maybeSingle();
+    if (!employee)
+      return NextResponse.json(
+        { error: "No active chat employee is assigned to this messenger." },
+        { status: 409 },
+      );
 
     let { data: inbox } = await supabase
       .from("inboxes")
@@ -101,6 +118,7 @@ export async function POST(request: Request) {
           metadata: {
             widget_session: input.sessionId,
             source: "website_widget",
+            ai_employee_id: employee.id,
           },
         })
         .select("id")
@@ -143,20 +161,29 @@ export async function POST(request: Request) {
       data: { conversation_id: conversation.id, message: input.message },
     });
 
+    const selectedSources = Array.isArray(employee.knowledge_source_ids)
+      ? employee.knowledge_source_ids
+      : [];
+    let articleQuery = supabase
+      .from("knowledge_articles")
+      .select("title,body")
+      .eq("organization_id", organization.id)
+      .eq("status", "approved")
+      .limit(20);
+    let sourceQuery = supabase
+      .from("knowledge_sources")
+      .select("name,content")
+      .eq("organization_id", organization.id)
+      .eq("status", "ready")
+      .limit(8);
+    if (selectedSources.length) {
+      articleQuery = articleQuery.in("source_id", selectedSources);
+      sourceQuery = sourceQuery.in("id", selectedSources);
+    }
     const [{ data: articles }, { data: sources }, { data: history }] =
       await Promise.all([
-        supabase
-          .from("knowledge_articles")
-          .select("title,body")
-          .eq("organization_id", organization.id)
-          .eq("status", "approved")
-          .limit(20),
-        supabase
-          .from("knowledge_sources")
-          .select("name,content")
-          .eq("organization_id", organization.id)
-          .eq("status", "ready")
-          .limit(8),
+        articleQuery,
+        sourceQuery,
         supabase
           .from("messages")
           .select("sender_type,body")
@@ -212,6 +239,11 @@ export async function POST(request: Request) {
           workspace: organization.name,
           context: approvedContext,
           messages,
+          agentName:
+            typeof organization.settings?.widget_agent_name === "string"
+              ? organization.settings.widget_agent_name
+              : employee.name,
+          instructions: employee.instructions,
         })
       : { message: handoffMessage, model: "human-handoff" };
 
@@ -224,6 +256,7 @@ export async function POST(request: Request) {
         ai_metadata: {
           model: result.model,
           grounded: allowanceAvailable,
+          ai_employee_id: employee.id,
         },
       }),
       supabase
@@ -245,7 +278,7 @@ export async function POST(request: Request) {
     return NextResponse.json({
       message: result.message,
       source: allowanceAvailable
-        ? "Approved workspace knowledge"
+        ? `${employee.name} · approved workspace knowledge`
         : "Human handoff recommended",
     });
   } catch (error) {

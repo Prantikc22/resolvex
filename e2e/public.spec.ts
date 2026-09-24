@@ -32,8 +32,10 @@ test("local chatbot test bench is available in development", async ({
   await expect(
     page.getByRole("heading", { name: "Chatbot test bench" }),
   ).toBeVisible();
-  await expect(page.getByPlaceholder("Ask a question...")).toBeVisible();
-  await expect(page.getByText("Product demo")).toBeVisible();
+  await expect(page.getByText("QAShift live data")).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Copy exact script" }),
+  ).toBeVisible();
 });
 
 test("private APIs reject anonymous access", async ({ request }) => {

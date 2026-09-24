@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { publicAppUrl } from "@/lib/app-url";
 import { escapeEmailHtml, sendEmail } from "@/lib/email/resend";
 import { getCurrentOrganization } from "@/lib/supabase/current-org";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -78,7 +79,7 @@ export async function POST() {
     return NextResponse.json({ sent: true, duplicate: true });
   }
 
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+  const appUrl = publicAppUrl();
   const workspace = organization?.name ?? "Your workspace";
   const name =
     profile?.full_name ??

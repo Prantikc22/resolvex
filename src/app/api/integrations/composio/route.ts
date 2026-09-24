@@ -5,8 +5,10 @@ import {
   createComposioConnection,
   disconnectComposioAccount,
   listComposioConnections,
+  listComposioTools,
   type ComposioToolkit,
 } from "@/lib/providers/composio";
+import { publicAppUrl } from "@/lib/app-url";
 import { getCurrentOrganization } from "@/lib/supabase/current-org";
 
 const toolkitSlugs = composioCatalog.map((item) => item.slug) as [
@@ -44,7 +46,7 @@ function normalizedAccount(value: unknown) {
   };
 }
 
-export async function GET() {
+export async function GET(request: Request) {
   const { supabase, user, organizationId } = await getCurrentOrganization();
   if (!user || !organizationId)
     return NextResponse.json(
@@ -56,6 +58,39 @@ export async function GET() {
     .select("id,provider,status,config,created_at,updated_at")
     .eq("organization_id", organizationId)
     .like("provider", "composio:%");
+  const requestedToolkit = new URL(request.url).searchParams.get("toolkit");
+  if (requestedToolkit) {
+    const parsedToolkit = z.enum(toolkitSlugs).safeParse(requestedToolkit);
+    if (!parsedToolkit.success)
+      return NextResponse.json({ error: "Unknown toolkit." }, { status: 400 });
+    const connected = (stored ?? []).some(
+      (item) =>
+        item.provider === `composio:${parsedToolkit.data}` &&
+        item.status === "connected",
+    );
+    if (!connected)
+      return NextResponse.json(
+        { error: "Connect this application before browsing its actions." },
+        { status: 409 },
+      );
+    try {
+      const search = new URL(request.url).searchParams.get("search")?.trim();
+      return NextResponse.json({
+        tools: await listComposioTools({
+          toolkit: parsedToolkit.data,
+          search: search || undefined,
+        }),
+      });
+    } catch (error) {
+      return NextResponse.json(
+        {
+          error:
+            error instanceof Error ? error.message : "Could not load actions.",
+        },
+        { status: 502 },
+      );
+    }
+  }
   if (!process.env.COMPOSIO_API_KEY) {
     return NextResponse.json({
       configured: false,
@@ -84,11 +119,18 @@ export async function GET() {
         { onConflict: "organization_id,provider" },
       );
     }
+    const { data: employees } = await supabase
+      .from("ai_employees")
+      .select("id,name,status,connected_toolkits")
+      .eq("organization_id", organizationId)
+      .in("status", ["active", "testing"])
+      .order("created_at", { ascending: false });
     return NextResponse.json({
       configured: true,
       catalog: composioCatalog,
       connections: accounts,
       pending: stored ?? [],
+      employees: employees ?? [],
     });
   } catch (error) {
     return NextResponse.json(
@@ -120,8 +162,7 @@ export async function POST(request: Request) {
         { error: "Only owners and admins can connect applications." },
         { status: 403 },
       );
-    const origin =
-      process.env.NEXT_PUBLIC_APP_URL ?? new URL(request.url).origin;
+    const origin = publicAppUrl(request);
     const callbackUrl = `${origin.replace(/\/$/, "")}/app?view=integrations&connected=${encodeURIComponent(input.toolkit)}`;
     const connection = await createComposioConnection({
       organizationId,

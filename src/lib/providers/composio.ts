@@ -56,6 +56,28 @@ export async function listComposioConnections(organizationId: string) {
   return response.items;
 }
 
+export async function listComposioTools({
+  toolkit,
+  search,
+}: {
+  toolkit: ComposioToolkit;
+  search?: string;
+}) {
+  const tools = await getComposio().tools.getRawComposioTools({
+    toolkits: [toolkit],
+    important: false,
+    limit: 60,
+    ...(search ? { search } : {}),
+  });
+  return tools.map((tool) => ({
+    slug: tool.slug,
+    name: tool.name,
+    description: tool.description ?? "",
+    inputParameters: tool.inputParameters ?? {},
+    tags: tool.tags ?? [],
+  }));
+}
+
 export async function disconnectComposioAccount(accountId: string) {
   return getComposio().connectedAccounts.delete(accountId);
 }

@@ -74,6 +74,44 @@ a {
   -webkit-tap-highlight-color: transparent;
 }
 
+.workspace-ui button,
+.workspace-ui a,
+.workspace-ui [role="button"] {
+  transition:
+    transform 110ms ease,
+    filter 150ms ease,
+    opacity 150ms ease,
+    background-color 150ms ease,
+    border-color 150ms ease;
+}
+
+.workspace-ui button:not(:disabled):active,
+.workspace-ui a:active,
+.workspace-ui [role="button"]:active {
+  transform: scale(0.97);
+  filter: brightness(0.94);
+}
+
+.workspace-ui button:focus-visible,
+.workspace-ui a:focus-visible,
+.workspace-ui input:focus-visible,
+.workspace-ui textarea:focus-visible,
+.workspace-ui select:focus-visible {
+  outline: 3px solid rgba(53, 92, 255, 0.28);
+  outline-offset: 2px;
+}
+
+.workspace-ui .text-\[9px\],
+.workspace-ui .text-\[10px\] {
+  font-size: 0.8125rem !important;
+  line-height: 1.25rem !important;
+}
+
+.workspace-ui .text-xs {
+  font-size: 0.875rem !important;
+  line-height: 1.35rem !important;
+}
+
 .page-grid {
   background: #f7f6f2;
 }

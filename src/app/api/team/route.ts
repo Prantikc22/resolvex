@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { publicAppUrl } from "@/lib/app-url";
 import { z } from "zod";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getCurrentOrganization } from "@/lib/supabase/current-org";
@@ -148,9 +149,11 @@ export async function POST(request: Request) {
       Number(previousInvitationWasPaid),
   );
   const purchasedSeats = Number(subscription?.metadata?.agents ?? 0);
-  const subscriptionReady = new Set(["active", "authenticated", "trialing"]).has(
-    subscription?.status ?? "",
-  );
+  const subscriptionReady = new Set([
+    "active",
+    "authenticated",
+    "trialing",
+  ]).has(subscription?.status ?? "");
   if (
     requestedRoleIsPaid &&
     (!subscriptionReady || purchasedSeats < requiredAfterInvite)
@@ -188,7 +191,7 @@ export async function POST(request: Request) {
       { status: 500 },
     );
   const seats = await requiredPaidSeats(supabase, organizationId);
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+  const appUrl = publicAppUrl();
   try {
     await sendEmail({
       to: email,
@@ -254,7 +257,9 @@ export async function PATCH(request: Request) {
     const purchasedSeats = Number(subscription?.metadata?.agents ?? 0);
     const requiredAfterPromotion = currentRequiredSeats + 1;
     if (
-      !new Set(["active", "authenticated", "trialing"]).has(subscription?.status ?? "") ||
+      !new Set(["active", "authenticated", "trialing"]).has(
+        subscription?.status ?? "",
+      ) ||
       purchasedSeats < requiredAfterPromotion
     ) {
       return NextResponse.json(

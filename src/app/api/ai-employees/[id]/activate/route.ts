@@ -78,6 +78,10 @@ export async function POST(
       greeting: template?.greeting ?? "Hi, I’m Arlo. How can I help?",
       language: employee.languages?.[0] ?? "en",
       voiceId: employee.voice_id,
+      transferToNumber:
+        typeof employee.escalation_rules?.transfer_to_number === "string"
+          ? employee.escalation_rules.transfer_to_number
+          : null,
     };
     let externalAgentId = employee.external_agent_id as string | null;
     try {

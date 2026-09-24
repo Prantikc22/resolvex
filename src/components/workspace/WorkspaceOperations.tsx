@@ -280,6 +280,11 @@ export function AutomationsLiveView() {
   const [items, setItems] = useState<Automation[]>([]);
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [activepieces, setActivepieces] = useState<{
+    configured: boolean;
+    url: string | null;
+  }>({ configured: false, url: null });
   const [form, setForm] = useState({
     name: "",
     contains: "",
@@ -296,15 +301,26 @@ export function AutomationsLiveView() {
   }, []);
   useEffect(() => {
     queueMicrotask(() => void load());
+    fetch("/api/activepieces/status", { cache: "no-store" })
+      .then((response) => response.json())
+      .then((data) =>
+        setActivepieces({
+          configured: Boolean(data.configured),
+          url: typeof data.url === "string" ? data.url : null,
+        }),
+      )
+      .catch(() => undefined);
   }, [load]);
   async function create(event: FormEvent) {
     event.preventDefault();
+    setSaving(true);
     const response = await fetch("/api/automations", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(form),
     });
     const data = await response.json();
+    setSaving(false);
     if (!response.ok) return toast.error(data.error);
     setItems((value) => [data.automation, ...value]);
     setCreating(false);
@@ -360,6 +376,41 @@ export function AutomationsLiveView() {
             New rule
           </button>
         </div>
+        <div className="mt-6 grid gap-4 md:grid-cols-2">
+          <div className="rounded-[10px] border border-black/10 bg-[#111318] p-5 text-white">
+            <Webhook size={20} className="text-[#d8ff70]" />
+            <h3 className="mt-5 text-lg font-semibold">Activepieces builder</h3>
+            <p className="mt-2 text-xs leading-6 text-white/60">
+              Build multi-step flows, schedules, and app workflows in your
+              Activepieces instance. Embedded building requires the Activepieces
+              Embed edition and a server-signed JWT.
+            </p>
+            {activepieces.configured && activepieces.url ? (
+              <a
+                href={activepieces.url}
+                target="_blank"
+                rel="noreferrer"
+                className="mt-5 inline-flex h-10 items-center gap-2 rounded-[5px] bg-[#d8ff70] px-4 text-xs font-semibold text-[#213600]"
+              >
+                Open Activepieces <ArrowRight size={14} />
+              </a>
+            ) : (
+              <p className="mt-5 rounded-[6px] bg-white/8 p-3 text-[10px] leading-5 text-white/70">
+                Not connected yet. Set ACTIVEPIECES_URL and the Embed signing
+                secret on the server to enable the builder.
+              </p>
+            )}
+          </div>
+          <div className="rounded-[10px] border border-black/10 bg-white p-5">
+            <Workflow size={20} className="text-[#355cff]" />
+            <h3 className="mt-5 text-lg font-semibold">ResolveX quick rules</h3>
+            <p className="mt-2 text-xs leading-6 text-[#71767f]">
+              These native rules run immediately for each new widget message.
+              Use them for priority, tags, and human handoff without another
+              service.
+            </p>
+          </div>
+        </div>
         {creating && (
           <form
             onSubmit={create}
@@ -414,8 +465,12 @@ export function AutomationsLiveView() {
               />
               Hand off to a human
             </label>
-            <button className="h-10 rounded-[5px] bg-[#355cff] text-xs font-semibold text-white">
-              Activate rule
+            <button
+              disabled={saving}
+              className="flex h-10 items-center justify-center gap-2 rounded-[5px] bg-[#355cff] text-xs font-semibold text-white disabled:opacity-50"
+            >
+              {saving && <Loader2 size={14} className="animate-spin" />}
+              {saving ? "Activating…" : "Activate rule"}
             </button>
           </form>
         )}
