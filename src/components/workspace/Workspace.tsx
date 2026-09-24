@@ -21,6 +21,7 @@ import {
   Copy,
   Filter,
   Inbox,
+  LayoutDashboard,
   Link2,
   Loader2,
   Menu,
@@ -37,6 +38,10 @@ import {
   RefreshCw,
   LogOut,
   Users,
+  Phone,
+  BriefcaseBusiness,
+  ListTodo,
+  Radio,
   WandSparkles,
   Workflow,
   X,
@@ -76,28 +81,86 @@ import {
   IntegrationsLiveView,
   ReportsLiveView,
 } from "@/components/workspace/WorkspaceOperations";
+import {
+  AIEmployeesView,
+  ApprovalsView,
+  CallsView,
+  ChannelsView,
+  ConnectView,
+  CRMView,
+  OverviewDashboard,
+  PhoneNumbersView,
+  UsageView,
+} from "@/components/workspace/ResolveXModules";
 
 type View =
+  | "overview"
   | "inbox"
-  | "ai"
+  | "calls"
+  | "contacts"
+  | "employees"
   | "knowledge"
-  | "automations"
+  | "approvals"
+  | "crm"
+  | "tasks"
+  | "flows"
   | "customers"
-  | "reports"
+  | "analytics"
   | "integrations"
+  | "usage"
   | "team"
+  | "channels"
+  | "phone_numbers"
   | "settings";
 
-const nav: { id: View; label: string; icon: typeof Inbox }[] = [
-  { id: "inbox", label: "Inbox", icon: Inbox },
-  { id: "ai", label: "Arlo AI", icon: Bot },
-  { id: "knowledge", label: "Knowledge", icon: BookOpen },
-  { id: "automations", label: "Automations", icon: Workflow },
-  { id: "customers", label: "Customers", icon: Users },
-  { id: "reports", label: "Reports", icon: Activity },
-  { id: "integrations", label: "Integrations", icon: Link2 },
-  { id: "team", label: "Team & billing", icon: CreditCard },
-  { id: "settings", label: "Settings", icon: Settings },
+const nav: { id: View; label: string; icon: typeof Inbox; group: string }[] = [
+  {
+    id: "overview",
+    label: "Overview",
+    icon: LayoutDashboard,
+    group: "RESOLVEX",
+  },
+  { id: "inbox", label: "Inbox", icon: Inbox, group: "COMMUNICATION" },
+  { id: "calls", label: "Calls", icon: Phone, group: "COMMUNICATION" },
+  { id: "contacts", label: "Contacts", icon: Users, group: "COMMUNICATION" },
+  { id: "employees", label: "AI Employees", icon: Bot, group: "AI WORKFORCE" },
+  {
+    id: "knowledge",
+    label: "Knowledge",
+    icon: BookOpen,
+    group: "AI WORKFORCE",
+  },
+  {
+    id: "approvals",
+    label: "Approvals",
+    icon: ShieldCheck,
+    group: "AI WORKFORCE",
+  },
+  { id: "crm", label: "CRM", icon: BriefcaseBusiness, group: "OPERATIONS" },
+  { id: "tasks", label: "Tasks", icon: ListTodo, group: "OPERATIONS" },
+  { id: "flows", label: "Flows", icon: Workflow, group: "OPERATIONS" },
+  { id: "integrations", label: "Integrations", icon: Link2, group: "BUSINESS" },
+  { id: "analytics", label: "Analytics", icon: Activity, group: "BUSINESS" },
+  {
+    id: "usage",
+    label: "Usage & billing",
+    icon: CreditCard,
+    group: "BUSINESS",
+  },
+  { id: "team", label: "Team", icon: Users, group: "SETTINGS" },
+  { id: "channels", label: "Channels", icon: Radio, group: "SETTINGS" },
+  {
+    id: "phone_numbers",
+    label: "Phone Numbers",
+    icon: Phone,
+    group: "SETTINGS",
+  },
+  {
+    id: "settings",
+    label: "Business Profile",
+    icon: Settings,
+    group: "SETTINGS",
+  },
 ];
 
 function Badge({
@@ -193,30 +256,56 @@ function Sidebar({
           <Menu size={17} />
         </button>
       )}
-      <div className="mt-5 flex-1 space-y-1">
-        {nav.map((item) => {
+      <div className="scrollbar-none mt-4 flex-1 space-y-1 overflow-y-auto">
+        {(demo
+          ? nav.filter((item) =>
+              [
+                "inbox",
+                "employees",
+                "knowledge",
+                "flows",
+                "contacts",
+                "analytics",
+                "integrations",
+                "team",
+                "settings",
+              ].includes(item.id),
+            )
+          : nav
+        ).map((item, index, items) => {
           const Icon = item.icon;
           return (
-            <button
-              key={item.id}
-              onClick={() => onChange(item.id)}
-              title={collapsed ? item.label : undefined}
-              className={cn(
-                "flex h-10 w-full items-center rounded-[5px] text-sm transition",
-                collapsed ? "justify-center" : "gap-3 px-3",
-                active === item.id
-                  ? "bg-white text-[#101114]"
-                  : "text-white/45 hover:bg-white/5 hover:text-white",
+            <div key={item.id}>
+              {!collapsed && item.group !== items[index - 1]?.group && (
+                <div
+                  className={cn(
+                    "px-3 pb-1 text-[8px] font-bold tracking-[.15em] text-white/22",
+                    index > 0 && "pt-3",
+                  )}
+                >
+                  {item.group}
+                </div>
               )}
-            >
-              <Icon size={17} />
-              {!collapsed && <span>{item.label}</span>}
-              {!collapsed && demo && item.id === "inbox" && (
-                <span className="ml-auto rounded-full bg-[#355cff] px-1.5 py-0.5 text-[9px] font-bold text-white">
-                  3
-                </span>
-              )}
-            </button>
+              <button
+                onClick={() => onChange(item.id)}
+                title={collapsed ? item.label : undefined}
+                className={cn(
+                  "flex h-9 w-full items-center rounded-[5px] text-xs transition",
+                  collapsed ? "justify-center" : "gap-3 px-3",
+                  active === item.id
+                    ? "bg-white text-[#101114]"
+                    : "text-white/45 hover:bg-white/5 hover:text-white",
+                )}
+              >
+                <Icon size={15} />
+                {!collapsed && <span>{item.label}</span>}
+                {!collapsed && demo && item.id === "inbox" && (
+                  <span className="ml-auto rounded-full bg-[#355cff] px-1.5 py-0.5 text-[9px] font-bold text-white">
+                    3
+                  </span>
+                )}
+              </button>
+            </div>
           );
         })}
       </div>
@@ -1729,42 +1818,52 @@ function MessengerSettings() {
 }
 
 const viewTitles: Record<View, string> = {
+  overview: "Overview",
   inbox: "Inbox",
-  ai: "Arlo AI",
+  calls: "Calls",
+  contacts: "Contacts",
+  employees: "AI Employees",
   knowledge: "Knowledge",
-  automations: "Automations",
+  approvals: "Approvals",
+  crm: "CRM",
+  tasks: "Tasks",
+  flows: "Flows",
   customers: "Customers",
-  reports: "Reports",
+  analytics: "Analytics",
   integrations: "Integrations",
-  team: "Team & billing",
-  settings: "Settings",
+  usage: "Usage & billing",
+  team: "Team",
+  channels: "Channels",
+  phone_numbers: "Phone Numbers",
+  settings: "Business Profile",
 };
 
 function WorkspaceSetupView({
   view,
 }: {
-  view: Exclude<View, "inbox" | "knowledge" | "settings">;
+  view:
+    "employees" | "flows" | "contacts" | "analytics" | "integrations" | "team";
 }) {
   const content: Record<
-    Exclude<View, "inbox" | "knowledge" | "settings">,
+    "employees" | "flows" | "contacts" | "analytics" | "integrations" | "team",
     { title: string; copy: string; action: string }
   > = {
-    ai: {
+    employees: {
       title: "Arlo is waiting for approved knowledge.",
       copy: "Import a website or PDF, approve the source, then install the messenger. Arlo will not answer factual questions before that boundary is in place.",
       action: "Open knowledge",
     },
-    automations: {
+    flows: {
       title: "Create rules after the first conversation arrives.",
       copy: "Automation storage is ready, but this workspace has no live rules yet. Use the demo to inspect routing and approval interactions.",
       action: "Open product demo",
     },
-    customers: {
+    contacts: {
       title: "Customer profiles build from real conversations.",
       copy: "The first messenger, email, form, or API conversation creates the profile and keeps its history together here.",
       action: "Install messenger",
     },
-    reports: {
+    analytics: {
       title: "Reports begin with live support events.",
       copy: "Resolution, response time, CSAT, AI usage, and SLA metrics will appear after this workspace has real conversations.",
       action: "Open product demo",
@@ -1782,13 +1881,13 @@ function WorkspaceSetupView({
   };
   const item = content[view];
   const href =
-    view === "customers"
+    view === "contacts"
       ? "/install"
       : view === "team"
         ? "/pricing"
-        : view === "ai"
+        : view === "employees"
           ? "/help"
-          : view === "automations" || view === "reports"
+          : view === "flows" || view === "analytics"
             ? "/demo"
             : "/help";
   return (
@@ -1836,22 +1935,40 @@ export function Workspace({
   capabilities?: WorkspaceCapabilities;
 }) {
   const router = useRouter();
-  const [view, setView] = useState<View>("inbox");
+  const [view, setView] = useState<View>(demo ? "inbox" : "overview");
   const [collapsed, setCollapsed] = useState(false);
   const [mobile, setMobile] = useState(false);
+  useEffect(() => {
+    const requested = new URLSearchParams(window.location.search).get(
+      "view",
+    ) as View | null;
+    if (requested && nav.some((item) => item.id === requested)) {
+      queueMicrotask(() => setView(requested));
+    }
+  }, []);
   const content = useMemo(() => {
     switch (view) {
+      case "overview":
+        return (
+          <OverviewDashboard onNavigate={(next) => setView(next as View)} />
+        );
       case "inbox":
         return demo ? <InboxView /> : <LiveInbox onNavigate={setView} />;
-      case "ai":
-        return demo ? (
-          <AIView />
-        ) : (
-          <ArloLiveView onOpenKnowledge={() => setView("knowledge")} />
-        );
+      case "calls":
+        return <CallsView />;
+      case "contacts":
+        return demo ? <CustomersView /> : <CRMView mode="contacts" />;
+      case "employees":
+        return demo ? <AIView /> : <AIEmployeesView />;
       case "knowledge":
         return <KnowledgeManager demo={demo} />;
-      case "automations":
+      case "approvals":
+        return <ApprovalsView />;
+      case "crm":
+        return <CRMView />;
+      case "tasks":
+        return <CRMView mode="tasks" />;
+      case "flows":
         return demo ? <AutomationsView /> : <AutomationsLiveView />;
       case "customers":
         return demo ? (
@@ -1859,16 +1976,22 @@ export function Workspace({
         ) : (
           <CustomersLiveView onInstall={() => setView("settings")} />
         );
-      case "reports":
+      case "analytics":
         return demo ? <ReportsView /> : <ReportsLiveView />;
       case "integrations":
-        return demo ? <IntegrationsView /> : <IntegrationsLiveView />;
+        return demo ? <IntegrationsView /> : <ConnectView />;
+      case "usage":
+        return demo ? <TeamBillingView /> : <UsageView />;
       case "team":
         return demo ? (
           <TeamBillingView />
         ) : (
           <TeamManagementView billingConfigured={capabilities.billing} />
         );
+      case "channels":
+        return <ChannelsView />;
+      case "phone_numbers":
+        return <PhoneNumbersView />;
       case "settings":
         return (
           <SettingsView

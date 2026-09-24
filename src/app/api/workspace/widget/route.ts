@@ -32,11 +32,17 @@ const schema = z.discriminatedUnion("action", [
 export async function POST(request: Request) {
   try {
     const input = schema.parse(await request.json());
-    const { supabase, organizationId } = await getCurrentOrganization();
+    const { supabase, organizationId, membershipRole } =
+      await getCurrentOrganization();
     if (!organizationId)
       return NextResponse.json(
         { error: "Workspace not found." },
         { status: 401 },
+      );
+    if (!new Set(["owner", "admin"]).has(membershipRole ?? ""))
+      return NextResponse.json(
+        { error: "Only workspace managers can change widget access." },
+        { status: 403 },
       );
     const update =
       input.action === "rotate"

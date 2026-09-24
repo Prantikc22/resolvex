@@ -32,6 +32,18 @@ export async function runMessageAutomations({
         ? rule.trigger_config.contains.trim().toLowerCase()
         : "";
     if (contains && !message.toLowerCase().includes(contains)) continue;
+    const { data: run } = await supabase
+      .from("workflow_runs")
+      .insert({
+        organization_id: organizationId,
+        automation_id: rule.id,
+        trigger_type: "new_message",
+        status: "running",
+        input: { conversation_id: conversationId, message },
+        started_at: new Date().toISOString(),
+      })
+      .select("id")
+      .maybeSingle();
     const update: Record<string, unknown> = {};
     const tags = Array.isArray(conversation.tags) ? [...conversation.tags] : [];
     for (const action of (Array.isArray(rule.actions)
@@ -48,15 +60,42 @@ export async function runMessageAutomations({
       if (action.type === "handoff") update.ai_state = "handed_off";
     }
     if (tags.length) update.tags = tags;
-    if (Object.keys(update).length) {
-      await supabase
-        .from("conversations")
-        .update(update)
-        .eq("id", conversationId);
-      await supabase
+    try {
+      if (Object.keys(update).length) {
+        const { error } = await supabase
+          .from("conversations")
+          .update(update)
+          .eq("id", conversationId)
+          .eq("organization_id", organizationId);
+        if (error) throw error;
+      }
+      const { error: countError } = await supabase
         .from("automations")
         .update({ run_count: Number(rule.run_count ?? 0) + 1 })
-        .eq("id", rule.id);
+        .eq("id", rule.id)
+        .eq("organization_id", organizationId);
+      if (countError) throw countError;
+      if (run)
+        await supabase
+          .from("workflow_runs")
+          .update({
+            status: "succeeded",
+            output: { conversation_update: update },
+            completed_at: new Date().toISOString(),
+          })
+          .eq("id", run.id);
+    } catch (error) {
+      if (run)
+        await supabase
+          .from("workflow_runs")
+          .update({
+            status: "failed",
+            error:
+              error instanceof Error ? error.message : "Automation failed.",
+            completed_at: new Date().toISOString(),
+          })
+          .eq("id", run.id);
+      throw error;
     }
   }
 }

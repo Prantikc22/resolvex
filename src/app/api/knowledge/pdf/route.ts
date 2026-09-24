@@ -6,6 +6,18 @@ const MAX_BYTES = 20 * 1024 * 1024;
 
 export async function POST(request: Request) {
   try {
+    const { supabase, organizationId, membershipRole } =
+      await getCurrentOrganization();
+    if (!organizationId)
+      return NextResponse.json(
+        { error: "Create a workspace first." },
+        { status: 401 },
+      );
+    if (!new Set(["owner", "admin"]).has(membershipRole ?? ""))
+      return NextResponse.json(
+        { error: "Only workspace managers can add knowledge sources." },
+        { status: 403 },
+      );
     const form = await request.formData();
     const file = form.get("file");
     if (!(file instanceof File) || file.type !== "application/pdf")
@@ -17,12 +29,6 @@ export async function POST(request: Request) {
       return NextResponse.json(
         { error: "PDFs are limited to 20 MB." },
         { status: 413 },
-      );
-    const { supabase, organizationId } = await getCurrentOrganization();
-    if (!organizationId)
-      return NextResponse.json(
-        { error: "Create a workspace first." },
-        { status: 401 },
       );
     const { count } = await supabase
       .from("knowledge_sources")

@@ -444,7 +444,7 @@ function Hero() {
                 className="inline-flex items-center gap-2 rounded-full border border-black/10 bg-white/88 px-4 py-2 text-xs font-semibold shadow-sm backdrop-blur-md"
               >
                 <span className="size-2 rounded-full bg-[#69a834]" />
-                AI helpdesk. Human standard.
+                Customer operations, finished.
               </motion.div>
               <motion.h1
                 initial={{ opacity: 0, y: 30 }}
@@ -452,10 +452,10 @@ function Hero() {
                 transition={{ duration: 0.9, delay: 0.14, ease }}
                 className="mt-5 text-balance text-[clamp(3.35rem,6.3vw,6.35rem)] font-semibold leading-[.88] tracking-[-.06em]"
               >
-                Support moves fast.
+                Your customers reach out.
                 <br />
                 <span className="font-display font-normal italic tracking-[-.035em] text-[#ff5c35]">
-                  Customers feel it.
+                  ResolveX gets it done.
                 </span>
               </motion.h1>
               <motion.p
@@ -464,9 +464,9 @@ function Hero() {
                 transition={{ duration: 0.7, delay: 0.3 }}
                 className="mx-auto mt-5 max-w-3xl text-balance text-base leading-relaxed text-[#4f535b] md:text-lg"
               >
-                ResolveX learns your business, answers across chat and email,
-                completes safe work, and hands the important moments to a
-                person. One beautiful helpdesk. A much smaller bill.
+                One workspace for customer conversations, AI employees, phone
+                calls and business operations. Answer enquiries, capture leads
+                and resolve requests across every connected channel.
               </motion.p>
               <motion.div
                 initial={{ opacity: 0, y: 18 }}
@@ -486,14 +486,14 @@ function Hero() {
                   href="/signup"
                   className="button-bright flex h-14 items-center justify-center gap-3 rounded-[6px] bg-[#ff5c35] px-7 text-sm font-semibold text-white shadow-[0_18px_50px_rgba(255,92,53,.28)]"
                 >
-                  Start 7-day free trial <ArrowRight size={18} />
+                  Get Started Free <ArrowRight size={18} />
                 </Link>
                 <Link
                   href="/demo"
                   className="flex h-14 items-center justify-center gap-3 rounded-[6px] border border-black/12 bg-white px-7 text-sm font-semibold hover:border-black/30"
                 >
                   <Play size={16} fill="currentColor" />
-                  Open live workspace
+                  See ResolveX in Action
                 </Link>
               </motion.div>
             </div>
@@ -531,32 +531,33 @@ function Hero() {
         <div className="mx-auto max-w-xl text-center">
           <div className="inline-flex items-center gap-2 rounded-full border border-black/10 bg-white px-3 py-2 text-[11px] font-semibold shadow-sm">
             <span className="size-2 rounded-full bg-[#69a834]" />
-            AI helpdesk. Human standard.
+            Customer operations, finished.
           </div>
           <h1 className="mt-6 text-balance text-[3.25rem] font-semibold leading-[.9] tracking-[-.055em]">
-            Support moves fast.
+            Your customers reach out.
             <br />
             <span className="font-display font-normal italic tracking-[-.025em] text-[#ff5c35]">
-              Customers feel it.
+              ResolveX gets it done.
             </span>
           </h1>
           <p className="mx-auto mt-6 max-w-md text-balance text-[15px] leading-relaxed text-[#555961]">
-            ResolveX learns your business, answers across chat and email, and
-            brings in a person with the full context when it matters.
+            One workspace for customer conversations, AI employees, phone calls
+            and business operations. Answer enquiries, capture leads and resolve
+            requests across every connected channel.
           </p>
           <div className="mt-7 grid gap-3">
             <Link
               href="/signup"
               className="button-bright flex h-14 items-center justify-center gap-2 rounded-[6px] bg-[#ff5c35] px-6 text-sm font-semibold text-white shadow-[0_18px_44px_rgba(255,92,53,.25)]"
             >
-              Start 7-day free trial <ArrowRight size={16} />
+              Get Started Free <ArrowRight size={16} />
             </Link>
             <Link
               href="/demo"
               className="flex h-14 items-center justify-center gap-2 rounded-[6px] border border-black/12 bg-white px-6 text-sm font-semibold"
             >
               <Play size={14} fill="currentColor" />
-              Open live workspace
+              See ResolveX in Action
             </Link>
           </div>
           <div className="mt-4 rounded-full border border-black/10 bg-white px-4 py-2 text-xs font-semibold leading-relaxed text-[#4d5159] shadow-sm">
@@ -594,12 +595,12 @@ function Hero() {
 }
 
 const trustedCompanies = [
-  "OnePlus",
-  "ClearTax",
-  "RVCJ Media",
-  "eBay",
-  "Randstad",
-  "The Baker's Street",
+  "Ecommerce",
+  "SaaS",
+  "Clinics",
+  "Real Estate",
+  "Restaurants",
+  "Professional Services",
 ];
 
 function TrustMarquee() {
@@ -614,12 +615,14 @@ function TrustMarquee() {
             id="trusted-heading"
             className="max-w-2xl text-balance text-3xl font-semibold leading-[1.02] tracking-[-.04em] md:text-5xl"
           >
-            Trusted by teams at{" "}
-            <span className="font-display italic">100+ companies.</span>
+            Built for the places where{" "}
+            <span className="font-display italic">
+              customers need an answer.
+            </span>
           </h2>
           <p className="max-w-md text-sm leading-relaxed text-[#6b6e75] sm:text-right">
-            From fast-growing startups to global customer teams, ResolveX keeps
-            service moving without adding another layer of complexity.
+            Start with an industry template, then shape the employees,
+            knowledge, channels, and workflows around how your business works.
           </p>
         </div>
         <div

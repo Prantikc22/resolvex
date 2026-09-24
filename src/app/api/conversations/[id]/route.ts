@@ -18,11 +18,17 @@ export async function POST(
   try {
     const input = schema.parse(await request.json());
     const { id } = await params;
-    const { supabase, user, organizationId } = await getCurrentOrganization();
+    const { supabase, user, organizationId, membershipRole } =
+      await getCurrentOrganization();
     if (!user || !organizationId)
       return NextResponse.json(
         { error: "Workspace not found." },
         { status: 401 },
+      );
+    if (!new Set(["owner", "admin", "agent"]).has(membershipRole ?? ""))
+      return NextResponse.json(
+        { error: "A read-only member cannot change conversations." },
+        { status: 403 },
       );
     const { data: conversation } = await supabase
       .from("conversations")

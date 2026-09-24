@@ -2,14 +2,14 @@ import type { Metadata } from "next";
 import { MarketingV2 } from "@/components/marketing/MarketingV2";
 
 export const metadata: Metadata = {
-  title: "ResolveX - Customer support that finishes the work",
+  title: "ResolveX - Your customers reach out. ResolveX gets it done.",
   description:
-    "One customer support workspace for AI resolutions, human conversations, knowledge, workflows, and measurable service quality.",
+    "One workspace for customer conversations, AI employees, phone calls and business operations.",
   alternates: { canonical: "/" },
   openGraph: {
-    title: "ResolveX - Customer support that finishes the work",
+    title: "ResolveX - Your customers reach out. ResolveX gets it done.",
     description:
-      "AI resolves the routine. Your team gets the conversations that deserve a human.",
+      "Answer enquiries, capture leads and resolve requests across every connected channel.",
     url: "/",
     type: "website",
     siteName: "ResolveX",

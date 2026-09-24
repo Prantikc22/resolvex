@@ -160,14 +160,20 @@ function articleSlug(page: CrawledPage, sourceId: string) {
 export async function POST(request: Request) {
   try {
     const { url: input } = schema.parse(await request.json());
-    const root = await safeRoot(input);
-    const { supabase, organizationId } = await getCurrentOrganization();
+    const { supabase, organizationId, membershipRole } =
+      await getCurrentOrganization();
     if (!organizationId) {
       return NextResponse.json(
         { error: "Create a workspace first." },
         { status: 401 },
       );
     }
+    if (!new Set(["owner", "admin"]).has(membershipRole ?? ""))
+      return NextResponse.json(
+        { error: "Only workspace managers can add knowledge sources." },
+        { status: 403 },
+      );
+    const root = await safeRoot(input);
 
     const startedAt = Date.now();
     const queued = new Set<string>([

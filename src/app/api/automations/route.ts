@@ -23,14 +23,29 @@ export async function GET() {
       { error: "Workspace not found." },
       { status: 401 },
     );
-  const { data, error } = await supabase
-    .from("automations")
-    .select("id,name,enabled,trigger_config,actions,run_count,created_at")
-    .eq("organization_id", organizationId)
-    .order("created_at", { ascending: false });
-  if (error)
-    return NextResponse.json({ error: error.message }, { status: 400 });
-  return NextResponse.json({ automations: data ?? [] });
+  const [{ data, error }, { data: runs, error: runsError }] = await Promise.all(
+    [
+      supabase
+        .from("automations")
+        .select("id,name,enabled,trigger_config,actions,run_count,created_at")
+        .eq("organization_id", organizationId)
+        .order("created_at", { ascending: false }),
+      supabase
+        .from("workflow_runs")
+        .select(
+          "id,automation_id,trigger_type,status,attempt,error,started_at,completed_at,created_at",
+        )
+        .eq("organization_id", organizationId)
+        .order("created_at", { ascending: false })
+        .limit(100),
+    ],
+  );
+  if (error || runsError)
+    return NextResponse.json(
+      { error: error?.message ?? runsError?.message },
+      { status: 400 },
+    );
+  return NextResponse.json({ automations: data ?? [], runs: runs ?? [] });
 }
 
 export async function POST(request: Request) {

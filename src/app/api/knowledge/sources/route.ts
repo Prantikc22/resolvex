@@ -27,13 +27,19 @@ export async function GET() {
 export async function PATCH(request: Request) {
   try {
     const input = idSchema.parse(await request.json());
-    const { supabase, organizationId } = await getCurrentOrganization();
+    const { supabase, organizationId, membershipRole } =
+      await getCurrentOrganization();
     if (!organizationId) {
       return NextResponse.json(
         { error: "Workspace not found." },
         { status: 401 },
       );
     }
+    if (!new Set(["owner", "admin"]).has(membershipRole ?? ""))
+      return NextResponse.json(
+        { error: "Only workspace managers can approve knowledge sources." },
+        { status: 403 },
+      );
     const { data, error } = await supabase
       .from("knowledge_sources")
       .update({ status: "ready" })
@@ -62,13 +68,19 @@ export async function PATCH(request: Request) {
 export async function DELETE(request: Request) {
   try {
     const input = idSchema.parse(await request.json());
-    const { supabase, organizationId } = await getCurrentOrganization();
+    const { supabase, organizationId, membershipRole } =
+      await getCurrentOrganization();
     if (!organizationId) {
       return NextResponse.json(
         { error: "Workspace not found." },
         { status: 401 },
       );
     }
+    if (!new Set(["owner", "admin"]).has(membershipRole ?? ""))
+      return NextResponse.json(
+        { error: "Only workspace managers can delete knowledge sources." },
+        { status: 403 },
+      );
     const { error } = await supabase
       .from("knowledge_sources")
       .delete()

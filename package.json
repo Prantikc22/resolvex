@@ -7,9 +7,13 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "test": "node --import tsx --test tests/*.test.ts",
+    "test:e2e": "playwright test",
     "db:migrate": "tsx --env-file=.env.local scripts/migrate.ts"
   },
   "dependencies": {
+    "@composio/core": "^0.20.0",
+    "@elevenlabs/react": "^1.15.2",
     "@paddle/paddle-js": "^1.6.4",
     "@paddle/paddle-node-sdk": "^3.10.0",
     "@supabase/ssr": "^0.12.4",
@@ -20,7 +24,7 @@
     "framer-motion": "^12.43.0",
     "lucide-react": "^1.28.0",
     "motion": "^12.43.0",
-    "next": "16.3.0",
+    "next": "^16.3.6",
     "pg": "^8.22.0",
     "razorpay": "^2.9.8",
     "react": "19.2.8",
@@ -32,13 +36,14 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
+    "@playwright/test": "^1.63.0",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/pg": "^8.20.3",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
-    "eslint-config-next": "16.3.0",
+    "eslint-config-next": "^16.3.6",
     "prettier": "^3.9.6",
     "tailwindcss": "^4",
     "tsx": "^4.23.5",
