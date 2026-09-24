@@ -25,6 +25,17 @@ test("public demo remains usable", async ({ page }) => {
   await expect(page.getByText("Interactive demo")).toBeVisible();
 });
 
+test("local chatbot test bench is available in development", async ({
+  page,
+}) => {
+  await page.goto("/dev/chatbot");
+  await expect(
+    page.getByRole("heading", { name: "Chatbot test bench" }),
+  ).toBeVisible();
+  await expect(page.getByPlaceholder("Ask a question...")).toBeVisible();
+  await expect(page.getByText("Product demo")).toBeVisible();
+});
+
 test("private APIs reject anonymous access", async ({ request }) => {
   const employees = await request.get("/api/ai-employees");
   expect(employees.status()).toBe(401);
