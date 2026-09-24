@@ -172,7 +172,7 @@ export function SubscriptionBillingView({
       const response = await fetch("/api/billing/subscription", {
         cache: "no-store",
       });
-      const data = (await response.json()) as BillingResponse;
+      const data = await billingResponse<BillingResponse>(response);
       if (!response.ok)
         throw new Error(data.error ?? "Could not load billing.");
       setConfigured(Boolean(data.configured));
@@ -201,7 +201,7 @@ export function SubscriptionBillingView({
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(response),
     });
-    const result = (await verifyResponse.json()) as BillingResponse;
+    const result = await billingResponse<BillingResponse>(verifyResponse);
     if (!verifyResponse.ok) {
       throw new Error(result.error ?? "Payment verification failed.");
     }
@@ -219,7 +219,7 @@ export function SubscriptionBillingView({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ agents }),
       });
-      const data = (await response.json()) as BillingResponse;
+      const data = await billingResponse<BillingResponse>(response);
       if (!response.ok)
         throw new Error(data.error ?? "Could not start checkout.");
       if (data.provider === "paddle") {
@@ -324,7 +324,7 @@ export function SubscriptionBillingView({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ agents }),
       });
-      const data = (await response.json()) as BillingResponse;
+      const data = await billingResponse<BillingResponse>(response);
       if (!response.ok)
         throw new Error(data.error ?? "Could not update seats.");
       setSubscription(data.subscription ?? null);
@@ -361,7 +361,7 @@ export function SubscriptionBillingView({
       const response = await fetch("/api/billing/subscription", {
         method: "DELETE",
       });
-      const data = (await response.json()) as BillingResponse;
+      const data = await billingResponse<BillingResponse>(response);
       if (!response.ok)
         throw new Error(data.error ?? "Could not cancel subscription.");
       setSubscription(data.subscription ?? null);
@@ -381,7 +381,9 @@ export function SubscriptionBillingView({
     setBusy(true);
     try {
       const response = await fetch("/api/billing/portal", { method: "POST" });
-      const data = (await response.json()) as { url?: string; error?: string };
+      const data = await billingResponse<{ url?: string; error?: string }>(
+        response,
+      );
       if (!response.ok || !data.url)
         throw new Error(data.error ?? "Could not open payment management.");
       window.location.assign(data.url);
@@ -695,4 +697,22 @@ export function SubscriptionBillingView({
       </div>
     </div>
   );
+}
+
+async function billingResponse<T extends { error?: string }>(
+  response: Response,
+): Promise<T> {
+  const text = await response.text();
+  if (!text) {
+    return {
+      error: `Billing returned an empty ${response.status} response. Please retry or contact support.`,
+    } as T;
+  }
+  try {
+    return JSON.parse(text) as T;
+  } catch {
+    return {
+      error: `Billing returned an invalid ${response.status} response. Please retry or contact support.`,
+    } as T;
+  }
 }

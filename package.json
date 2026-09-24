@@ -9,6 +9,7 @@
     "lint": "eslint",
     "test": "node --import tsx --test tests/*.test.ts",
     "test:e2e": "playwright test",
+    "test:paddle": "tsx --env-file=.env.local scripts/test-paddle-sandbox.ts",
     "db:migrate": "tsx --env-file=.env.local scripts/migrate.ts"
   },
   "dependencies": {

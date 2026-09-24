@@ -111,6 +111,13 @@ function paddleError(error: unknown) {
     : "Paddle could not complete the billing request.";
 }
 
+function paddleErrorStatus(error: unknown) {
+  if (!error || typeof error !== "object") return 502;
+  const item = error as { code?: unknown; status?: unknown };
+  if (item.code === "forbidden" || item.status === 403) return 503;
+  return 502;
+}
+
 export async function paddleGet() {
   const { supabase, user, organizationId, membershipRole } =
     await getCurrentOrganization();
@@ -192,25 +199,41 @@ export async function paddlePost(request: Request) {
       subscription: publicSubscription(existing),
     });
   }
-  const transaction = await getPaddle().transactions.create({
-    items: [{ priceId: config.seatPriceId, quantity: parsed.data.agents }],
-    checkout: { url: "https://getresolvex.com/checkout" },
-    customData: {
-      organization_id: organizationId,
-      user_id: user.id,
-      plan: "one",
+  try {
+    const transaction = await getPaddle().transactions.create({
+      items: [{ priceId: config.seatPriceId, quantity: parsed.data.agents }],
+      checkout: { url: "https://getresolvex.com/checkout" },
+      customData: {
+        organization_id: organizationId,
+        user_id: user.id,
+        plan: "one",
+        agents: parsed.data.agents,
+        paddle_environment: config.environment,
+      },
+    });
+    return NextResponse.json({
+      provider: "paddle",
+      clientToken: config.clientToken,
+      environment: config.environment,
+      transactionId: transaction.id,
       agents: parsed.data.agents,
-      paddle_environment: config.environment,
-    },
-  });
-  return NextResponse.json({
-    provider: "paddle",
-    clientToken: config.clientToken,
-    environment: config.environment,
-    transactionId: transaction.id,
-    agents: parsed.data.agents,
-    customer: { email: user.email ?? "" },
-  });
+      customer: { email: user.email ?? "" },
+    });
+  } catch (error) {
+    console.error("Paddle checkout creation failed", error);
+    const forbidden =
+      error &&
+      typeof error === "object" &&
+      (error as { code?: unknown }).code === "forbidden";
+    return NextResponse.json(
+      {
+        error: forbidden
+          ? "The Paddle sandbox key cannot create transactions. Enable Transactions: Write for this key in Paddle, then retry."
+          : paddleError(error),
+      },
+      { status: paddleErrorStatus(error) },
+    );
+  }
 }
 
 export async function paddlePatch(request: Request) {
