@@ -30,6 +30,7 @@ import {
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { AttentionBrief } from "@/components/workspace/AttentionBrief";
 
 function Loading() {
   return (
@@ -128,6 +129,80 @@ const templateOrder: Employee["template_type"][] = [
   "custom",
 ];
 
+const integrationGuidance: Record<
+  Employee["template_type"],
+  Array<{ slug: string; name: string; reason: string }>
+> = {
+  support: [
+    { slug: "gmail", name: "Gmail", reason: "Read and draft support email" },
+    {
+      slug: "slack",
+      name: "Slack",
+      reason: "Escalate and coordinate internally",
+    },
+    {
+      slug: "notion",
+      name: "Notion",
+      reason: "Use approved operating context",
+    },
+    { slug: "shopify", name: "Shopify", reason: "Look up customer orders" },
+  ],
+  receptionist: [
+    {
+      slug: "googlecalendar",
+      name: "Google Calendar",
+      reason: "Schedule and reschedule meetings",
+    },
+    {
+      slug: "gmail",
+      name: "Gmail",
+      reason: "Send confirmations and follow-ups",
+    },
+  ],
+  sales: [
+    { slug: "hubspot", name: "HubSpot", reason: "Read and update CRM records" },
+    { slug: "gmail", name: "Gmail", reason: "Draft approved sales follow-ups" },
+    {
+      slug: "googlecalendar",
+      name: "Google Calendar",
+      reason: "Book qualified meetings",
+    },
+    {
+      slug: "zoom",
+      name: "Zoom",
+      reason: "Use available post-meeting records",
+    },
+    {
+      slug: "microsoft_teams",
+      name: "Teams",
+      reason: "Use available meeting transcripts",
+    },
+    {
+      slug: "googlemeet",
+      name: "Google Meet",
+      reason: "Use available conference records",
+    },
+  ],
+  customer_success: [
+    {
+      slug: "gmail",
+      name: "Gmail",
+      reason: "Monitor and draft customer follow-ups",
+    },
+    { slug: "slack", name: "Slack", reason: "Coordinate account risks" },
+    {
+      slug: "hubspot",
+      name: "HubSpot",
+      reason: "Update lifecycle and health context",
+    },
+  ],
+  custom: [
+    { slug: "gmail", name: "Gmail", reason: "Read and draft authorized email" },
+    { slug: "slack", name: "Slack", reason: "Work with internal messages" },
+    { slug: "hubspot", name: "HubSpot", reason: "Use CRM records" },
+  ],
+};
+
 function statusTone(status: string) {
   if (status === "active") return "bg-[#e9fbd0] text-[#397313]";
   if (status === "failed") return "bg-[#ffede8] text-[#a33a27]";
@@ -147,7 +222,9 @@ export function AIEmployeesView() {
   const [name, setName] = useState("Arlo Support");
   const [instructions, setInstructions] = useState("");
   const [voice, setVoice] = useState(false);
+  const [phoneChannel, setPhoneChannel] = useState(false);
   const [transferToNumber, setTransferToNumber] = useState("");
+  const [selectedToolkits, setSelectedToolkits] = useState<string[]>([]);
   const [busy, setBusy] = useState<string | null>(null);
 
   const load = useCallback(async () => {
@@ -170,6 +247,8 @@ export function AIEmployeesView() {
     setName(templates[id]?.label ?? "Custom employee");
     setInstructions(templates[id]?.instructions ?? "");
     setVoice(templates[id]?.channels.includes("voice") ?? false);
+    setPhoneChannel(templates[id]?.channels.includes("phone") ?? false);
+    setSelectedToolkits(templates[id]?.recommendedToolkits ?? []);
   }
 
   async function create(event: FormEvent) {
@@ -182,15 +261,18 @@ export function AIEmployeesView() {
         name,
         templateType: selectedTemplate,
         instructions: instructions || templates[selectedTemplate]?.instructions,
-        assignedChannels: voice ? ["chat", "voice"] : ["chat"],
+        assignedChannels: [
+          "chat",
+          ...(voice ? ["voice"] : []),
+          ...(phoneChannel ? ["phone"] : []),
+        ],
         escalationRules: {
           always_allow_human: true,
           ...(transferToNumber.trim()
             ? { transfer_to_number: transferToNumber.trim() }
             : {}),
         },
-        connectedToolkits:
-          templates[selectedTemplate]?.recommendedToolkits ?? [],
+        connectedToolkits: selectedToolkits,
       }),
     });
     const data = await response.json();
@@ -313,20 +395,84 @@ export function AIEmployeesView() {
                 className="mt-2 h-11 w-full rounded-[6px] border border-black/10 px-3 font-normal outline-none focus:border-[#355cff]"
               />
             </label>
-            <label className="flex items-center justify-between rounded-[7px] border border-black/10 p-4 text-xs">
-              <span>
-                <b className="block">Website voice</b>
-                <span className="mt-1 block text-[10px] text-[#7c818a]">
-                  Provision ElevenLabs only when activated.
-                </span>
+            <div className="rounded-[9px] border border-black/10 p-4 md:col-span-2">
+              <p className="text-[10px] font-bold uppercase tracking-[.12em] text-[#757a83]">
+                Conversation channels
+              </p>
+              <div className="mt-3 grid gap-3 md:grid-cols-2">
+                <label className="flex min-h-20 items-center justify-between rounded-[7px] bg-[#f5f6f7] p-4 text-xs">
+                  <span>
+                    <b className="block">Website voice</b>
+                    <span className="mt-1 block text-[10px] text-[#7c818a]">
+                      Browser microphone and animated website assistant.
+                    </span>
+                  </span>
+                  <input
+                    type="checkbox"
+                    checked={voice}
+                    onChange={(event) => setVoice(event.target.checked)}
+                    className="size-4 accent-[#355cff]"
+                  />
+                </label>
+                <label className="flex min-h-20 items-center justify-between rounded-[7px] bg-[#f5f6f7] p-4 text-xs">
+                  <span>
+                    <b className="block">Telephone calls</b>
+                    <span className="mt-1 block text-[10px] text-[#7c818a]">
+                      Mobile and landline calls through a number the customer
+                      already owns.
+                    </span>
+                  </span>
+                  <input
+                    type="checkbox"
+                    checked={phoneChannel}
+                    onChange={(event) => setPhoneChannel(event.target.checked)}
+                    className="size-4 accent-[#355cff]"
+                  />
+                </label>
+              </div>
+            </div>
+          </div>
+          <div className="mt-4 rounded-[9px] border border-black/10 p-4">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <b className="text-xs">Apps this employee may use</b>
+                <p className="mt-1 text-[10px] text-[#777c85]">
+                  Selecting an app grants no account access by itself. Connect
+                  the customer’s account in Integrations first; every action
+                  remains tenant-scoped and policy-checked.
+                </p>
+              </div>
+              <span className="rounded-full bg-[#eef1ff] px-2 py-1 text-[9px] font-bold text-[#355cff]">
+                {selectedToolkits.length} selected
               </span>
-              <input
-                type="checkbox"
-                checked={voice}
-                onChange={(event) => setVoice(event.target.checked)}
-                className="size-4 accent-[#355cff]"
-              />
-            </label>
+            </div>
+            <div className="mt-3 grid gap-2 md:grid-cols-2 xl:grid-cols-3">
+              {integrationGuidance[selectedTemplate].map((toolkit) => (
+                <label
+                  key={toolkit.slug}
+                  className="flex min-h-16 items-center gap-3 rounded-[7px] bg-[#f5f6f7] p-3 text-xs"
+                >
+                  <input
+                    type="checkbox"
+                    checked={selectedToolkits.includes(toolkit.slug)}
+                    onChange={(event) =>
+                      setSelectedToolkits((items) =>
+                        event.target.checked
+                          ? [...new Set([...items, toolkit.slug])]
+                          : items.filter((item) => item !== toolkit.slug),
+                      )
+                    }
+                    className="size-4 accent-[#355cff]"
+                  />
+                  <span>
+                    <b className="block">{toolkit.name}</b>
+                    <span className="mt-1 block text-[10px] text-[#777c85]">
+                      {toolkit.reason}
+                    </span>
+                  </span>
+                </label>
+              ))}
+            </div>
           </div>
           <label className="mt-4 block text-xs font-semibold">
             Role instructions
@@ -337,7 +483,7 @@ export function AIEmployeesView() {
               className="mt-2 w-full rounded-[6px] border border-black/10 p-3 font-normal leading-5 outline-none focus:border-[#355cff]"
             />
           </label>
-          {voice && (
+          {phoneChannel && (
             <label className="mt-4 block text-xs font-semibold">
               Human transfer number (optional)
               <input
@@ -348,9 +494,8 @@ export function AIEmployeesView() {
                 className="mt-2 h-11 w-full rounded-[6px] border border-black/10 px-3 font-normal outline-none focus:border-[#355cff]"
               />
               <span className="mt-1 block text-[10px] font-normal text-[#777c85]">
-                Use E.164 format. Voice calls can conference-transfer here when
-                the caller asks for a human or the request needs human
-                authority.
+                Use E.164 format. Telephone calls can transfer here when the
+                caller asks for a human or the request needs human authority.
               </span>
             </label>
           )}
@@ -430,15 +575,30 @@ export function AIEmployeesView() {
                 Human transfer: {employee.escalation_rules.transfer_to_number}
               </p>
             )}
-            {employee.external_agent_id && employee.status === "active" && (
-              <div className="mt-4">
-                <div className="mb-3 rounded-[7px] border border-[#c8e99c] bg-[#f3ffe4] p-3 text-[10px] leading-5 text-[#345d17]">
-                  <b>{employee.name} is live.</b> Website chat now uses this
-                  employee’s instructions and approved knowledge. Add the widget
-                  in Channels → Messenger; use the panel below for a browser
-                  voice test.
+            {employee.external_agent_id &&
+              employee.status === "active" &&
+              employee.assigned_channels.includes("voice") && (
+                <div className="mt-4">
+                  <div className="mb-3 rounded-[7px] border border-[#c8e99c] bg-[#f3ffe4] p-3 text-[10px] leading-5 text-[#345d17]">
+                    <b>{employee.name} is live.</b> Website chat now uses this
+                    employee’s instructions and approved knowledge. Add the
+                    widget in Channels → Messenger; use the panel below for a
+                    browser voice test.
+                  </div>
+                  <VoiceTester employee={employee} />
                 </div>
-                <VoiceTester employee={employee} />
+              )}
+            {employee.status === "active" && (
+              <div className="mt-3 rounded-[7px] border border-black/8 bg-[#f5f6f7] p-3 text-[10px] leading-5 text-[#626873]">
+                <b className="text-[#15171b]">How it runs:</b>{" "}
+                {employee.assigned_channels.includes("chat") &&
+                  "website chat reacts to new messages; "}
+                {employee.assigned_channels.includes("voice") &&
+                  "website voice uses the visitor’s browser microphone; "}
+                {employee.assigned_channels.includes("phone") &&
+                  "telephone calls use a connected customer-owned number; "}
+                scheduled and event-driven jobs continue after the browser is
+                closed.
               </div>
             )}
             <div className="mt-4 flex flex-wrap gap-2 border-t border-black/8 pt-4">
@@ -902,9 +1062,9 @@ export function ApprovalsView() {
     const item = items.find((approval) => approval.id === id);
     if (
       decision === "approved" &&
-      item?.action_type === "phone_number_purchase" &&
+      item?.action_type === "managed_sip_connection" &&
       !window.confirm(
-        "Approve and purchase this number now? Provider rental and setup charges may be applied immediately.",
+        "Approve this SIP connection now? ResolveX will configure routing but will not purchase or bill for the number.",
       )
     )
       return;
@@ -1474,283 +1634,6 @@ export function ConnectView() {
   );
 }
 
-type AvailableNumber = {
-  number: string;
-  type: string | null;
-  region: string | null;
-  monthlyRentalRate: string | null;
-  setupRate: string | null;
-  currency: string | null;
-  restriction: string | null;
-  restrictionText: string | null;
-};
-type StoredNumber = {
-  id: string;
-  e164: string;
-  country: string;
-  number_type: string | null;
-  status: string;
-  compliance_status: string;
-  monthly_cost_minor: number | null;
-  currency: string | null;
-};
-type VoiceEmployeeOption = { id: string; name: string };
-
-export function PhoneNumbersView() {
-  const [numbers, setNumbers] = useState<StoredNumber[]>([]);
-  const [available, setAvailable] = useState<AvailableNumber[]>([]);
-  const [country, setCountry] = useState("US");
-  const [numberType, setNumberType] = useState("local");
-  const [voiceEmployees, setVoiceEmployees] = useState<VoiceEmployeeOption[]>(
-    [],
-  );
-  const [employeeId, setEmployeeId] = useState("");
-  const [complianceApplicationId, setComplianceApplicationId] = useState("");
-  const [searchMessage, setSearchMessage] = useState("");
-  const [requesting, setRequesting] = useState<string | null>(null);
-  const [configured, setConfigured] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const [searching, setSearching] = useState(false);
-  useEffect(() => {
-    fetch("/api/phone-numbers", { cache: "no-store" })
-      .then(async (response) => ({ response, data: await response.json() }))
-      .then(({ response, data }) => {
-        if (response.ok) {
-          setNumbers(data.numbers ?? []);
-          setConfigured(data.configured);
-          setVoiceEmployees(data.voiceEmployees ?? []);
-          setEmployeeId(data.voiceEmployees?.[0]?.id ?? "");
-        } else toast.error(data.error);
-      })
-      .finally(() => setLoading(false));
-  }, []);
-  async function search() {
-    setSearching(true);
-    const response = await fetch(
-      `/api/phone-numbers?country=${encodeURIComponent(country)}&type=${encodeURIComponent(numberType)}`,
-      { cache: "no-store" },
-    );
-    const data = await response.json();
-    setSearching(false);
-    if (!response.ok) return toast.error(data.error);
-    setAvailable(data.available ?? []);
-    setSearchMessage(data.message ?? "");
-  }
-  async function requestActivation(item: AvailableNumber) {
-    if (
-      !window.confirm(
-        `Create an approval for ${item.number}? No purchase happens until an owner presses “Approve & run” in Approvals.`,
-      )
-    )
-      return;
-    if (!employeeId)
-      return toast.error(
-        "Activate a voice AI employee before requesting a number.",
-      );
-    if (country === "IN" && !complianceApplicationId.trim())
-      return toast.error("Enter the accepted Plivo compliance application ID.");
-    setRequesting(item.number);
-    const decimal = Number(item.monthlyRentalRate ?? 0);
-    const response = await fetch("/api/phone-numbers", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        number: item.number,
-        country,
-        numberType: item.type ?? undefined,
-        monthlyCostMinor: Number.isFinite(decimal)
-          ? Math.round(decimal * 100)
-          : undefined,
-        currency: item.currency ?? undefined,
-        providerMetadata: item,
-        employeeId,
-        complianceApplicationId:
-          country === "IN" ? complianceApplicationId.trim() : undefined,
-        confirmation: "REQUEST ACTIVATION",
-      }),
-    });
-    const data = await response.json();
-    setRequesting(null);
-    if (!response.ok) return toast.error(data.error);
-    setNumbers((rows) => [
-      data.number,
-      ...rows.filter((row) => row.id !== data.number.id),
-    ]);
-    toast.success(data.message);
-  }
-  if (loading) return <Loading />;
-  return (
-    <ModuleShell
-      eyebrow="Business"
-      title="Phone Numbers"
-      copy="Search actual Plivo inventory, review provider restrictions, and request activation. Rental never happens before billing authorization and required compliance approval."
-      tone="#f1f5ef"
-    >
-      <div className="rounded-[10px] border border-black/10 bg-white p-5">
-        <div className="flex flex-wrap items-end gap-3">
-          <label className="text-[10px] font-bold uppercase tracking-[.1em] text-[#767b84]">
-            Country
-            <input
-              value={country}
-              maxLength={2}
-              onChange={(event) => setCountry(event.target.value.toUpperCase())}
-              className="mt-2 block h-10 w-28 rounded-[5px] border border-black/10 px-3 text-xs font-normal"
-            />
-          </label>
-          <label className="text-[10px] font-bold uppercase tracking-[.1em] text-[#767b84]">
-            Number type
-            <select
-              value={numberType}
-              onChange={(event) => setNumberType(event.target.value)}
-              className="mt-2 block h-10 rounded-[5px] border border-black/10 bg-white px-3 text-xs font-normal normal-case"
-            >
-              <option value="local">Local</option>
-              <option value="tollfree">Toll-free</option>
-              <option value="mobile">Mobile</option>
-              <option value="fixed">Fixed</option>
-            </select>
-          </label>
-          <label className="min-w-56 text-[10px] font-bold uppercase tracking-[.1em] text-[#767b84]">
-            Route to AI employee
-            <select
-              value={employeeId}
-              onChange={(event) => setEmployeeId(event.target.value)}
-              className="mt-2 block h-10 w-full rounded-[5px] border border-black/10 bg-white px-3 text-xs font-normal normal-case"
-            >
-              {!voiceEmployees.length && (
-                <option value="">No active voice employee</option>
-              )}
-              {voiceEmployees.map((employee) => (
-                <option key={employee.id} value={employee.id}>
-                  {employee.name}
-                </option>
-              ))}
-            </select>
-          </label>
-          <button
-            disabled={!configured || searching || country.length !== 2}
-            onClick={() => void search()}
-            className="flex h-10 items-center gap-2 rounded-[5px] bg-[#15171b] px-4 text-xs font-semibold text-white disabled:opacity-40"
-          >
-            {searching ? (
-              <Loader2 size={14} className="animate-spin" />
-            ) : (
-              <Search size={14} />
-            )}{" "}
-            Search live inventory
-          </button>
-          <p className="text-[10px] text-[#81868f]">
-            {configured
-              ? "Provider connected"
-              : "Add Plivo credentials to search"}
-          </p>
-        </div>
-        {country === "IN" && (
-          <div className="mt-4 rounded-[7px] bg-[#fff5db] p-4 text-[10px] leading-5 text-[#7a5504]">
-            <b>India compliance review required.</b> KYC, number eligibility,
-            data region, SIP routing, calling consent, and inbound/outbound
-            tests must be accepted before activation. Plivo remains the carrier
-            and India-resident number provider; ElevenLabs receives the AI audio
-            over the provisioned SIP route.
-            <label className="mt-3 block font-bold">
-              Accepted Plivo compliance application ID
-              <input
-                value={complianceApplicationId}
-                onChange={(event) =>
-                  setComplianceApplicationId(event.target.value)
-                }
-                placeholder="Enter the approved application ID"
-                className="mt-2 block h-10 w-full rounded-[5px] border border-[#d5b86f] bg-white px-3 font-normal text-[#15171b]"
-              />
-            </label>
-          </div>
-        )}
-      </div>
-      <div className="mt-5 grid gap-5 lg:grid-cols-2">
-        <section>
-          <h3 className="mb-3 text-xs font-semibold">Available numbers</h3>
-          <div className="space-y-2">
-            {available.map((item) => (
-              <div
-                key={item.number}
-                className="flex items-center gap-3 rounded-[8px] border border-black/10 bg-white p-4"
-              >
-                <Phone size={15} />
-                <div className="min-w-0 flex-1">
-                  <b className="text-xs">{item.number}</b>
-                  <p className="mt-1 text-[9px] text-[#838891]">
-                    {item.type ?? "Voice"} · {item.region ?? country}
-                    {item.monthlyRentalRate
-                      ? ` · ${item.currency ?? ""} ${item.monthlyRentalRate}/mo`
-                      : ""}
-                  </p>
-                  {item.restrictionText && (
-                    <p className="mt-1 truncate text-[9px] text-[#9b6532]">
-                      {item.restrictionText}
-                    </p>
-                  )}
-                </div>
-                <button
-                  disabled={requesting === item.number || !employeeId}
-                  onClick={() => void requestActivation(item)}
-                  className="h-8 rounded-[5px] border border-black/10 px-3 text-[9px] font-semibold"
-                >
-                  {requesting === item.number ? (
-                    <Loader2 size={13} className="animate-spin" />
-                  ) : (
-                    "Request"
-                  )}
-                </button>
-              </div>
-            ))}
-            {!available.length && (
-              <Empty
-                title={
-                  searchMessage
-                    ? "No provider inventory"
-                    : "Search live inventory"
-                }
-                copy={
-                  searchMessage ||
-                  "ResolveX never fabricates availability or price. Results come directly from the configured telephony provider."
-                }
-              />
-            )}
-          </div>
-        </section>
-        <section>
-          <h3 className="mb-3 text-xs font-semibold">Workspace numbers</h3>
-          <div className="space-y-2">
-            {numbers.map((item) => (
-              <div
-                key={item.id}
-                className="flex items-center gap-3 rounded-[8px] border border-black/10 bg-white p-4"
-              >
-                <span className="grid size-9 place-items-center rounded-full bg-[#e9fbd0]">
-                  <Phone size={14} />
-                </span>
-                <div className="flex-1">
-                  <b className="text-xs">{item.e164}</b>
-                  <p className="mt-1 text-[9px] capitalize text-[#838891]">
-                    {item.status.replaceAll("_", " ")} · compliance{" "}
-                    {item.compliance_status}
-                  </p>
-                </div>
-              </div>
-            ))}
-            {!numbers.length && (
-              <Empty
-                title="No phone numbers"
-                copy="A number can route to multiple AI employees and humans. You do not need one number per employee."
-              />
-            )}
-          </div>
-        </section>
-      </div>
-    </ModuleShell>
-  );
-}
-
 type UsageData = {
   balanceMicrounits: number;
   monthSpendMinor: number;
@@ -1971,6 +1854,16 @@ export function OverviewDashboard({
     [overview],
   );
   const knowledge = (overview?.knowledge ?? {}) as Record<string, number>;
+  const setupSteps = ((overview?.setup as Record<string, unknown> | undefined)
+    ?.steps ?? []) as Array<{
+    id: string;
+    label: string;
+    complete: boolean;
+    view: string;
+    optional?: boolean;
+  }>;
+  const requiredSteps = setupSteps.filter((step) => !step.optional);
+  const completedSteps = requiredSteps.filter((step) => step.complete).length;
   const stats = useMemo(
     () => [
       ["Enquiries handled", metrics.conversations ?? 0, InboxIcon],
@@ -1994,6 +1887,55 @@ export function OverviewDashboard({
       copy="See the outcomes that matter, then move directly into the conversation, employee, call, relationship, or workflow responsible."
       tone="#edf1ea"
     >
+      <AttentionBrief onOpenIntegrations={() => onNavigate("integrations")} />
+      <section className="mb-5 rounded-[11px] border border-black/8 bg-white p-5 md:p-6">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <p className="text-[10px] font-bold uppercase tracking-[.12em] text-[#355cff]">
+              Workspace setup
+            </p>
+            <h3 className="mt-2 text-xl font-semibold">
+              {completedSteps === requiredSteps.length
+                ? "Core setup complete"
+                : `${completedSteps} of ${requiredSteps.length} core steps complete`}
+            </h3>
+          </div>
+          <div className="h-2 w-44 overflow-hidden rounded-full bg-[#e7e9ee]">
+            <div
+              className="h-full rounded-full bg-[#355cff] transition-all"
+              style={{
+                width: `${requiredSteps.length ? (completedSteps / requiredSteps.length) * 100 : 0}%`,
+              }}
+            />
+          </div>
+        </div>
+        <div className="mt-5 grid gap-2 md:grid-cols-2 xl:grid-cols-3">
+          {setupSteps.map((step) => (
+            <button
+              key={step.id}
+              onClick={() => onNavigate(step.view)}
+              className="flex min-h-11 items-center gap-3 rounded-[7px] border border-black/8 px-3 text-left text-sm hover:border-[#355cff]/40"
+            >
+              <span
+                className={cn(
+                  "grid size-6 shrink-0 place-items-center rounded-full",
+                  step.complete
+                    ? "bg-[#d8ff70] text-[#2f5300]"
+                    : "bg-[#eef0f4] text-[#717680]",
+                )}
+              >
+                {step.complete ? <Check size={13} /> : <ArrowRight size={12} />}
+              </span>
+              <span>
+                {step.label}
+                {step.optional && (
+                  <small className="ml-1 text-[#858a92]">optional</small>
+                )}
+              </span>
+            </button>
+          ))}
+        </div>
+      </section>
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         {stats.map(([label, value, Icon]) => {
           const I = Icon as typeof Activity;

@@ -4,10 +4,31 @@ import { getCurrentOrganization } from "@/lib/supabase/current-org";
 
 const createSchema = z.object({
   name: z.string().trim().min(2).max(100),
+  description: z.string().trim().max(500).optional().default(""),
+  trigger: z
+    .enum([
+      "new_message",
+      "crm_lead_created",
+      "new_contact",
+      "email_received",
+      "call_completed",
+      "webhook",
+      "schedule_once",
+      "schedule_recurring",
+    ])
+    .default("new_message"),
   contains: z.string().trim().max(100).optional().default(""),
   priority: z.enum(["low", "normal", "high", "urgent"]).default("normal"),
   tag: z.string().trim().max(40).optional().default(""),
   handoff: z.boolean().default(false),
+  createTaskTitle: z.string().trim().max(160).optional().default(""),
+  employeeId: z.string().uuid().optional(),
+  employeePrompt: z.string().trim().max(2000).optional().default(""),
+  toolkit: z.string().trim().max(80).optional().default(""),
+  toolSlug: z.string().trim().max(200).optional().default(""),
+  toolArguments: z.record(z.string(), z.unknown()).optional().default({}),
+  scheduleAt: z.string().datetime().optional(),
+  intervalMinutes: z.number().int().min(5).max(525_600).optional(),
 });
 const updateSchema = z.object({ id: z.string().uuid(), enabled: z.boolean() });
 const deleteSchema = z.object({ id: z.string().uuid() });
@@ -27,7 +48,9 @@ export async function GET() {
     [
       supabase
         .from("automations")
-        .select("id,name,enabled,trigger_config,actions,run_count,created_at")
+        .select(
+          "id,name,description,enabled,trigger_config,actions,schedule_config,next_run_at,last_run_at,failure_count,run_count,created_at",
+        )
         .eq("organization_id", organizationId)
         .order("created_at", { ascending: false }),
       supabase
@@ -64,20 +87,78 @@ export async function POST(request: Request) {
         { status: 403 },
       );
     const actions = [
-      { type: "set_priority", value: input.priority },
+      ...(input.trigger === "new_message"
+        ? [{ type: "set_priority", value: input.priority }]
+        : []),
       ...(input.tag ? [{ type: "add_tag", value: input.tag }] : []),
       ...(input.handoff ? [{ type: "handoff" }] : []),
+      ...(input.createTaskTitle
+        ? [{ type: "create_task", title: input.createTaskTitle }]
+        : []),
+      ...(input.employeeId
+        ? [
+            {
+              type: "run_employee",
+              employee_id: input.employeeId,
+              prompt: input.employeePrompt || undefined,
+            },
+          ]
+        : []),
+      ...(input.employeeId && input.toolkit && input.toolSlug
+        ? [
+            {
+              type: "composio_tool",
+              employee_id: input.employeeId,
+              toolkit: input.toolkit,
+              tool_slug: input.toolSlug,
+              arguments: input.toolArguments,
+            },
+          ]
+        : []),
     ];
+    if (!actions.length)
+      return NextResponse.json(
+        { error: "Add at least one THEN action." },
+        { status: 422 },
+      );
+    if (input.trigger === "schedule_once" && !input.scheduleAt)
+      return NextResponse.json(
+        { error: "Choose when this one-time flow should run." },
+        { status: 422 },
+      );
+    if (input.trigger === "schedule_recurring" && !input.intervalMinutes)
+      return NextResponse.json(
+        { error: "Choose a recurrence interval." },
+        { status: 422 },
+      );
+    const firstRun =
+      input.trigger === "schedule_once"
+        ? input.scheduleAt
+        : input.trigger === "schedule_recurring"
+          ? new Date(
+              Date.now() + Number(input.intervalMinutes) * 60_000,
+            ).toISOString()
+          : null;
     const { data, error } = await supabase
       .from("automations")
       .insert({
         organization_id: organizationId,
         name: input.name,
+        description: input.description,
         enabled: true,
-        trigger_config: { event: "new_message", contains: input.contains },
+        trigger_config: { event: input.trigger, contains: input.contains },
         actions,
+        schedule_config:
+          input.trigger === "schedule_recurring"
+            ? { interval_minutes: input.intervalMinutes }
+            : input.trigger === "schedule_once"
+              ? { run_at: input.scheduleAt }
+              : {},
+        next_run_at: firstRun,
       })
-      .select("id,name,enabled,trigger_config,actions,run_count,created_at")
+      .select(
+        "id,name,description,enabled,trigger_config,actions,schedule_config,next_run_at,last_run_at,failure_count,run_count,created_at",
+      )
       .single();
     if (error) throw error;
     return NextResponse.json({ automation: data });
@@ -114,7 +195,9 @@ export async function PATCH(request: Request) {
       .update({ enabled: input.enabled })
       .eq("id", input.id)
       .eq("organization_id", organizationId)
-      .select("id,name,enabled,trigger_config,actions,run_count,created_at")
+      .select(
+        "id,name,description,enabled,trigger_config,actions,schedule_config,next_run_at,last_run_at,failure_count,run_count,created_at",
+      )
       .single();
     if (error) throw error;
     return NextResponse.json({ automation: data });

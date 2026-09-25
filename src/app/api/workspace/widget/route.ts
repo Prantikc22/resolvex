@@ -29,6 +29,8 @@ export async function GET() {
       "Ask naturally. We answer from approved knowledge or bring in a person.",
     logoUrl: data.settings?.widget_logo_url ?? "",
     position: data.settings?.widget_position ?? "right",
+    websiteVoiceEnabled: data.settings?.website_voice_enabled === true,
+    humanHandoffEnabled: data.settings?.human_handoff_enabled !== false,
   });
 }
 
@@ -53,6 +55,8 @@ const schema = z.discriminatedUnion("action", [
         }),
     ]),
     position: z.enum(["left", "right"]),
+    websiteVoiceEnabled: z.boolean(),
+    humanHandoffEnabled: z.boolean(),
   }),
 ]);
 
@@ -92,6 +96,8 @@ export async function POST(request: Request) {
           widget_welcome_message: input.welcomeMessage,
           widget_logo_url: input.logoUrl,
           widget_position: input.position,
+          website_voice_enabled: input.websiteVoiceEnabled,
+          human_handoff_enabled: input.humanHandoffEnabled,
         },
       };
     }
@@ -112,6 +118,8 @@ export async function POST(request: Request) {
       welcomeMessage: data.settings?.widget_welcome_message ?? "",
       logoUrl: data.settings?.widget_logo_url ?? "",
       position: data.settings?.widget_position ?? "right",
+      websiteVoiceEnabled: data.settings?.website_voice_enabled === true,
+      humanHandoffEnabled: data.settings?.human_handoff_enabled !== false,
     });
   } catch (error) {
     return NextResponse.json(

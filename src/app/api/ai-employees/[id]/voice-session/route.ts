@@ -16,12 +16,26 @@ export async function POST(
       );
     const { data: employee } = await supabase
       .from("ai_employees")
-      .select("id,status,external_agent_id,usage_budget_cents")
+      .select("id,status,external_agent_id,provider,usage_budget_cents")
       .eq("id", id)
       .eq("organization_id", organizationId)
-      .eq("provider", "elevenlabs")
       .single();
-    if (!employee?.external_agent_id || employee.status !== "active")
+    const { data: providerAgent } = await supabase
+      .from("ai_provider_agents")
+      .select("external_agent_id,status")
+      .eq("organization_id", organizationId)
+      .eq("ai_employee_id", id)
+      .eq("provider", "elevenlabs")
+      .eq("channel", "website_voice")
+      .maybeSingle();
+    const externalAgentId =
+      providerAgent?.external_agent_id ??
+      (employee?.provider === "elevenlabs" ? employee.external_agent_id : null);
+    if (
+      !externalAgentId ||
+      employee?.status !== "active" ||
+      (providerAgent && providerAgent.status !== "active")
+    )
       return NextResponse.json(
         { error: "Activate this voice employee before starting a test." },
         { status: 409 },
@@ -45,9 +59,7 @@ export async function POST(
         { error: "This employee’s monthly voice budget has been reached." },
         { status: 402 },
       );
-    const result = await createSignedConversationUrl(
-      employee.external_agent_id,
-    );
+    const result = await createSignedConversationUrl(externalAgentId);
     await supabase.from("usage_events").insert({
       organization_id: organizationId,
       event_type: "voice_session_started",

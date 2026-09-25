@@ -1,9 +1,12 @@
 "use client";
 
+import { ConversationProvider, useConversation } from "@elevenlabs/react";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   ArrowUp,
   CheckCheck,
+  Mic,
+  MicOff,
   Paperclip,
   Phone,
   Sparkles,
@@ -25,15 +28,25 @@ const actions = [
   "Talk to a person",
 ];
 
-export function WidgetPanel({
-  embedded = false,
-  onClose,
-  workspaceKey,
-}: {
+type WidgetPanelProps = {
   embedded?: boolean;
   onClose?: () => void;
   workspaceKey?: string;
-}) {
+};
+
+export function WidgetPanel(props: WidgetPanelProps) {
+  return (
+    <ConversationProvider>
+      <WidgetPanelContent {...props} />
+    </ConversationProvider>
+  );
+}
+
+function WidgetPanelContent({
+  embedded = false,
+  onClose,
+  workspaceKey,
+}: WidgetPanelProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [thinking, setThinking] = useState(false);
@@ -47,6 +60,8 @@ export function WidgetPanel({
     "Ask naturally. The answer cites approved knowledge or brings in a person with the context ready.",
   );
   const [logoUrl, setLogoUrl] = useState("");
+  const [websiteVoiceEnabled, setWebsiteVoiceEnabled] = useState(false);
+  const [voiceOpen, setVoiceOpen] = useState(false);
 
   useEffect(() => {
     if (!workspaceKey) return;
@@ -75,6 +90,7 @@ export function WidgetPanel({
             "Ask naturally. We answer from approved knowledge or bring in a person.",
         );
         setLogoUrl(data.logoUrl ?? "");
+        setWebsiteVoiceEnabled(Boolean(data.websiteVoiceEnabled));
       })
       .catch(() => setWorkspaceName("Support"));
   }, [workspaceKey]);
@@ -132,6 +148,54 @@ export function WidgetPanel({
     }
   }
 
+  async function requestHandoff(source: "website_chat" | "website_voice") {
+    if (!workspaceKey || !sessionId) {
+      await send("Talk to a person");
+      return;
+    }
+    setThinking(true);
+    try {
+      const response = await fetch("/api/widget/handoff", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          key: workspaceKey,
+          sessionId,
+          source,
+          reason: "Visitor requested a human from the website messenger",
+          summary: messages
+            .slice(-8)
+            .map((message) => `${message.role}: ${message.content}`)
+            .join("\n"),
+        }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error ?? "Handoff failed");
+      setMessages((value) => [
+        ...value,
+        {
+          role: "assistant",
+          content: data.message,
+          source: "Human handoff queued",
+        },
+      ]);
+    } catch (error) {
+      setMessages((value) => [
+        ...value,
+        {
+          role: "assistant",
+          content:
+            error instanceof Error
+              ? error.message
+              : "The team queue could not be reached.",
+          source: "Handoff unavailable",
+        },
+      ]);
+    } finally {
+      setThinking(false);
+    }
+  }
+
   function submit(event: FormEvent) {
     event.preventDefault();
     void send(input);
@@ -144,7 +208,7 @@ export function WidgetPanel({
       exit={{ opacity: 0, y: 18, scale: 0.97 }}
       transition={{ duration: 0.38, ease: [0.22, 1, 0.36, 1] }}
       className={cn(
-        "flex overflow-hidden rounded-[22px] border border-white/80 bg-white text-[#151619] shadow-[0_34px_110px_rgba(10,13,20,.3),0_6px_24px_rgba(10,13,20,.12)]",
+        "relative flex overflow-hidden rounded-[22px] border border-white/80 bg-white text-[#151619] shadow-[0_34px_110px_rgba(10,13,20,.3),0_6px_24px_rgba(10,13,20,.12)]",
         embedded
           ? "h-screen w-full flex-col rounded-none border-0"
           : "h-[min(650px,calc(100vh-7rem))] w-[min(392px,calc(100vw-1.5rem))] flex-col",
@@ -180,10 +244,21 @@ export function WidgetPanel({
             </div>
           </div>
           <div className="flex items-center gap-1">
+            {websiteVoiceEnabled && workspaceKey && sessionId && (
+              <button
+                type="button"
+                onClick={() => setVoiceOpen(true)}
+                aria-label="Talk to AI"
+                title="Talk to AI · AI-powered"
+                className="grid size-9 place-items-center rounded-full border border-white/10 bg-white/[.06] text-white/68 transition hover:bg-white/12 hover:text-white"
+              >
+                <Mic size={15} />
+              </button>
+            )}
             <button
               type="button"
-              onClick={() => void send("I'd like to request a callback.")}
-              aria-label="Call support"
+              onClick={() => void requestHandoff("website_chat")}
+              aria-label="Request a person"
               className="grid size-9 place-items-center rounded-full border border-white/10 bg-white/[.06] text-white/68 transition hover:bg-white/12 hover:text-white"
             >
               <Phone size={16} />
@@ -201,6 +276,21 @@ export function WidgetPanel({
           </div>
         </div>
       </header>
+      <AnimatePresence>
+        {voiceOpen && workspaceKey && sessionId && (
+          <WidgetVoiceExperience
+            workspaceKey={workspaceKey}
+            sessionId={sessionId}
+            agentName={agentName}
+            workspaceName={workspaceName}
+            onClose={() => setVoiceOpen(false)}
+            onHandoff={() => {
+              setVoiceOpen(false);
+              void requestHandoff("website_voice");
+            }}
+          />
+        )}
+      </AnimatePresence>
       <div className="scrollbar-none min-h-0 flex-1 overflow-y-auto bg-[#f7f5f0] p-4">
         {messages.length === 0 ? (
           <div className="flex min-h-full flex-col justify-between">
@@ -315,6 +405,198 @@ export function WidgetPanel({
         </div>
       </form>
     </motion.section>
+  );
+}
+
+function WidgetVoiceExperience({
+  workspaceKey,
+  sessionId,
+  agentName,
+  workspaceName,
+  onClose,
+  onHandoff,
+}: {
+  workspaceKey: string;
+  sessionId: string;
+  agentName: string;
+  workspaceName: string;
+  onClose: () => void;
+  onHandoff: () => void;
+}) {
+  const conversation = useConversation({
+    clientTools: {
+      request_human_handoff: async (parameters: Record<string, unknown>) => {
+        await conversation.endSession();
+        onHandoff();
+        return `Human handoff requested: ${String(parameters.reason ?? "visitor request")}`;
+      },
+    },
+  });
+  const [starting, setStarting] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
+  const connected = conversation.status === "connected";
+  const visualState = starting
+    ? "connecting"
+    : connected && conversation.isSpeaking
+      ? "speaking"
+      : connected
+        ? "listening"
+        : "idle";
+
+  async function close() {
+    if (connected) await conversation.endSession();
+    onClose();
+  }
+
+  async function toggle() {
+    if (connected) {
+      await conversation.endSession();
+      return;
+    }
+    setStarting(true);
+    setErrorMessage("");
+    try {
+      await navigator.mediaDevices.getUserMedia({ audio: true });
+      const response = await fetch("/api/widget/voice-session", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ key: workspaceKey, sessionId }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error ?? "Voice unavailable");
+      await conversation.startSession({
+        signedUrl: data.signedUrl,
+        dynamicVariables: {
+          resolvex_widget_session: sessionId,
+          resolvex_workspace_key: workspaceKey,
+        },
+      });
+    } catch (error) {
+      setErrorMessage(
+        error instanceof Error ? error.message : "Could not start voice.",
+      );
+    } finally {
+      setStarting(false);
+    }
+  }
+
+  const statusCopy = starting
+    ? "Connecting securely…"
+    : connected && conversation.isSpeaking
+      ? `${agentName} is speaking`
+      : connected && conversation.isMuted
+        ? "Microphone muted"
+        : connected
+          ? "Listening…"
+          : "Ready when you are";
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 18 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: 14 }}
+      transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+      className="absolute inset-0 z-40 flex flex-col bg-[#f7f9fc] text-[#151619]"
+    >
+      <div className="flex items-center justify-between border-b border-black/7 bg-white px-5 py-4">
+        <div>
+          <div className="text-[13px] font-semibold">Voice with {agentName}</div>
+          <div className="mt-0.5 flex items-center gap-1.5 text-[10px] text-[#7b818b]">
+            <span
+              className={cn(
+                "size-1.5 rounded-full",
+                connected
+                  ? "bg-[#76ad38] shadow-[0_0_8px_rgba(118,173,56,.55)]"
+                  : "bg-[#b9bec7]",
+              )}
+            />
+            {workspaceName} · AI-powered
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={() => void close()}
+          aria-label="Close voice assistant"
+          className="grid size-9 place-items-center rounded-full border border-black/8 bg-[#f4f5f7] text-[#6d727c] transition hover:bg-[#e9ebef] hover:text-[#151619]"
+        >
+          <X size={17} />
+        </button>
+      </div>
+
+      <div className="flex min-h-0 flex-1 flex-col items-center justify-center overflow-hidden px-6 pb-5 pt-3 text-center">
+        <p className="text-[11px] font-semibold uppercase tracking-[.16em] text-[#8b92a0]">
+          {statusCopy}
+        </p>
+        <button
+          type="button"
+          onClick={() => void toggle()}
+          disabled={starting}
+          aria-label={connected ? "End AI voice" : "Start AI voice"}
+          className="group relative mt-7 grid size-[205px] shrink-0 place-items-center rounded-full outline-none focus-visible:ring-4 focus-visible:ring-[#355cff]/25 disabled:cursor-wait sm:size-[220px]"
+        >
+          <span
+            data-state={visualState}
+            className="resolvex-voice-orb absolute inset-0 transition-[filter] duration-300"
+          />
+          <span
+            className={cn(
+              "absolute -bottom-3 grid size-14 place-items-center rounded-full border-[5px] border-[#f7f9fc] text-white shadow-[0_12px_30px_rgba(15,20,31,.24)] transition group-hover:scale-105",
+              connected ? "bg-[#ff5c4d]" : "bg-[#111318]",
+            )}
+          >
+            {starting ? (
+              <span className="size-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+            ) : connected ? (
+              <Phone className="rotate-[135deg]" size={21} />
+            ) : (
+              <Phone size={21} />
+            )}
+          </span>
+        </button>
+
+        <p className="mt-9 min-h-5 text-[12px] text-[#737a87]">
+          {errorMessage ||
+            (connected
+              ? "Speak naturally. You can interrupt at any time."
+              : "Tap the orb to start a private voice conversation.")}
+        </p>
+
+        <div className="mt-5 flex min-h-11 items-center justify-center gap-2">
+          {connected && (
+            <>
+              <button
+                type="button"
+                onClick={() => conversation.setMuted(!conversation.isMuted)}
+                aria-label={conversation.isMuted ? "Unmute" : "Mute"}
+                className="flex h-11 items-center gap-2 rounded-full border border-black/9 bg-white px-4 text-[11px] font-semibold shadow-sm transition hover:border-black/18"
+              >
+                {conversation.isMuted ? (
+                  <MicOff size={15} />
+                ) : (
+                  <Mic size={15} />
+                )}
+                {conversation.isMuted ? "Unmute" : "Mute"}
+              </button>
+              <button
+                type="button"
+                onClick={async () => {
+                  await conversation.endSession();
+                  onHandoff();
+                }}
+                className="flex h-11 items-center gap-2 rounded-full border border-black/9 bg-white px-4 text-[11px] font-semibold shadow-sm transition hover:border-black/18"
+              >
+                <Phone size={15} />
+                Person
+              </button>
+            </>
+          )}
+        </div>
+      </div>
+
+      <div className="border-t border-black/7 bg-white px-5 py-3 text-center text-[9px] leading-relaxed text-[#9399a4]">
+        AI voice may make mistakes. Ask for a person whenever you need one.
+      </div>
+    </motion.div>
   );
 }
 

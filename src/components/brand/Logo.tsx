@@ -31,7 +31,7 @@ export function Logo({
       className="inline-flex items-center gap-2.5"
       aria-label="ResolveX home"
     >
-      <Mark className={inverse ? "bg-white" : undefined} />
+      <Mark className={inverse ? "bg-transparent" : undefined} />
       <span
         className={cn(
           "text-[19px] font-semibold tracking-[-0.02em]",

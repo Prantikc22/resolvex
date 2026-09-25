@@ -5,6 +5,7 @@ import {
   employeeTemplates,
 } from "@/lib/ai/employee-templates";
 import { deleteElevenLabsAgent } from "@/lib/providers/elevenlabs";
+import { deleteBolnaAgent } from "@/lib/providers/bolna";
 import { getCurrentOrganization } from "@/lib/supabase/current-org";
 
 const baseSchema = z.object({
@@ -24,7 +25,7 @@ const baseSchema = z.object({
     .max(30)
     .optional(),
   assignedChannels: z
-    .array(z.enum(["chat", "email", "voice", "sms", "whatsapp"]))
+    .array(z.enum(["chat", "email", "voice", "phone", "sms", "whatsapp"]))
     .min(1)
     .max(5)
     .optional(),
@@ -213,19 +214,36 @@ export async function DELETE(request: Request) {
         { error: "Only owners and admins can delete AI employees." },
         { status: 403 },
       );
-    const { data: employee, error: readError } = await supabase
-      .from("ai_employees")
-      .select("id,external_agent_id,provider")
-      .eq("id", input.id)
-      .eq("organization_id", organizationId)
-      .single();
+    const [{ data: employee, error: readError }, { data: providerAgents }] =
+      await Promise.all([
+        supabase
+          .from("ai_employees")
+          .select("id,external_agent_id,provider")
+          .eq("id", input.id)
+          .eq("organization_id", organizationId)
+          .single(),
+        supabase
+          .from("ai_provider_agents")
+          .select("provider,external_agent_id")
+          .eq("ai_employee_id", input.id)
+          .eq("organization_id", organizationId),
+      ]);
     if (readError) throw readError;
-    if (
-      input.deleteProviderResource &&
-      employee.provider === "elevenlabs" &&
-      employee.external_agent_id
-    ) {
-      await deleteElevenLabsAgent(employee.external_agent_id);
+    if (input.deleteProviderResource) {
+      const resources = providerAgents?.length
+        ? providerAgents
+        : employee.external_agent_id && employee.provider
+          ? [employee]
+          : [];
+      await Promise.all(
+        resources.map((resource) => {
+          if (resource.provider === "elevenlabs")
+            return deleteElevenLabsAgent(resource.external_agent_id);
+          if (resource.provider === "bolna")
+            return deleteBolnaAgent(resource.external_agent_id);
+          return Promise.resolve();
+        }),
+      );
     }
     const { error } = await supabase
       .from("ai_employees")

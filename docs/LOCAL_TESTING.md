@@ -36,7 +36,7 @@ Open `http://localhost:3000`.
 3. Create a chat-only AI employee and activate it. No external resource is created.
 4. Connect a low-risk Composio sandbox/test account and verify the badge changes only after authorization succeeds.
 5. Create a voice employee, select a voice, activate it, and test through the browser microphone.
-6. Search Plivo inventory. Do not expect the local app to purchase a number; activation requests remain pending billing/compliance approval.
+6. Connect a carrier-owned sandbox number with SIP test credentials. ResolveX never searches or purchases number inventory.
 7. Create a rule, send a widget message, and verify a workflow run is recorded.
 8. Create a contact, task, and deal; confirm tenant-scoped retrieval.
 9. Trigger a consequential tool request and approve/reject it from Approvals.

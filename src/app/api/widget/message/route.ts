@@ -1,9 +1,12 @@
-import { NextResponse } from "next/server";
+import { after, NextResponse } from "next/server";
 import { z } from "zod";
 import { askArlo } from "@/lib/ai/arlo";
 import { runMessageAutomations } from "@/lib/automation/run";
 import { subscriptionHasWorkspaceAccess } from "@/lib/billing/access";
+import { createHumanHandoff } from "@/lib/handoff";
 import { sendWorkspaceWebhooks } from "@/lib/integrations/webhooks";
+import { processEmployeeJobs } from "@/lib/jobs/runner";
+import { classifyCustomerSignal, jevConfigured } from "@/lib/providers/jev";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 const schema = z.object({
@@ -100,7 +103,7 @@ export async function POST(request: Request) {
 
     let { data: conversation } = await supabase
       .from("conversations")
-      .select("id")
+      .select("id,ai_state,tags,metadata,priority")
       .eq("organization_id", organization.id)
       .contains("metadata", { widget_session: input.sessionId })
       .neq("status", "closed")
@@ -121,7 +124,7 @@ export async function POST(request: Request) {
             ai_employee_id: employee.id,
           },
         })
-        .select("id")
+        .select("id,ai_state,tags,metadata,priority")
         .single();
       if (created.error) throw created.error;
       conversation = created.data;
@@ -140,19 +143,108 @@ export async function POST(request: Request) {
         { status: 429 },
       );
 
-    const { error: incomingError } = await supabase.from("messages").insert({
-      organization_id: organization.id,
-      conversation_id: conversation.id,
-      sender_type: "contact",
-      body: input.message,
-    });
+    const { data: incoming, error: incomingError } = await supabase
+      .from("messages")
+      .insert({
+        organization_id: organization.id,
+        conversation_id: conversation.id,
+        sender_type: "contact",
+        body: input.message,
+      })
+      .select("id")
+      .single();
     if (incomingError) throw incomingError;
+
+    if (jevConfigured()) {
+      const currentConversation = conversation;
+      after(async () => {
+        try {
+          const decision = await classifyCustomerSignal({
+            channel: "website_chat",
+            message: input.message,
+          });
+          const nextPriority =
+            decision.urgencyScore >= 2.4 ||
+            decision.needsHumanProbability >= 0.75
+              ? "urgent"
+              : decision.urgencyScore >= 1.5
+                ? "high"
+                : currentConversation.priority;
+          await createAdminClient()
+            .from("conversations")
+            .update({
+              priority: nextPriority,
+              tags: [
+                ...new Set([
+                  ...(currentConversation.tags ?? []),
+                  `intent:${decision.intent}`,
+                ]),
+              ],
+              metadata: {
+                ...(currentConversation.metadata ?? {}),
+                decision: {
+                  intent: decision.intent,
+                  confidence: decision.confidence,
+                  urgency_score: decision.urgencyScore,
+                  needs_human_probability: decision.needsHumanProbability,
+                },
+              },
+            })
+            .eq("id", currentConversation.id)
+            .eq("organization_id", organization.id);
+        } catch {
+          // Decision enrichment is advisory and must never block a customer reply.
+        }
+      });
+    }
+
+    const explicitHandoff =
+      /\b(human|person|agent|representative|manager|supervisor|someone real|call me|callback)\b/i.test(
+        input.message,
+      );
+    if (explicitHandoff || conversation.ai_state === "handed_off") {
+      const result = await createHumanHandoff({
+        supabase,
+        organizationId: organization.id,
+        conversationId: conversation.id,
+        employeeId: employee.id,
+        source: "website_chat",
+        reason: explicitHandoff
+          ? "Visitor explicitly requested a human"
+          : "Follow-up message on an active human handoff",
+        summary: input.message,
+      });
+      const reply = result.duplicate
+        ? "Your message has been added to the existing handoff. A teammate can see the full conversation in the ResolveX inbox."
+        : "I’ve placed this conversation in the team queue with the context attached. A teammate can accept it from the ResolveX inbox.";
+      await supabase.from("messages").insert({
+        organization_id: organization.id,
+        conversation_id: conversation.id,
+        sender_type: "ai",
+        body: reply,
+        ai_metadata: {
+          model: "human-handoff",
+          grounded: false,
+          ai_employee_id: employee.id,
+          handoff_id: result.handoff.id,
+        },
+      });
+      return NextResponse.json({
+        message: reply,
+        source: "Human handoff queued",
+        handoff: { id: result.handoff.id, status: result.handoff.status },
+      });
+    }
 
     await runMessageAutomations({
       supabase,
       organizationId: organization.id,
       conversationId: conversation.id,
       message: input.message,
+      eventId: incoming.id,
+    });
+    after(async () => {
+      await processEmployeeJobs(createAdminClient(), { limit: 10 });
     });
     await sendWorkspaceWebhooks({
       supabase,
@@ -247,6 +339,22 @@ export async function POST(request: Request) {
         })
       : { message: handoffMessage, model: "human-handoff" };
 
+    const automaticHandoff = allowanceAvailable
+      ? null
+      : await createHumanHandoff({
+          supabase,
+          organizationId: organization.id,
+          conversationId: conversation.id,
+          employeeId: employee.id,
+          source: "website_chat",
+          reason: !approvedContext
+            ? "No approved knowledge matched the visitor request"
+            : aiReplies >= 5
+              ? "AI reply limit reached"
+              : "Workspace AI allowance exhausted",
+          summary: input.message,
+        });
+
     await Promise.all([
       supabase.from("messages").insert({
         organization_id: organization.id,
@@ -257,6 +365,9 @@ export async function POST(request: Request) {
           model: result.model,
           grounded: allowanceAvailable,
           ai_employee_id: employee.id,
+          ...(automaticHandoff
+            ? { handoff_id: automaticHandoff.handoff.id }
+            : {}),
         },
       }),
       supabase

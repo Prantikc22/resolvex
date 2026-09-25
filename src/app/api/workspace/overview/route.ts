@@ -18,6 +18,9 @@ export async function GET() {
     usageResult,
     automationResult,
     integrationResult,
+    organizationResult,
+    employeeResult,
+    phoneResult,
   ] = await Promise.all([
     supabase
       .from("knowledge_sources")
@@ -57,6 +60,19 @@ export async function GET() {
       .from("integrations")
       .select("id,status", { count: "exact" })
       .eq("organization_id", organizationId),
+    supabase
+      .from("organizations")
+      .select("name,support_email,widget_enabled,settings")
+      .eq("id", organizationId)
+      .single(),
+    supabase
+      .from("ai_employees")
+      .select("id,status,connected_toolkits,assigned_channels")
+      .eq("organization_id", organizationId),
+    supabase
+      .from("phone_numbers")
+      .select("id,status")
+      .eq("organization_id", organizationId),
   ]);
   const error = [
     sourcesResult,
@@ -66,6 +82,9 @@ export async function GET() {
     usageResult,
     automationResult,
     integrationResult,
+    organizationResult,
+    employeeResult,
+    phoneResult,
   ].find((result) => result.error)?.error;
   if (error)
     return NextResponse.json({ error: error.message }, { status: 400 });
@@ -120,6 +139,62 @@ export async function GET() {
     : null;
 
   return NextResponse.json({
+    setup: {
+      steps: [
+        {
+          id: "business_profile",
+          label: "Complete business profile",
+          complete: Boolean(
+            organizationResult.data?.name &&
+            organizationResult.data?.support_email,
+          ),
+          view: "settings",
+        },
+        {
+          id: "knowledge",
+          label: "Approve knowledge",
+          complete: (sourcesResult.data ?? []).some(
+            (source) => source.status === "ready",
+          ),
+          view: "knowledge",
+        },
+        {
+          id: "integrations",
+          label: "Connect a business app",
+          complete:
+            (integrationResult.data ?? []).some(
+              (item) => item.status === "connected",
+            ) ||
+            (employeeResult.data ?? []).some(
+              (employee) => employee.connected_toolkits?.length,
+            ),
+          view: "integrations",
+        },
+        {
+          id: "employee",
+          label: "Activate an AI employee",
+          complete: (employeeResult.data ?? []).some(
+            (employee) => employee.status === "active",
+          ),
+          view: "employees",
+        },
+        {
+          id: "widget",
+          label: "Enable and install the website widget",
+          complete: Boolean(organizationResult.data?.widget_enabled),
+          view: "settings",
+        },
+        {
+          id: "telephone",
+          label: "Optional: connect a customer-owned telephone number",
+          complete: (phoneResult.data ?? []).some(
+            (number) => number.status === "active",
+          ),
+          view: "phone_numbers",
+          optional: true,
+        },
+      ],
+    },
     knowledge: {
       approved: (sourcesResult.data ?? []).filter(
         (source) => source.status === "ready",

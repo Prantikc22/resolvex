@@ -76,6 +76,8 @@ export async function GET(request: Request) {
             : null,
         position: settings.widget_position === "left" ? "left" : "right",
         employeeId: employee.id,
+        websiteVoiceEnabled: settings.website_voice_enabled === true,
+        humanHandoffEnabled: settings.human_handoff_enabled !== false,
       },
       {
         headers: {

@@ -37,7 +37,7 @@ export const employeeTemplates: Record<
       "Welcome callers, identify their reason for calling, answer only from approved knowledge, and collect the minimum details needed. Confirm dates, times, names, and numbers aloud. Escalate urgent or sensitive matters to a human.",
     greeting:
       "Thanks for calling. I’m Arlo, the virtual receptionist. How may I help?",
-    channels: ["voice", "chat"],
+    channels: ["voice", "phone", "chat"],
     recommendedToolkits: ["googlecalendar", "gmail"],
   },
   sales: {
@@ -48,7 +48,7 @@ export const employeeTemplates: Record<
       "Understand the buyer’s need, timeline, and constraints without pressure. Use only approved product and pricing information. Never promise discounts or availability. Ask permission before creating records or sending messages.",
     greeting:
       "Hi, I’m Arlo. Tell me what you’re hoping to accomplish and I’ll help with the right next step.",
-    channels: ["chat", "voice"],
+    channels: ["chat", "voice", "phone"],
     recommendedToolkits: ["hubspot", "googlecalendar", "gmail"],
   },
   customer_success: {

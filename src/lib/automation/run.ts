@@ -1,101 +1,175 @@
+import "server-only";
+
+import crypto from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-type StoredAction = { type?: string; value?: string };
+export type ResolveXEvent =
+  | "crm_lead_created"
+  | "new_contact"
+  | "email_received"
+  | "call_completed"
+  | "webhook";
+
+export async function runEventAutomations({
+  supabase,
+  organizationId,
+  event,
+  eventId,
+  payload,
+}: {
+  supabase: SupabaseClient;
+  organizationId: string;
+  event: ResolveXEvent;
+  eventId: string;
+  payload: Record<string, unknown>;
+}) {
+  const { data: flows, error } = await supabase
+    .from("automations")
+    .select("id,actions")
+    .eq("organization_id", organizationId)
+    .eq("enabled", true)
+    .contains("trigger_config", { event });
+  if (error) throw error;
+  const jobs: string[] = [];
+  for (const flow of flows ?? []) {
+    const idempotencyKey = `flow:${flow.id}:event:${eventId}`;
+    const input = { event_id: eventId, ...payload };
+    const { data: run, error: runError } = await supabase
+      .from("workflow_runs")
+      .upsert(
+        {
+          organization_id: organizationId,
+          automation_id: flow.id,
+          trigger_type: event,
+          status: "queued",
+          input,
+          idempotency_key: idempotencyKey,
+        },
+        {
+          onConflict: "organization_id,idempotency_key",
+          ignoreDuplicates: true,
+        },
+      )
+      .select("id")
+      .maybeSingle();
+    if (runError) throw runError;
+    if (!run) continue;
+    const employeeAction = (
+      Array.isArray(flow.actions) ? flow.actions : []
+    ).find(
+      (action) =>
+        action?.type === "run_employee" || action?.type === "composio_tool",
+    );
+    const { data: job, error: jobError } = await supabase
+      .from("employee_jobs")
+      .upsert(
+        {
+          organization_id: organizationId,
+          ai_employee_id: employeeAction?.employee_id ?? null,
+          automation_id: flow.id,
+          workflow_run_id: run.id,
+          job_type: "flow",
+          trigger_type: event,
+          status: "queued",
+          idempotency_key: idempotencyKey,
+          input,
+          max_attempts: 5,
+          timeout_seconds: 90,
+          max_tool_calls: 5,
+          max_spend_minor: 100,
+        },
+        { onConflict: "organization_id,idempotency_key" },
+      )
+      .select("id")
+      .single();
+    if (jobError) throw jobError;
+    jobs.push(job.id);
+  }
+  return jobs;
+}
 
 export async function runMessageAutomations({
   supabase,
   organizationId,
   conversationId,
   message,
+  eventId,
 }: {
   supabase: SupabaseClient;
   organizationId: string;
   conversationId: string;
   message: string;
+  eventId?: string;
 }) {
-  const { data: rules } = await supabase
+  const { data: rules, error } = await supabase
     .from("automations")
-    .select("id,trigger_config,actions,run_count")
+    .select("id,trigger_config")
     .eq("organization_id", organizationId)
     .eq("enabled", true);
-  if (!rules?.length) return;
-  const { data: conversation } = await supabase
-    .from("conversations")
-    .select("priority,tags,ai_state")
-    .eq("id", conversationId)
-    .single();
-  if (!conversation) return;
-
-  for (const rule of rules) {
+  if (error) throw error;
+  const queued: string[] = [];
+  for (const rule of rules ?? []) {
+    const event = String(rule.trigger_config?.event ?? "new_message");
+    if (event !== "new_message") continue;
     const contains =
       typeof rule.trigger_config?.contains === "string"
         ? rule.trigger_config.contains.trim().toLowerCase()
         : "";
     if (contains && !message.toLowerCase().includes(contains)) continue;
-    const { data: run } = await supabase
+    const sourceKey =
+      eventId ??
+      crypto
+        .createHash("sha256")
+        .update(`${conversationId}:${message}`)
+        .digest("hex")
+        .slice(0, 24);
+    const idempotencyKey = `flow:${rule.id}:message:${sourceKey}`;
+    const { data: run, error: runError } = await supabase
       .from("workflow_runs")
-      .insert({
-        organization_id: organizationId,
-        automation_id: rule.id,
-        trigger_type: "new_message",
-        status: "running",
-        input: { conversation_id: conversationId, message },
-        started_at: new Date().toISOString(),
-      })
+      .upsert(
+        {
+          organization_id: organizationId,
+          automation_id: rule.id,
+          trigger_type: "new_message",
+          status: "queued",
+          input: {
+            conversation_id: conversationId,
+            message,
+            event_id: eventId,
+          },
+          idempotency_key: idempotencyKey,
+        },
+        {
+          onConflict: "organization_id,idempotency_key",
+          ignoreDuplicates: true,
+        },
+      )
       .select("id")
       .maybeSingle();
-    const update: Record<string, unknown> = {};
-    const tags = Array.isArray(conversation.tags) ? [...conversation.tags] : [];
-    for (const action of (Array.isArray(rule.actions)
-      ? rule.actions
-      : []) as StoredAction[]) {
-      if (action.type === "set_priority" && action.value)
-        update.priority = action.value;
-      if (
-        action.type === "add_tag" &&
-        action.value &&
-        !tags.includes(action.value)
-      )
-        tags.push(action.value);
-      if (action.type === "handoff") update.ai_state = "handed_off";
-    }
-    if (tags.length) update.tags = tags;
-    try {
-      if (Object.keys(update).length) {
-        const { error } = await supabase
-          .from("conversations")
-          .update(update)
-          .eq("id", conversationId)
-          .eq("organization_id", organizationId);
-        if (error) throw error;
-      }
-      const { error: countError } = await supabase
-        .from("automations")
-        .update({ run_count: Number(rule.run_count ?? 0) + 1 })
-        .eq("id", rule.id)
-        .eq("organization_id", organizationId);
-      if (countError) throw countError;
-      if (run)
-        await supabase
-          .from("workflow_runs")
-          .update({
-            status: "succeeded",
-            output: { conversation_update: update },
-            completed_at: new Date().toISOString(),
-          })
-          .eq("id", run.id);
-    } catch (error) {
-      if (run)
-        await supabase
-          .from("workflow_runs")
-          .update({
-            status: "failed",
-            error:
-              error instanceof Error ? error.message : "Automation failed.",
-            completed_at: new Date().toISOString(),
-          })
-          .eq("id", run.id);
-      throw error;
-    }
+    if (runError) throw runError;
+    if (!run) continue;
+    const { error: jobError } = await supabase.from("employee_jobs").upsert(
+      {
+        organization_id: organizationId,
+        automation_id: rule.id,
+        workflow_run_id: run.id,
+        job_type: "flow",
+        trigger_type: "new_message",
+        status: "queued",
+        idempotency_key: idempotencyKey,
+        input: { conversation_id: conversationId, message, event_id: eventId },
+        max_attempts: 5,
+        timeout_seconds: 90,
+        max_tool_calls: 5,
+        max_spend_minor: 100,
+      },
+      {
+        onConflict: "organization_id,idempotency_key",
+        ignoreDuplicates: true,
+      },
+    );
+    if (jobError) throw jobError;
+    queued.push(run.id);
   }
+  return queued;
 }

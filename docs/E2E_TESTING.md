@@ -29,25 +29,43 @@ The page deliberately loads the production embed exactly as a customer site does
 
 ## Phone and voice
 
-1. Activate an AI employee with the Voice channel.
-2. Open **Phone Numbers**, select that employee, country, and number type, then search live Plivo inventory.
-3. For India, enter an **accepted** Plivo compliance application ID. The Plivo account must use the India data region.
-4. Press **Request**, then open **Approvals**. The number has not been purchased yet.
-5. Review the displayed number and charges, then press **Approve & run**. This is the step that can incur Plivo rental/setup charges.
-6. ResolveX creates the Plivo application, purchases and attaches the number, provisions an outbound SIP trunk, imports the number into ElevenLabs, and assigns the employee.
-7. Place one inbound test call. Verify **Calls** shows duration, transcript, summary, result, Plivo carrier cost, and the ResolveX voice-platform charge.
-8. Test a human transfer only after a real transfer destination is configured on the ElevenLabs agent and permitted by the SIP trunk. Verify the call status becomes `transferred`.
+Activating an employee's telephone channel provisions its managed voice runtime. A phone
+number is deliberately **not** required for activation. ResolveX does not sell or
+purchase phone numbers.
 
-Do not expect US results when Plivo returns an empty US local/toll-free inventory response. That is provider account inventory or eligibility, not a locally generated list.
+### Connect a customer-owned number (any country)
+
+1. Activate an AI employee with **Telephone calls** enabled.
+2. Buy and verify the number directly with the carrier. The carrier owns KYC,
+   availability, rental, porting, taxes and regulatory compliance.
+3. Open **Phone Numbers**, choose the country and carrier, then provide the E.164 number,
+   SIP gateway and either SIP credentials or an IP allowlist.
+4. Select the employee and submit the connection request.
+5. ResolveX opens **Approvals**. Press **Approve & run**.
+6. ResolveX creates the managed SIP route, resolves the connected number, and assigns
+   inbound calls to the selected employee. Encrypted SIP credentials are removed from
+   the approval payload after provisioning.
+
+Place one inbound test call and verify **Calls** shows duration,
+transcript, summary, result and the reconciled provider/ResolveX cost. Test human
+transfer only after a real transfer destination is configured; verify the call and
+Inbox handoff become `transferred`/waiting as appropriate.
+
+### Website voice
+
+Enable **Website voice** and **Human handoff** under Channels/widget settings. The
+embedded widget should show **Talk to AI** and **Request a person**. Website voice uses
+ElevenLabs and saves the transcript into the same Inbox conversation; Indian telephone
+calling remains on the managed telephone runtime.
 
 ## Flows
 
-ResolveX quick rules are available immediately for message priority, tags, and human handoff. Multi-step Activepieces flows require `ACTIVEPIECES_URL` and `ACTIVEPIECES_EMBED_SIGNING_KEY`. Activepieces' embedded builder is an Embed/Enterprise feature; without it, the Flows page links to the external Activepieces builder instead of displaying a non-functional mock editor.
+ResolveX Flows use the native durable `employee_jobs` queue. Event-triggered flows are persisted before execution, scheduled flows are picked up by the Supabase Cron worker, and consequential Composio actions pause in Approvals before resuming automatically. Activepieces is deliberately not part of the runtime.
 
 ## Required provider checks
 
-- Plivo webhooks must return `401` without a valid V3 signature.
+- Managed telephony webhooks must return `401` without the configured unguessable token.
 - ElevenLabs webhooks must return `401` without a valid HMAC signature.
-- Re-delivering an ElevenLabs event must not duplicate the call or ledger transaction.
-- No phone purchase occurs before the owner/admin confirmation in Approvals.
-- India purchase fails closed unless Plivo accepts the supplied compliance application.
+- Re-delivering a telephony or website-voice event must not duplicate a call or ledger transaction.
+- ResolveX exposes no phone-number search or purchase path; owner/admin approval covers SIP routing only.
+- India purchase fails closed unless the managed provider accepts the supplied verification.

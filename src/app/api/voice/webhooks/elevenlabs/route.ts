@@ -86,17 +86,36 @@ export async function POST(request: Request) {
   );
 
   try {
-    const { data: employee } = await admin
-      .from("ai_employees")
-      .select("id,organization_id")
+    const { data: providerAgent } = await admin
+      .from("ai_provider_agents")
+      .select("organization_id,ai_employee_id")
       .eq("provider", "elevenlabs")
       .eq("external_agent_id", agentId)
-      .single();
+      .maybeSingle();
+    const { data: legacyEmployee } = providerAgent
+      ? { data: null }
+      : await admin
+          .from("ai_employees")
+          .select("id,organization_id")
+          .eq("provider", "elevenlabs")
+          .eq("external_agent_id", agentId)
+          .maybeSingle();
+    const employee = providerAgent
+      ? {
+          id: providerAgent.ai_employee_id,
+          organization_id: providerAgent.organization_id,
+        }
+      : legacyEmployee;
     if (!employee) throw new Error("Unknown ElevenLabs agent.");
 
     const metadata = record(data.metadata);
     const phoneCall = record(metadata.phone_call);
     const providerBody = record(metadata.body);
+    const initiation = record(data.conversation_initiation_client_data);
+    const dynamicVariables = record(
+      initiation.dynamic_variables ?? metadata.dynamic_variables,
+    );
+    const widgetSession = text(dynamicVariables.resolvex_widget_session);
     const analysis = record(data.analysis);
     const providerCredits = Math.max(0, Number(metadata.cost ?? 0));
     const durationSeconds = Math.max(
@@ -194,6 +213,49 @@ export async function POST(request: Request) {
       },
       { onConflict: "organization_id,idempotency_key" },
     );
+    if (widgetSession) {
+      const { data: widgetConversation } = await admin
+        .from("conversations")
+        .select("id")
+        .eq("organization_id", employee.organization_id)
+        .contains("metadata", { widget_session: widgetSession })
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (widgetConversation) {
+        const summary =
+          text(analysis.transcript_summary) ??
+          (failed
+            ? text(data.failure_reason)
+            : "Website voice session completed");
+        await Promise.all([
+          admin
+            .from("conversations")
+            .update({
+              last_message_at: new Date().toISOString(),
+              metadata: {
+                widget_session: widgetSession,
+                source: "website_voice",
+                ai_employee_id: employee.id,
+                elevenlabs_conversation_id: conversationId,
+              },
+            })
+            .eq("id", widgetConversation.id),
+          admin.from("messages").insert({
+            organization_id: employee.organization_id,
+            conversation_id: widgetConversation.id,
+            sender_type: "system",
+            body: summary || "Website voice session completed",
+            is_internal: true,
+            ai_metadata: {
+              provider: "elevenlabs",
+              external_conversation_id: conversationId,
+              transcript: transcriptText(data.transcript),
+            },
+          }),
+        ]);
+      }
+    }
     await admin
       .from("provider_events")
       .update({ processed_at: new Date().toISOString(), error: null })

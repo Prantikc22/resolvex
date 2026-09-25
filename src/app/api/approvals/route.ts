@@ -1,14 +1,50 @@
-import { NextResponse } from "next/server";
+import { after, NextResponse } from "next/server";
 import { z } from "zod";
 import { executeComposioTool } from "@/lib/providers/composio";
+import {
+  assignBolnaInboundAgent,
+  createBolnaSipTrunk,
+  listBolnaPhoneNumbers,
+} from "@/lib/providers/bolna";
 import { sanitizeToolOutput } from "@/lib/security/tool-policy";
+import { decryptServerSecret } from "@/lib/security/secrets";
+import { processEmployeeJobs } from "@/lib/jobs/runner";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { getCurrentOrganization } from "@/lib/supabase/current-org";
-import { provisionApprovedPhone } from "@/lib/voice/provision";
 
 const decisionSchema = z.object({
   id: z.string().uuid(),
   decision: z.enum(["approved", "rejected"]),
 });
+
+const managedConnectionActions = new Set([
+  "managed_sip_connection",
+  // Backward compatibility for requests created before provider white-labelling.
+  "bolna_sip_connection",
+]);
+
+const retiredPurchaseActions = new Set([
+  "phone_number_purchase",
+  "managed_phone_purchase",
+  "bolna_phone_purchase",
+]);
+
+function whiteLabelTelephony(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(whiteLabelTelephony);
+  if (value && typeof value === "object")
+    return Object.fromEntries(
+      Object.entries(value as Record<string, unknown>).map(([key, item]) => [
+        key.replaceAll("bolna", "managed_telephony"),
+        whiteLabelTelephony(item),
+      ]),
+    );
+  if (typeof value === "string") {
+    if (value === "bolna_phone_purchase") return "managed_phone_purchase";
+    if (value === "bolna_sip_connection") return "managed_sip_connection";
+    return value.replaceAll(/bolna/gi, "managed telephony");
+  }
+  return value;
+}
 
 export async function GET() {
   const { supabase, user, organizationId } = await getCurrentOrganization();
@@ -27,7 +63,9 @@ export async function GET() {
     .limit(200);
   if (error)
     return NextResponse.json({ error: error.message }, { status: 400 });
-  return NextResponse.json({ approvals: data ?? [] });
+  return NextResponse.json({
+    approvals: whiteLabelTelephony(data ?? []),
+  });
 }
 
 export async function PATCH(request: Request) {
@@ -56,6 +94,14 @@ export async function PATCH(request: Request) {
         { error: "Approval is no longer pending." },
         { status: 409 },
       );
+    if (retiredPurchaseActions.has(current.action_type))
+      return NextResponse.json(
+        {
+          error:
+            "ResolveX no longer purchases phone numbers. Buy the number from your carrier, then connect it here.",
+        },
+        { status: 410 },
+      );
     if (new Date(current.expires_at) <= new Date()) {
       await supabase
         .from("approval_requests")
@@ -78,12 +124,25 @@ export async function PATCH(request: Request) {
       .select("id,status,decided_at")
       .single();
     if (error) throw error;
-    if (input.decision === "rejected")
+    if (input.decision === "rejected") {
       await supabase
         .from("tool_executions")
         .update({ status: "blocked", error: "Rejected by workspace approver." })
         .eq("approval_id", input.id)
         .eq("organization_id", organizationId);
+      await createAdminClient()
+        .from("employee_jobs")
+        .update({
+          status: "failed",
+          error: "Required action was rejected by a workspace approver.",
+          completed_at: new Date().toISOString(),
+          locked_at: null,
+          locked_by: null,
+        })
+        .eq("approval_id", input.id)
+        .eq("organization_id", organizationId)
+        .eq("status", "waiting_approval");
+    }
 
     let executionResult: unknown = null;
     if (input.decision === "approved") {
@@ -124,57 +183,130 @@ export async function PATCH(request: Request) {
               completed_at: new Date().toISOString(),
             })
             .eq("id", execution.id);
-        } else if (current.action_type === "phone_number_purchase") {
-          const phoneId = String(current.payload?.phone_number_id ?? "");
+        } else if (managedConnectionActions.has(current.action_type)) {
+          const payload = current.payload as Record<string, unknown>;
+          const phoneId = String(payload.phone_number_id ?? "");
           const employeeId = String(
-            current.ai_employee_id ?? current.payload?.ai_employee_id ?? "",
+            current.ai_employee_id ?? payload.ai_employee_id ?? "",
           );
-          const [{ data: phone }, { data: employee }] = await Promise.all([
-            supabase
-              .from("phone_numbers")
-              .select("id,e164,country,provider_metadata")
-              .eq("id", phoneId)
-              .eq("organization_id", organizationId)
-              .single(),
-            supabase
-              .from("ai_employees")
-              .select("id,name,status,external_agent_id,assigned_channels")
-              .eq("id", employeeId)
-              .eq("organization_id", organizationId)
-              .single(),
-          ]);
+          const [{ data: phone }, { data: employee }, { data: bolnaAgent }] =
+            await Promise.all([
+              supabase
+                .from("phone_numbers")
+                .select("id,e164,country,provider_metadata")
+                .eq("id", phoneId)
+                .eq("organization_id", organizationId)
+                .single(),
+              supabase
+                .from("ai_employees")
+                .select("id,name,status,assigned_channels")
+                .eq("id", employeeId)
+                .eq("organization_id", organizationId)
+                .single(),
+              supabase
+                .from("ai_provider_agents")
+                .select("external_agent_id,status")
+                .eq("organization_id", organizationId)
+                .eq("ai_employee_id", employeeId)
+                .eq("provider", "bolna")
+                .eq("channel", "telephone")
+                .single(),
+            ]);
           if (!phone) throw new Error("Phone-number request no longer exists.");
           if (
-            !employee?.external_agent_id ||
-            employee.status !== "active" ||
-            !employee.assigned_channels?.includes("voice")
+            employee?.status !== "active" ||
+            !employee.assigned_channels?.includes("phone") ||
+            bolnaAgent?.status !== "active" ||
+            !bolnaAgent.external_agent_id
           )
             throw new Error(
-              "Activate the selected voice employee before approving this purchase.",
+              "Activate the selected telephone employee before approving this request.",
             );
           await supabase
             .from("phone_numbers")
             .update({ status: "provisioning" })
             .eq("id", phone.id);
-          executionResult = await provisionApprovedPhone(phone, employee);
-          const result = executionResult as Record<string, string>;
+
+          const sip = (payload.sip ?? {}) as Record<string, unknown>;
+          const encryptedPassword =
+            typeof sip.authPasswordEncrypted === "string"
+              ? sip.authPasswordEncrypted
+              : undefined;
+          const providerResult = await createBolnaSipTrunk({
+            name: `ResolveX ${organizationId.slice(0, 8)} ${phone.e164}`,
+            provider: String(sip.provider || "custom"),
+            gatewayAddress: String(sip.gatewayAddress || ""),
+            port: Number(sip.port || 5060),
+            authType: String(sip.authType) as "userpass" | "ip-based",
+            authUsername:
+              typeof sip.authUsername === "string"
+                ? sip.authUsername
+                : undefined,
+            authPassword: encryptedPassword
+              ? decryptServerSecret(encryptedPassword)
+              : undefined,
+            ipIdentifiers: Array.isArray(sip.ipIdentifiers)
+              ? sip.ipIdentifiers.map(String)
+              : undefined,
+            phoneNumber: phone.e164,
+          });
+          const returnedNumbers = Array.isArray(providerResult.phone_numbers)
+            ? (providerResult.phone_numbers as Array<Record<string, unknown>>)
+            : [];
+          let externalPhoneId = String(returnedNumbers[0]?.id ?? "");
+          if (!externalPhoneId) {
+            const accountNumbers = await listBolnaPhoneNumbers();
+            const matched = accountNumbers.find(
+              (row) =>
+                String(row.phone_number ?? row.number) === phone.e164 ||
+                `+${String(row.phone_number ?? row.number).replace(/^\+/, "")}` ===
+                  phone.e164,
+            );
+            externalPhoneId = String(matched?.id ?? "");
+          }
+          if (!externalPhoneId)
+            throw new Error(
+              "The telephony provider completed the operation without returning a phone-number ID.",
+            );
+          const inbound = await assignBolnaInboundAgent({
+            agentId: bolnaAgent.external_agent_id,
+            phoneNumberId: externalPhoneId,
+          });
+          executionResult = {
+            ...providerResult,
+            inbound,
+            phone_number_id: externalPhoneId,
+          };
           await supabase
             .from("phone_numbers")
             .update({
               status: "active",
-              compliance_status:
-                phone.country === "IN" ? "accepted" : "not_required",
+              provider: "bolna",
+              compliance_status: "not_required",
               assigned_employee_ids: [employee.id],
-              external_id: phone.e164,
-              sip_trunk_id: result.plivo_trunk_id,
-              elevenlabs_phone_number_id: result.elevenlabs_phone_number_id,
+              external_id: externalPhoneId,
+              sip_trunk_id: String(providerResult.id ?? "") || null,
               provider_metadata: {
                 ...phone.provider_metadata,
-                ...result,
+                bolna_phone_number_id: externalPhoneId,
+                bolna_agent_id: bolnaAgent.external_agent_id,
+                operation: current.action_type,
               },
               updated_at: new Date().toISOString(),
             })
             .eq("id", phone.id);
+          // Remove encrypted connection material after successful execution.
+          await supabase
+            .from("approval_requests")
+            .update({
+              payload: {
+                phone_number_id: phone.id,
+                ai_employee_id: employee.id,
+                provider: "bolna",
+                credentials_consumed: true,
+              },
+            })
+            .eq("id", input.id);
         }
         const { data: executed, error: executedError } = await supabase
           .from("approval_requests")
@@ -196,7 +328,24 @@ export async function PATCH(request: Request) {
           entity_id: input.id,
           metadata: { action_type: current.action_type },
         });
-        return NextResponse.json({ approval: executed });
+        const admin = createAdminClient();
+        await admin
+          .from("employee_jobs")
+          .update({
+            status: "retrying",
+            run_at: new Date().toISOString(),
+            locked_at: null,
+            locked_by: null,
+          })
+          .eq("approval_id", input.id)
+          .eq("organization_id", organizationId)
+          .eq("status", "waiting_approval");
+        after(async () => {
+          await processEmployeeJobs(createAdminClient(), { limit: 10 });
+        });
+        return NextResponse.json({
+          approval: whiteLabelTelephony(executed),
+        });
       } catch (executionError) {
         const message =
           executionError instanceof Error
@@ -220,7 +369,7 @@ export async function PATCH(request: Request) {
             })
             .eq("approval_id", input.id),
         ];
-        if (current.action_type === "phone_number_purchase") {
+        if (managedConnectionActions.has(current.action_type)) {
           const phoneId = String(current.payload?.phone_number_id ?? "");
           if (phoneId) {
             failureUpdates.push(

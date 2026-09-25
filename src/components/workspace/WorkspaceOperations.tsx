@@ -271,26 +271,35 @@ type Automation = {
   id: string;
   name: string;
   enabled: boolean;
-  trigger_config: { contains?: string };
+  trigger_config: { event?: string; contains?: string };
   actions: Array<{ type: string; value?: string }>;
   run_count: number;
+  next_run_at?: string | null;
 };
 
 export function AutomationsLiveView() {
   const [items, setItems] = useState<Automation[]>([]);
+  const [employees, setEmployees] = useState<
+    Array<{ id: string; name: string }>
+  >([]);
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [activepieces, setActivepieces] = useState<{
-    configured: boolean;
-    url: string | null;
-  }>({ configured: false, url: null });
   const [form, setForm] = useState({
     name: "",
+    trigger: "new_message",
     contains: "",
     priority: "high",
     tag: "",
     handoff: false,
+    createTaskTitle: "",
+    scheduleAt: "",
+    intervalMinutes: 1440,
+    employeeId: "",
+    employeePrompt: "",
+    toolkit: "",
+    toolSlug: "",
+    toolArgumentsJson: "{}",
   });
   const load = useCallback(async () => {
     const response = await fetch("/api/automations", { cache: "no-store" });
@@ -301,23 +310,38 @@ export function AutomationsLiveView() {
   }, []);
   useEffect(() => {
     queueMicrotask(() => void load());
-    fetch("/api/activepieces/status", { cache: "no-store" })
+    fetch("/api/ai-employees", { cache: "no-store" })
       .then((response) => response.json())
       .then((data) =>
-        setActivepieces({
-          configured: Boolean(data.configured),
-          url: typeof data.url === "string" ? data.url : null,
-        }),
+        setEmployees(
+          (data.employees ?? []).filter(
+            (employee: { status?: string }) => employee.status === "active",
+          ),
+        ),
       )
       .catch(() => undefined);
   }, [load]);
   async function create(event: FormEvent) {
     event.preventDefault();
     setSaving(true);
+    let toolArguments: Record<string, unknown> = {};
+    try {
+      toolArguments = JSON.parse(form.toolArgumentsJson || "{}");
+    } catch {
+      setSaving(false);
+      return toast.error("Tool arguments must be valid JSON.");
+    }
     const response = await fetch("/api/automations", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(form),
+      body: JSON.stringify({
+        ...form,
+        scheduleAt:
+          form.trigger === "schedule_once" && form.scheduleAt
+            ? new Date(form.scheduleAt).toISOString()
+            : undefined,
+        toolArguments,
+      }),
     });
     const data = await response.json();
     setSaving(false);
@@ -326,12 +350,21 @@ export function AutomationsLiveView() {
     setCreating(false);
     setForm({
       name: "",
+      trigger: "new_message",
       contains: "",
       priority: "high",
       tag: "",
       handoff: false,
+      createTaskTitle: "",
+      scheduleAt: "",
+      intervalMinutes: 1440,
+      employeeId: "",
+      employeePrompt: "",
+      toolkit: "",
+      toolSlug: "",
+      toolArgumentsJson: "{}",
     });
-    toast.success("Automation is live.");
+    toast.success("Flow is live and will run without an open browser.");
   }
   async function toggle(item: Automation) {
     const response = await fetch("/api/automations", {
@@ -361,11 +394,10 @@ export function AutomationsLiveView() {
       <div className="mx-auto max-w-6xl">
         <div className="flex items-end justify-between gap-4">
           <div>
-            <h2 className="text-3xl font-semibold tracking-[-.04em]">
-              Automations
-            </h2>
+            <h2 className="text-3xl font-semibold tracking-[-.04em]">Flows</h2>
             <p className="mt-2 text-sm text-[#74777f]">
-              Rules execute on every new messenger message.
+              Native, durable WHEN / IF / THEN workflows with retries and audit
+              history.
             </p>
           </div>
           <button
@@ -373,43 +405,19 @@ export function AutomationsLiveView() {
             className="flex h-11 items-center gap-2 rounded-[6px] bg-[#17191d] px-4 text-xs font-semibold text-white"
           >
             <Plus size={14} />
-            New rule
+            New flow
           </button>
         </div>
-        <div className="mt-6 grid gap-4 md:grid-cols-2">
-          <div className="rounded-[10px] border border-black/10 bg-[#111318] p-5 text-white">
-            <Webhook size={20} className="text-[#d8ff70]" />
-            <h3 className="mt-5 text-lg font-semibold">Activepieces builder</h3>
-            <p className="mt-2 text-xs leading-6 text-white/60">
-              Build multi-step flows, schedules, and app workflows in your
-              Activepieces instance. Embedded building requires the Activepieces
-              Embed edition and a server-signed JWT.
-            </p>
-            {activepieces.configured && activepieces.url ? (
-              <a
-                href={activepieces.url}
-                target="_blank"
-                rel="noreferrer"
-                className="mt-5 inline-flex h-10 items-center gap-2 rounded-[5px] bg-[#d8ff70] px-4 text-xs font-semibold text-[#213600]"
-              >
-                Open Activepieces <ArrowRight size={14} />
-              </a>
-            ) : (
-              <p className="mt-5 rounded-[6px] bg-white/8 p-3 text-[10px] leading-5 text-white/70">
-                Not connected yet. Set ACTIVEPIECES_URL and the Embed signing
-                secret on the server to enable the builder.
-              </p>
-            )}
-          </div>
-          <div className="rounded-[10px] border border-black/10 bg-white p-5">
-            <Workflow size={20} className="text-[#355cff]" />
-            <h3 className="mt-5 text-lg font-semibold">ResolveX quick rules</h3>
-            <p className="mt-2 text-xs leading-6 text-[#71767f]">
-              These native rules run immediately for each new widget message.
-              Use them for priority, tags, and human handoff without another
-              service.
-            </p>
-          </div>
+        <div className="mt-6 rounded-[10px] border border-black/10 bg-[#111318] p-5 text-white">
+          <Workflow size={20} className="text-[#d8ff70]" />
+          <h3 className="mt-4 text-lg font-semibold">
+            ResolveX execution engine
+          </h3>
+          <p className="mt-2 max-w-3xl text-sm leading-6 text-white/65">
+            Event and scheduled flows are persisted before execution. The worker
+            can retry, pause for approval, enforce tool-call limits, and
+            continue after you close the browser.
+          </p>
         </div>
         {creating && (
           <form
@@ -425,7 +433,54 @@ export function AutomationsLiveView() {
               }
               className="h-10 rounded-[5px] border border-black/10 px-3 text-xs"
             />
+            <select
+              value={form.trigger}
+              onChange={(event) =>
+                setForm((value) => ({ ...value, trigger: event.target.value }))
+              }
+              className="h-10 rounded-[5px] border border-black/10 bg-white px-3 text-xs"
+            >
+              <option value="new_message">WHEN a new message arrives</option>
+              <option value="crm_lead_created">WHEN a CRM lead arrives</option>
+              <option value="new_contact">WHEN a contact is created</option>
+              <option value="email_received">WHEN an email arrives</option>
+              <option value="call_completed">WHEN a call completes</option>
+              <option value="webhook">WHEN a webhook arrives</option>
+              <option value="schedule_once">WHEN a date/time is reached</option>
+              <option value="schedule_recurring">WHEN a schedule is due</option>
+            </select>
+            {form.trigger === "schedule_once" && (
+              <input
+                required
+                type="datetime-local"
+                value={form.scheduleAt}
+                onChange={(event) =>
+                  setForm((value) => ({
+                    ...value,
+                    scheduleAt: event.target.value,
+                  }))
+                }
+                className="h-10 rounded-[5px] border border-black/10 px-3 text-xs"
+              />
+            )}
+            {form.trigger === "schedule_recurring" && (
+              <select
+                value={form.intervalMinutes}
+                onChange={(event) =>
+                  setForm((value) => ({
+                    ...value,
+                    intervalMinutes: Number(event.target.value),
+                  }))
+                }
+                className="h-10 rounded-[5px] border border-black/10 bg-white px-3 text-xs"
+              >
+                <option value={60}>Every hour</option>
+                <option value={1440}>Every day</option>
+                <option value={10080}>Every week</option>
+              </select>
+            )}
             <input
+              disabled={form.trigger !== "new_message"}
               placeholder="Message contains (optional)"
               value={form.contains}
               onChange={(event) =>
@@ -452,6 +507,90 @@ export function AutomationsLiveView() {
               }
               className="h-10 rounded-[5px] border border-black/10 px-3 text-xs"
             />
+            <input
+              placeholder="THEN create task (optional)"
+              value={form.createTaskTitle}
+              onChange={(event) =>
+                setForm((value) => ({
+                  ...value,
+                  createTaskTitle: event.target.value,
+                }))
+              }
+              className="h-10 rounded-[5px] border border-black/10 px-3 text-xs"
+            />
+            <select
+              value={form.employeeId}
+              onChange={(event) =>
+                setForm((value) => ({
+                  ...value,
+                  employeeId: event.target.value,
+                }))
+              }
+              className="h-10 rounded-[5px] border border-black/10 bg-white px-3 text-xs"
+            >
+              <option value="">THEN no AI employee action</option>
+              {employees.map((employee) => (
+                <option key={employee.id} value={employee.id}>
+                  THEN run {employee.name}
+                </option>
+              ))}
+            </select>
+            {form.employeeId && (
+              <input
+                placeholder="Employee task instructions (optional)"
+                value={form.employeePrompt}
+                onChange={(event) =>
+                  setForm((value) => ({
+                    ...value,
+                    employeePrompt: event.target.value,
+                  }))
+                }
+                className="h-10 rounded-[5px] border border-black/10 px-3 text-xs"
+              />
+            )}
+            {form.employeeId && (
+              <input
+                placeholder="Composio toolkit (optional, e.g. hubspot)"
+                value={form.toolkit}
+                onChange={(event) =>
+                  setForm((value) => ({
+                    ...value,
+                    toolkit: event.target.value,
+                  }))
+                }
+                className="h-10 rounded-[5px] border border-black/10 px-3 text-xs"
+              />
+            )}
+            {form.employeeId && form.toolkit && (
+              <input
+                placeholder="Composio action slug"
+                value={form.toolSlug}
+                onChange={(event) =>
+                  setForm((value) => ({
+                    ...value,
+                    toolSlug: event.target.value,
+                  }))
+                }
+                className="h-10 rounded-[5px] border border-black/10 px-3 text-xs"
+              />
+            )}
+            {form.employeeId && form.toolkit && form.toolSlug && (
+              <textarea
+                rows={3}
+                aria-label="Composio action arguments"
+                placeholder={
+                  'Arguments JSON. Use values like "{{input.email}}".'
+                }
+                value={form.toolArgumentsJson}
+                onChange={(event) =>
+                  setForm((value) => ({
+                    ...value,
+                    toolArgumentsJson: event.target.value,
+                  }))
+                }
+                className="rounded-[5px] border border-black/10 p-3 font-mono text-xs md:col-span-2"
+              />
+            )}
             <label className="flex items-center gap-2 text-xs">
               <input
                 type="checkbox"
@@ -470,7 +609,7 @@ export function AutomationsLiveView() {
               className="flex h-10 items-center justify-center gap-2 rounded-[5px] bg-[#355cff] text-xs font-semibold text-white disabled:opacity-50"
             >
               {saving && <Loader2 size={14} className="animate-spin" />}
-              {saving ? "Activating…" : "Activate rule"}
+              {saving ? "Activating…" : "Activate flow"}
             </button>
           </form>
         )}
@@ -486,9 +625,13 @@ export function AutomationsLiveView() {
               <div className="min-w-0 flex-1">
                 <div className="text-sm font-semibold">{item.name}</div>
                 <div className="mt-1 text-[10px] text-[#858891]">
-                  {item.trigger_config.contains
-                    ? `When message contains “${item.trigger_config.contains}”`
-                    : "On every new message"}{" "}
+                  {item.trigger_config.event === "schedule_once"
+                    ? `Scheduled for ${item.next_run_at ? new Date(item.next_run_at).toLocaleString() : "—"}`
+                    : item.trigger_config.event === "schedule_recurring"
+                      ? `Recurring · next ${item.next_run_at ? new Date(item.next_run_at).toLocaleString() : "—"}`
+                      : item.trigger_config.contains
+                        ? `When message contains “${item.trigger_config.contains}”`
+                        : "On every new message"}{" "}
                   · ran {item.run_count} times
                 </div>
               </div>
@@ -508,8 +651,8 @@ export function AutomationsLiveView() {
           ))}
           {!items.length && (
             <Empty
-              title="No automations yet"
-              copy="Create a rule to set priority, add a tag, or hand conversations to a person when a message matches."
+              title="No flows yet"
+              copy="Create a WHEN / IF / THEN flow. ResolveX will persist and execute it even when nobody is logged in."
             />
           )}
         </div>

@@ -10,6 +10,9 @@ export const composioCatalog = [
   { slug: "notion", name: "Notion", category: "Productivity" },
   { slug: "hubspot", name: "HubSpot", category: "CRM" },
   { slug: "shopify", name: "Shopify", category: "Commerce" },
+  { slug: "zoom", name: "Zoom", category: "Meetings" },
+  { slug: "microsoft_teams", name: "Microsoft Teams", category: "Meetings" },
+  { slug: "googlemeet", name: "Google Meet", category: "Meetings" },
 ] as const;
 
 export type ComposioToolkit = (typeof composioCatalog)[number]["slug"];

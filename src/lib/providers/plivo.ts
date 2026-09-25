@@ -33,79 +33,6 @@ export async function plivoRequest<T>(path: string, init?: RequestInit) {
   return body;
 }
 
-export async function createPlivoApplication(input: {
-  name: string;
-  answerUrl: string;
-  hangupUrl: string;
-}) {
-  return plivoRequest<{ app_id: string; message?: string }>("/Application/", {
-    method: "POST",
-    body: JSON.stringify({
-      app_name: input.name,
-      answer_url: input.answerUrl,
-      answer_method: "POST",
-      hangup_url: input.hangupUrl,
-      hangup_method: "POST",
-    }),
-  });
-}
-
-export async function buyPlivoNumber(input: {
-  number: string;
-  appId: string;
-  complianceApplicationId?: string | null;
-}) {
-  return plivoRequest<{ message?: string }>(
-    `/PhoneNumber/${encodeURIComponent(input.number)}/`,
-    {
-      method: "POST",
-      body: JSON.stringify({
-        app_id: input.appId,
-        ...(input.complianceApplicationId
-          ? { compliance_application_id: input.complianceApplicationId }
-          : {}),
-      }),
-    },
-  );
-}
-
-export async function createPlivoSipCredential(input: {
-  name: string;
-  username: string;
-  password: string;
-}) {
-  return plivoRequest<{ credential_uuid: string }>("/Zentrunk/Credential/", {
-    method: "POST",
-    body: JSON.stringify(input),
-  });
-}
-
-export async function createPlivoOutboundTrunk(input: {
-  name: string;
-  credentialUuid: string;
-}) {
-  return plivoRequest<{
-    trunk_id?: string;
-    trunk_uuid?: string;
-  }>("/Zentrunk/Trunk/", {
-    method: "POST",
-    body: JSON.stringify({
-      name: input.name,
-      trunk_direction: "outbound",
-      trunk_status: "enabled",
-      credential_uuid: input.credentialUuid,
-    }),
-  });
-}
-
-export async function retrievePlivoTrunk(trunkId: string) {
-  return plivoRequest<{
-    object?: { trunk_id?: string; trunk_domain?: string };
-    trunk_id?: string;
-    trunk_domain?: string;
-  }>(`/Zentrunk/Trunk/${encodeURIComponent(trunkId)}/`, { method: "GET" });
-}
-
 export async function retrievePlivoCall(callId: string) {
   return plivoRequest<{
     call_uuid?: string;
@@ -144,37 +71,4 @@ export function verifyPlivoV3Signature(input: {
     const right = Buffer.from(expected);
     return left.length === right.length && crypto.timingSafeEqual(left, right);
   });
-}
-
-export async function searchPlivoNumbers({
-  country,
-  type,
-  limit = 10,
-}: {
-  country: string;
-  type?: "local" | "tollfree" | "mobile" | "fixed";
-  limit?: number;
-}) {
-  const query = new URLSearchParams({
-    country_iso: country.toUpperCase(),
-    services: "voice",
-    limit: String(Math.min(Math.max(limit, 1), 20)),
-  });
-  if (type) query.set("type", type);
-  return plivoRequest<{
-    objects?: Array<{
-      number: string;
-      type?: string;
-      region?: string;
-      monthly_rental_rate?: string;
-      setup_rate?: string;
-      currency?: string;
-      restriction?: string;
-      restriction_text?: string;
-    }>;
-  }>(`/PhoneNumber/?${query}`, { method: "GET" });
-}
-
-export function plivoConfigured() {
-  return Boolean(process.env.PLIVO_AUTH_ID && process.env.PLIVO_AUTH_TOKEN);
 }

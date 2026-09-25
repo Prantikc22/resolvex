@@ -1,3 +1,5 @@
+import { publicAppUrl } from "@/lib/app-url";
+
 type ArloMessage = { role: "user" | "assistant"; content: string };
 
 const fallback =
@@ -34,6 +36,7 @@ export async function askArlo({
         model: process.env.OPENROUTER_MODEL ?? "deepseek/deepseek-v4-flash",
         temperature: 0.15,
         max_tokens: 420,
+        usage: { include: true },
         messages: [
           {
             role: "system",
@@ -50,6 +53,10 @@ export async function askArlo({
   return {
     message: data.choices?.[0]?.message?.content?.trim() || fallback,
     model: data.model ?? process.env.OPENROUTER_MODEL ?? "openrouter",
+    costMinor: Math.max(0, Math.ceil(Number(data.usage?.cost ?? 0) * 100)),
+    usage: {
+      promptTokens: Number(data.usage?.prompt_tokens ?? 0),
+      completionTokens: Number(data.usage?.completion_tokens ?? 0),
+    },
   };
 }
-import { publicAppUrl } from "@/lib/app-url";

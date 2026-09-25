@@ -12,6 +12,7 @@ import {
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { AttentionBrief } from "@/components/workspace/AttentionBrief";
 
 type LiveMessage = {
   id: string;
@@ -42,7 +43,7 @@ type LiveConversation = {
 export function LiveInbox({
   onNavigate,
 }: {
-  onNavigate: (view: "knowledge" | "settings") => void;
+  onNavigate: (view: "knowledge" | "settings" | "integrations") => void;
 }) {
   const [items, setItems] = useState<LiveConversation[]>([]);
   const [selected, setSelected] = useState("");
@@ -75,7 +76,10 @@ export function LiveInbox({
   );
 
   async function act(
-    body: { action: "resolve" } | { action: "reply"; body: string },
+    body:
+      | { action: "resolve" }
+      | { action: "reply"; body: string }
+      | { action: "accept_handoff" },
   ) {
     if (!current) return;
     setSending(true);
@@ -91,7 +95,7 @@ export function LiveInbox({
         setItems((value) => value.filter((item) => item.id !== current.id));
         setSelected(items.find((item) => item.id !== current.id)?.id ?? "");
         toast.success("Conversation resolved");
-      } else {
+      } else if (body.action === "reply") {
         setItems((value) =>
           value.map((item) =>
             item.id === current.id
@@ -100,6 +104,13 @@ export function LiveInbox({
           ),
         );
         setReply("");
+      } else {
+        setItems((value) =>
+          value.map((item) =>
+            item.id === current.id ? { ...item, ai_state: "disabled" } : item,
+          ),
+        );
+        toast.success("Handoff accepted. You now own this conversation.");
       }
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Action failed");
@@ -124,6 +135,10 @@ export function LiveInbox({
   return (
     <div className="grid min-h-0 flex-1 grid-cols-1 bg-[#11151e] text-white lg:grid-cols-[300px_1fr] xl:grid-cols-[300px_1fr_280px]">
       <aside className="min-h-0 overflow-y-auto border-r border-white/8">
+        <AttentionBrief
+          compact
+          onOpenIntegrations={() => onNavigate("integrations")}
+        />
         <div className="sticky top-0 z-10 border-b border-white/8 bg-[#11151e] p-4">
           <h2 className="text-sm font-semibold">Open conversations</h2>
           <p className="mt-1 text-[10px] text-white/35">
@@ -186,6 +201,16 @@ export function LiveInbox({
             </p>
           </div>
           <div className="flex items-center gap-2">
+            {current.ai_state === "handed_off" && (
+              <button
+                disabled={sending}
+                onClick={() => void act({ action: "accept_handoff" })}
+                className="flex h-9 items-center gap-2 rounded-[5px] bg-[#355cff] px-3 text-[10px] font-semibold text-white"
+              >
+                <Inbox size={13} />
+                Accept handoff
+              </button>
+            )}
             <button
               disabled={sending}
               onClick={() => void act({ action: "resolve" })}

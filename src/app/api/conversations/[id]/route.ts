@@ -9,6 +9,7 @@ const schema = z.discriminatedUnion("action", [
     body: z.string().trim().min(1).max(10000),
   }),
   z.object({ action: z.literal("resolve") }),
+  z.object({ action: z.literal("accept_handoff") }),
 ]);
 
 export async function POST(
@@ -32,7 +33,7 @@ export async function POST(
       );
     const { data: conversation } = await supabase
       .from("conversations")
-      .select("id,status")
+      .select("id,status,ai_state")
       .eq("id", id)
       .eq("organization_id", organizationId)
       .single();
@@ -41,6 +42,42 @@ export async function POST(
         { error: "Conversation not found." },
         { status: 404 },
       );
+    if (input.action === "accept_handoff") {
+      const now = new Date().toISOString();
+      const { data: handoff, error: handoffError } = await supabase
+        .from("human_handoffs")
+        .update({
+          status: "accepted",
+          assigned_to: user.id,
+          accepted_at: now,
+        })
+        .eq("conversation_id", id)
+        .eq("organization_id", organizationId)
+        .in("status", ["waiting", "assigned"])
+        .select("id,status,assigned_to,accepted_at")
+        .maybeSingle();
+      if (handoffError) throw handoffError;
+      if (!handoff)
+        return NextResponse.json(
+          { error: "This handoff is no longer waiting." },
+          { status: 409 },
+        );
+      const { error: conversationError } = await supabase
+        .from("conversations")
+        .update({ status: "open", ai_state: "disabled", assignee_id: user.id })
+        .eq("id", id)
+        .eq("organization_id", organizationId);
+      if (conversationError) throw conversationError;
+      await supabase.from("audit_events").insert({
+        organization_id: organizationId,
+        actor_id: user.id,
+        action: "handoff.accepted",
+        entity_type: "conversation",
+        entity_id: id,
+        metadata: { handoff_id: handoff.id },
+      });
+      return NextResponse.json({ handoff });
+    }
     if (input.action === "resolve") {
       const { data: messages, error: messageError } = await supabase
         .from("messages")
@@ -61,6 +98,12 @@ export async function POST(
         .update({ status: "resolved", ai_state: "disabled" })
         .eq("id", id);
       if (error) throw error;
+      await supabase
+        .from("human_handoffs")
+        .update({ status: "resolved", resolved_at: new Date().toISOString() })
+        .eq("conversation_id", id)
+        .eq("organization_id", organizationId)
+        .in("status", ["waiting", "assigned", "accepted"]);
       if (
         conversation.status !== "resolved" &&
         hasGroundedAiAnswer &&

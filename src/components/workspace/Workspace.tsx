@@ -25,6 +25,7 @@ import {
   Link2,
   Loader2,
   Menu,
+  Moon,
   MoreHorizontal,
   PanelRightClose,
   Paperclip,
@@ -35,6 +36,7 @@ import {
   ShieldCheck,
   SlidersHorizontal,
   Sparkles,
+  Sun,
   RefreshCw,
   LogOut,
   Users,
@@ -87,21 +89,23 @@ import {
   CallsView,
   ChannelsView,
   ConnectView,
-  CRMView,
   OverviewDashboard,
-  PhoneNumbersView,
   UsageView,
 } from "@/components/workspace/ResolveXModules";
+import { PhoneNumbersView } from "@/components/workspace/PhoneNumbersView";
+import { SalesCRMView } from "@/components/workspace/SalesCRMView";
 
 type View =
   | "overview"
   | "inbox"
   | "calls"
   | "contacts"
+  | "pipeline"
+  | "sequences"
+  | "activities"
   | "employees"
   | "knowledge"
   | "approvals"
-  | "crm"
   | "tasks"
   | "flows"
   | "customers"
@@ -122,7 +126,10 @@ const nav: { id: View; label: string; icon: typeof Inbox; group: string }[] = [
   },
   { id: "inbox", label: "Inbox", icon: Inbox, group: "COMMUNICATION" },
   { id: "calls", label: "Calls", icon: Phone, group: "COMMUNICATION" },
-  { id: "contacts", label: "Contacts", icon: Users, group: "COMMUNICATION" },
+  { id: "contacts", label: "Contacts", icon: Users, group: "CRM" },
+  { id: "pipeline", label: "Pipeline", icon: BriefcaseBusiness, group: "CRM" },
+  { id: "sequences", label: "Sequences", icon: Workflow, group: "CRM" },
+  { id: "activities", label: "Activities", icon: Activity, group: "CRM" },
   { id: "employees", label: "AI Employees", icon: Bot, group: "AI WORKFORCE" },
   {
     id: "knowledge",
@@ -136,7 +143,6 @@ const nav: { id: View; label: string; icon: typeof Inbox; group: string }[] = [
     icon: ShieldCheck,
     group: "AI WORKFORCE",
   },
-  { id: "crm", label: "CRM", icon: BriefcaseBusiness, group: "OPERATIONS" },
   { id: "tasks", label: "Tasks", icon: ListTodo, group: "OPERATIONS" },
   { id: "flows", label: "Flows", icon: Workflow, group: "OPERATIONS" },
   { id: "integrations", label: "Integrations", icon: Link2, group: "BUSINESS" },
@@ -235,7 +241,7 @@ function Sidebar({
         )}
       >
         {collapsed ? (
-          <Mark className="size-8 bg-white" />
+          <Mark className="size-8 bg-transparent" />
         ) : (
           <Logo inverse href="/app" />
         )}
@@ -279,7 +285,7 @@ function Sidebar({
               {!collapsed && item.group !== items[index - 1]?.group && (
                 <div
                   className={cn(
-                    "px-3 pb-1 text-[8px] font-bold tracking-[.15em] text-white/22",
+                    "px-3 pb-1 text-[10px] font-bold tracking-[.15em] text-white/55",
                     index > 0 && "pt-3",
                   )}
                 >
@@ -290,7 +296,7 @@ function Sidebar({
                 onClick={() => onChange(item.id)}
                 title={collapsed ? item.label : undefined}
                 className={cn(
-                  "flex h-9 w-full items-center rounded-[5px] text-xs transition",
+                  "flex h-10 w-full items-center rounded-[5px] text-sm transition",
                   collapsed ? "justify-center" : "gap-3 px-3",
                   active === item.id
                     ? "bg-white text-[#101114]"
@@ -365,11 +371,15 @@ function Topbar({
   demo,
   onMenu,
   workspaceName,
+  darkMode,
+  onToggleTheme,
 }: {
   title: string;
   demo: boolean;
   onMenu: () => void;
   workspaceName: string;
+  darkMode: boolean;
+  onToggleTheme: () => void;
 }) {
   const [notifications, setNotifications] = useState(false);
   return (
@@ -393,71 +403,85 @@ function Topbar({
           </span>
         )}
       </div>
-      {demo && (
-        <div className="flex items-center gap-1.5">
-          <button className="hidden h-9 items-center gap-2 rounded-[5px] border border-black/10 px-3 text-xs text-[#717783] lg:flex">
-            <Search size={14} /> Search{" "}
-            <span className="ml-7 flex items-center gap-0.5 rounded-[3px] bg-[#f1f2f4] px-1.5 py-0.5 font-mono text-[9px]">
-              <Command size={9} />K
-            </span>
-          </button>
-          <div className="relative">
-            <button
-              onClick={() => setNotifications((value) => !value)}
-              className="relative grid size-9 place-items-center rounded-[5px] border border-black/10"
-            >
-              <Bell size={16} />
-              <span className="absolute right-1.5 top-1.5 size-1.5 rounded-full bg-[#ff5b45] ring-2 ring-white" />
+      <div className="flex items-center gap-1.5">
+        <button
+          type="button"
+          onClick={onToggleTheme}
+          aria-label={darkMode ? "Use light mode" : "Use dark mode"}
+          title={darkMode ? "Use light mode" : "Use dark mode"}
+          className="grid size-9 place-items-center rounded-[5px] border border-black/10"
+        >
+          {darkMode ? <Sun size={16} /> : <Moon size={16} />}
+        </button>
+        {demo && (
+          <>
+            <button className="hidden h-9 items-center gap-2 rounded-[5px] border border-black/10 px-3 text-xs text-[#717783] lg:flex">
+              <Search size={14} /> Search{" "}
+              <span className="ml-7 flex items-center gap-0.5 rounded-[3px] bg-[#f1f2f4] px-1.5 py-0.5 font-mono text-[9px]">
+                <Command size={9} />K
+              </span>
             </button>
-            <AnimatePresence>
-              {notifications && (
-                <motion.div
-                  initial={{ opacity: 0, y: -8, scale: 0.98 }}
-                  animate={{ opacity: 1, y: 0, scale: 1 }}
-                  exit={{ opacity: 0, y: -8, scale: 0.98 }}
-                  className="absolute right-0 top-11 w-[310px] rounded-[7px] border border-black/10 bg-white p-2 shadow-2xl"
-                >
-                  <div className="flex items-center justify-between px-2 py-2">
-                    <b className="text-xs">Notifications</b>
-                    <span className="text-[10px] text-[#355cff]">
-                      Mark all read
-                    </span>
-                  </div>
-                  {[
-                    ["SLA needs attention", "Sana Khan · 18 minutes remaining"],
-                    [
-                      "AI resolved a conversation",
-                      "Lena Park · data export prepared",
-                    ],
-                    ["Knowledge gap detected", "Team invite permissions"],
-                  ].map(([title, copy], i) => (
-                    <div
-                      key={title}
-                      className="flex gap-3 rounded-[5px] p-2.5 hover:bg-[#f5f6f8]"
-                    >
-                      <span
-                        className={cn(
-                          "mt-1 size-2 shrink-0 rounded-full",
-                          i === 0 ? "bg-[#ff735c]" : "bg-[#355cff]",
-                        )}
-                      />
-                      <div>
-                        <div className="text-xs font-semibold">{title}</div>
-                        <div className="mt-1 text-[10px] text-[#7b818b]">
-                          {copy}
+            <div className="relative">
+              <button
+                onClick={() => setNotifications((value) => !value)}
+                className="relative grid size-9 place-items-center rounded-[5px] border border-black/10"
+              >
+                <Bell size={16} />
+                <span className="absolute right-1.5 top-1.5 size-1.5 rounded-full bg-[#ff5b45] ring-2 ring-white" />
+              </button>
+              <AnimatePresence>
+                {notifications && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -8, scale: 0.98 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: -8, scale: 0.98 }}
+                    className="absolute right-0 top-11 w-[310px] rounded-[7px] border border-black/10 bg-white p-2 shadow-2xl"
+                  >
+                    <div className="flex items-center justify-between px-2 py-2">
+                      <b className="text-xs">Notifications</b>
+                      <span className="text-[10px] text-[#355cff]">
+                        Mark all read
+                      </span>
+                    </div>
+                    {[
+                      [
+                        "SLA needs attention",
+                        "Sana Khan · 18 minutes remaining",
+                      ],
+                      [
+                        "AI resolved a conversation",
+                        "Lena Park · data export prepared",
+                      ],
+                      ["Knowledge gap detected", "Team invite permissions"],
+                    ].map(([title, copy], i) => (
+                      <div
+                        key={title}
+                        className="flex gap-3 rounded-[5px] p-2.5 hover:bg-[#f5f6f8]"
+                      >
+                        <span
+                          className={cn(
+                            "mt-1 size-2 shrink-0 rounded-full",
+                            i === 0 ? "bg-[#ff735c]" : "bg-[#355cff]",
+                          )}
+                        />
+                        <div>
+                          <div className="text-xs font-semibold">{title}</div>
+                          <div className="mt-1 text-[10px] text-[#7b818b]">
+                            {copy}
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
-          <button className="grid size-9 place-items-center rounded-[5px] border border-black/10">
-            <CircleHelp size={16} />
-          </button>
-        </div>
-      )}
+                    ))}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+            <button className="grid size-9 place-items-center rounded-[5px] border border-black/10">
+              <CircleHelp size={16} />
+            </button>
+          </>
+        )}
+      </div>
     </header>
   );
 }
@@ -1730,6 +1754,8 @@ function MessengerSettings() {
       "Ask naturally. We answer from approved knowledge or bring in a person.",
     logoUrl: "",
     position: "right" as "left" | "right",
+    websiteVoiceEnabled: false,
+    humanHandoffEnabled: true,
   });
 
   useEffect(() => {
@@ -1748,6 +1774,8 @@ function MessengerSettings() {
           welcomeMessage: data.welcomeMessage ?? "",
           logoUrl: data.logoUrl ?? "",
           position: data.position === "left" ? "left" : "right",
+          websiteVoiceEnabled: Boolean(data.websiteVoiceEnabled),
+          humanHandoffEnabled: data.humanHandoffEnabled !== false,
         });
       })
       .catch((error) =>
@@ -1946,6 +1974,46 @@ function MessengerSettings() {
               <option value="left">Bottom left</option>
             </select>
           </label>
+          <div className="grid gap-2 rounded-[8px] border border-black/10 p-3 md:col-span-2 sm:grid-cols-2">
+            <label className="flex items-center justify-between gap-3 text-xs font-semibold">
+              <span>
+                Website voice
+                <small className="mt-1 block font-normal text-[#858b95]">
+                  ElevenLabs only · AI voice disclosed in the widget
+                </small>
+              </span>
+              <input
+                type="checkbox"
+                checked={branding.websiteVoiceEnabled}
+                onChange={(event) =>
+                  setBranding((value) => ({
+                    ...value,
+                    websiteVoiceEnabled: event.target.checked,
+                  }))
+                }
+                className="size-4 accent-[#355cff]"
+              />
+            </label>
+            <label className="flex items-center justify-between gap-3 text-xs font-semibold">
+              <span>
+                Human handoff
+                <small className="mt-1 block font-normal text-[#858b95]">
+                  Creates a real queue item in the ResolveX inbox
+                </small>
+              </span>
+              <input
+                type="checkbox"
+                checked={branding.humanHandoffEnabled}
+                onChange={(event) =>
+                  setBranding((value) => ({
+                    ...value,
+                    humanHandoffEnabled: event.target.checked,
+                  }))
+                }
+                className="size-4 accent-[#355cff]"
+              />
+            </label>
+          </div>
           <button
             disabled={loading}
             onClick={() => void update({ action: "customize", ...branding })}
@@ -1985,10 +2053,12 @@ const viewTitles: Record<View, string> = {
   inbox: "Inbox",
   calls: "Calls",
   contacts: "Contacts",
+  pipeline: "Pipeline",
+  sequences: "Sequences",
+  activities: "Activities",
   employees: "AI Employees",
   knowledge: "Knowledge",
   approvals: "Approvals",
-  crm: "CRM",
   tasks: "Tasks",
   flows: "Flows",
   customers: "Customers",
@@ -2101,6 +2171,7 @@ export function Workspace({
   const [view, setView] = useState<View>(demo ? "inbox" : "overview");
   const [collapsed, setCollapsed] = useState(false);
   const [mobile, setMobile] = useState(false);
+  const [darkMode, setDarkMode] = useState(false);
   useEffect(() => {
     const requested = new URLSearchParams(window.location.search).get(
       "view",
@@ -2109,6 +2180,24 @@ export function Workspace({
       queueMicrotask(() => setView(requested));
     }
   }, []);
+  useEffect(() => {
+    const saved = window.localStorage.getItem("resolvex-theme");
+    if (saved === "dark") queueMicrotask(() => setDarkMode(true));
+    const haptic = (event: PointerEvent) => {
+      const target = event.target as HTMLElement | null;
+      if (target?.closest("button, [role='button']")) navigator.vibrate?.(8);
+    };
+    document.addEventListener("pointerdown", haptic, { passive: true });
+    return () => document.removeEventListener("pointerdown", haptic);
+  }, []);
+  useEffect(() => {
+    document.documentElement.dataset.workspaceTheme = darkMode
+      ? "dark"
+      : "light";
+    return () => {
+      delete document.documentElement.dataset.workspaceTheme;
+    };
+  }, [darkMode]);
   const content = useMemo(() => {
     switch (view) {
       case "overview":
@@ -2120,17 +2209,48 @@ export function Workspace({
       case "calls":
         return <CallsView />;
       case "contacts":
-        return demo ? <CustomersView /> : <CRMView mode="contacts" />;
+        return demo ? (
+          <CustomersView />
+        ) : (
+          <SalesCRMView
+            mode="contacts"
+            onNavigate={(next) => setView(next as View)}
+          />
+        );
+      case "pipeline":
+        return (
+          <SalesCRMView
+            mode="pipeline"
+            onNavigate={(next) => setView(next as View)}
+          />
+        );
+      case "sequences":
+        return (
+          <SalesCRMView
+            mode="sequences"
+            onNavigate={(next) => setView(next as View)}
+          />
+        );
+      case "activities":
+        return (
+          <SalesCRMView
+            mode="activities"
+            onNavigate={(next) => setView(next as View)}
+          />
+        );
       case "employees":
         return demo ? <AIView /> : <AIEmployeesView />;
       case "knowledge":
         return <KnowledgeManager demo={demo} />;
       case "approvals":
         return <ApprovalsView />;
-      case "crm":
-        return <CRMView />;
       case "tasks":
-        return <CRMView mode="tasks" />;
+        return (
+          <SalesCRMView
+            mode="tasks"
+            onNavigate={(next) => setView(next as View)}
+          />
+        );
       case "flows":
         return demo ? <AutomationsView /> : <AutomationsLiveView />;
       case "customers":
@@ -2154,7 +2274,7 @@ export function Workspace({
       case "channels":
         return <ChannelsView />;
       case "phone_numbers":
-        return <PhoneNumbersView />;
+        return <PhoneNumbersView onNavigate={() => setView("approvals")} />;
       case "settings":
         return (
           <SettingsView
@@ -2166,7 +2286,12 @@ export function Workspace({
     }
   }, [view, demo, capabilities, identity]);
   return (
-    <main className="workspace-ui flex h-screen overflow-hidden bg-[#0b0d12]">
+    <main
+      className={cn(
+        "workspace-ui flex h-screen overflow-hidden bg-[#0b0d12]",
+        darkMode && "workspace-dark",
+      )}
+    >
       <Sidebar
         active={view}
         onChange={setView}
@@ -2263,12 +2388,22 @@ export function Workspace({
           </motion.div>
         )}
       </AnimatePresence>
-      <div className="flex min-w-0 flex-1 flex-col">
+      <div className="workspace-main flex min-w-0 flex-1 flex-col">
         <Topbar
           title={viewTitles[view]}
           demo={demo}
           onMenu={() => setMobile(true)}
           workspaceName={identity.workspaceName}
+          darkMode={darkMode}
+          onToggleTheme={() => {
+            setDarkMode((value) => {
+              window.localStorage.setItem(
+                "resolvex-theme",
+                value ? "light" : "dark",
+              );
+              return !value;
+            });
+          }}
         />
         {content}
       </div>

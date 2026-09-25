@@ -3,12 +3,21 @@ import { z } from "zod";
 import { employeeTemplates } from "@/lib/ai/employee-templates";
 import { hasWorkspaceAccess } from "@/lib/billing/access";
 import {
+  bolnaConfigured,
+  createBolnaAgent,
+  updateBolnaAgent,
+} from "@/lib/providers/bolna";
+import {
   createElevenLabsAgent,
   updateElevenLabsAgent,
 } from "@/lib/providers/elevenlabs";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { getCurrentOrganization } from "@/lib/supabase/current-org";
 
 const schema = z.object({ confirmation: z.literal("ACTIVATE") });
+
+type ProviderName = "elevenlabs" | "bolna";
+type ChannelName = "website_voice" | "telephone";
 
 export async function POST(
   request: Request,
@@ -37,6 +46,7 @@ export async function POST(
         },
         { status: 402 },
       );
+
     const { data: employee, error } = await supabase
       .from("ai_employees")
       .select("*")
@@ -48,55 +58,141 @@ export async function POST(
         { error: "AI employee not found." },
         { status: 404 },
       );
-    const wantsVoice = employee.assigned_channels?.includes("voice");
-    if (!wantsVoice) {
-      const { data, error: updateError } = await supabase
-        .from("ai_employees")
-        .update({ status: "active", last_error: null })
-        .eq("id", id)
-        .select()
-        .single();
-      if (updateError) throw updateError;
-      return NextResponse.json({ employee: data, provisioned: false });
-    }
-    if (!process.env.ELEVENLABS_API_KEY)
+
+    const wantsWebsiteVoice = employee.assigned_channels?.includes("voice");
+    const wantsTelephone = employee.assigned_channels?.includes("phone");
+    if (wantsWebsiteVoice && !process.env.ELEVENLABS_API_KEY)
       return NextResponse.json(
-        { error: "ElevenLabs is not configured on the server." },
+        { error: "ElevenLabs website voice is not configured on the server." },
         { status: 503 },
       );
+    if (wantsTelephone && !bolnaConfigured())
+      return NextResponse.json(
+        { error: "Telephone calling is not configured on the server." },
+        { status: 503 },
+      );
+
     await supabase
       .from("ai_employees")
       .update({ status: "provisioning", last_error: null })
-      .eq("id", id);
+      .eq("id", id)
+      .eq("organization_id", organizationId);
+
+    const admin = createAdminClient();
+    const { data: existingProviders } = await admin
+      .from("ai_provider_agents")
+      .select("provider,channel,external_agent_id")
+      .eq("organization_id", organizationId)
+      .eq("ai_employee_id", id);
     const template =
       employeeTemplates[
         employee.template_type as keyof typeof employeeTemplates
       ];
-    const config = {
+    const baseConfig = {
       name: employee.name,
       instructions: employee.instructions,
       greeting: template?.greeting ?? "Hi, I’m Arlo. How can I help?",
       language: employee.languages?.[0] ?? "en",
-      voiceId: employee.voice_id,
       transferToNumber:
         typeof employee.escalation_rules?.transfer_to_number === "string"
           ? employee.escalation_rules.transfer_to_number
           : null,
     };
-    let externalAgentId = employee.external_agent_id as string | null;
+    const provisioned: Array<{
+      provider: ProviderName;
+      channel: ChannelName;
+      externalAgentId: string;
+    }> = [];
+
     try {
-      if (externalAgentId) {
-        await updateElevenLabsAgent(externalAgentId, config);
-      } else {
-        const created = await createElevenLabsAgent(config);
-        externalAgentId = created.agent_id;
+      if (wantsWebsiteVoice) {
+        const current = existingProviders?.find(
+          (row) =>
+            row.provider === "elevenlabs" && row.channel === "website_voice",
+        );
+        let externalAgentId = current?.external_agent_id as string | undefined;
+        if (externalAgentId) {
+          await updateElevenLabsAgent(externalAgentId, {
+            ...baseConfig,
+            voiceId: employee.voice_id,
+          });
+        } else {
+          const created = await createElevenLabsAgent({
+            ...baseConfig,
+            voiceId: employee.voice_id,
+          });
+          externalAgentId = created.agent_id;
+        }
+        await admin.from("ai_provider_agents").upsert(
+          {
+            organization_id: organizationId,
+            ai_employee_id: id,
+            provider: "elevenlabs",
+            channel: "website_voice",
+            external_agent_id: externalAgentId,
+            status: "active",
+            config: { language: baseConfig.language },
+            last_error: null,
+            provisioned_at: new Date().toISOString(),
+          },
+          {
+            onConflict: "organization_id,ai_employee_id,provider,channel",
+          },
+        );
+        provisioned.push({
+          provider: "elevenlabs",
+          channel: "website_voice",
+          externalAgentId,
+        });
       }
+
+      if (wantsTelephone) {
+        const current = existingProviders?.find(
+          (row) => row.provider === "bolna" && row.channel === "telephone",
+        );
+        let externalAgentId = current?.external_agent_id as string | undefined;
+        if (externalAgentId) {
+          await updateBolnaAgent(externalAgentId, baseConfig);
+        } else {
+          const created = await createBolnaAgent(baseConfig);
+          externalAgentId = created.agent_id;
+        }
+        await admin.from("ai_provider_agents").upsert(
+          {
+            organization_id: organizationId,
+            ai_employee_id: id,
+            provider: "bolna",
+            channel: "telephone",
+            external_agent_id: externalAgentId,
+            status: "active",
+            config: {
+              language: baseConfig.language,
+              telephony_region: "IN",
+              handoff_supported: Boolean(baseConfig.transferToNumber),
+            },
+            last_error: null,
+            provisioned_at: new Date().toISOString(),
+          },
+          {
+            onConflict: "organization_id,ai_employee_id,provider,channel",
+          },
+        );
+        provisioned.push({
+          provider: "bolna",
+          channel: "telephone",
+          externalAgentId,
+        });
+      }
+
+      const legacyProvider =
+        provisioned.find((item) => item.provider === "elevenlabs") ??
+        provisioned[0];
       const { data, error: updateError } = await supabase
         .from("ai_employees")
         .update({
           status: "active",
-          provider: "elevenlabs",
-          external_agent_id: externalAgentId,
+          provider: legacyProvider?.provider ?? null,
+          external_agent_id: legacyProvider?.externalAgentId ?? null,
           provisioned_at: new Date().toISOString(),
           last_error: null,
         })
@@ -112,16 +208,26 @@ export async function POST(
         entity_type: "ai_employee",
         entity_id: id,
         metadata: {
-          provider: "elevenlabs",
-          external_agent_id: externalAgentId,
+          providers: provisioned.map(({ provider, channel }) => ({
+            provider,
+            channel,
+          })),
+          execution_modes: ["reactive", "scheduled", "event_driven"],
         },
       });
-      return NextResponse.json({ employee: data, provisioned: true });
+      return NextResponse.json({
+        employee: data,
+        provisioned: provisioned.length > 0,
+        providers: provisioned.map(({ provider, channel }) => ({
+          provider,
+          channel,
+        })),
+      });
     } catch (providerError) {
       const message =
         providerError instanceof Error
           ? providerError.message
-          : "Voice provisioning failed.";
+          : "Provider provisioning failed.";
       await supabase
         .from("ai_employees")
         .update({ status: "failed", last_error: message })

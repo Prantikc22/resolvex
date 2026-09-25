@@ -107,9 +107,296 @@ a {
   line-height: 1.25rem !important;
 }
 
+.workspace-ui .text-\[8px\] {
+  font-size: 0.75rem !important;
+  line-height: 1rem !important;
+}
+
 .workspace-ui .text-xs {
   font-size: 0.875rem !important;
   line-height: 1.35rem !important;
+}
+
+.workspace-dark,
+html[data-workspace-theme="dark"] {
+  color-scheme: dark;
+}
+
+html[data-workspace-theme="dark"] body {
+  background: #0b0d12;
+}
+
+.workspace-dark .workspace-main header {
+  border-color: rgba(255, 255, 255, 0.1) !important;
+  background-color: #12151b !important;
+  color: #f5f7fb !important;
+}
+
+/* Neutral surfaces are mapped explicitly. The previous prefix selector also
+   swallowed lime/blue status colours, which made dark mode look unfinished. */
+.workspace-dark
+  .workspace-main
+  :is(
+    [class~="bg-white"],
+    [class*="bg-white/"],
+    [class~="bg-[#fafafa]"],
+    [class~="bg-[#f8f7f2]"],
+    [class~="bg-[#f7f6f2]"],
+    [class~="bg-[#f6f6f3]"],
+    [class~="bg-[#f5f6f8]"],
+    [class~="bg-[#f5f6f7]"],
+    [class~="bg-[#f5f4ef]"],
+    [class~="bg-[#f4f5f6]"],
+    [class~="bg-[#f4f5f2]"],
+    [class~="bg-[#f2f3f5]"],
+    [class~="bg-[#f1f5ef]"],
+    [class~="bg-[#f1f2f4]"],
+    [class~="bg-[#f1f0f8]"],
+    [class~="bg-[#f0f2f5]"],
+    [class~="bg-[#f0f1f3]"],
+    [class~="bg-[#eff0f2]"],
+    [class~="bg-[#eef0f4]"],
+    [class~="bg-[#eceef2]"],
+    [class~="bg-[#eceef1]"],
+    [class~="bg-[#eeeef0]"],
+    [class~="bg-[#e9eaed]"],
+    [class~="bg-[#e7e9ee]"],
+    [class~="bg-[#d6d9df]"],
+    [class~="bg-[#c7c8cb]"]
+  ) {
+  background-color: #171a21 !important;
+}
+
+.workspace-dark
+  .workspace-main
+  :is(
+    [class~="bg-[#eafbd2]"],
+    [class~="bg-[#e9fbd0]"],
+    [class~="bg-[#dff8bc]"],
+    [class~="bg-[#f3ffe4]"]
+  ) {
+  background-color: rgba(200, 255, 115, 0.13) !important;
+}
+
+.workspace-dark
+  .workspace-main
+  :is(
+    [class~="bg-[#edf1ff]"],
+    [class~="bg-[#eef4ff]"],
+    [class~="bg-[#eef3ff]"],
+    [class~="bg-[#eaf1ff]"],
+    [class~="bg-[#dbe6ff]"],
+    [class~="bg-[#b9d8ff]"],
+    [class~="bg-[#c5dcff]"]
+  ) {
+  background-color: rgba(91, 121, 255, 0.16) !important;
+}
+
+.workspace-dark
+  .workspace-main
+  :is(
+    [class~="bg-[#fff7df]"],
+    [class~="bg-[#fff5db]"],
+    [class~="bg-[#fff3d7]"],
+    [class~="bg-[#fff2d2]"],
+    [class~="bg-[#fff1c9]"],
+    [class~="bg-[#fff0d2]"],
+    [class~="bg-[#ffcf70]"],
+    [class~="bg-[#ffd66b]"]
+  ) {
+  background-color: rgba(255, 207, 112, 0.15) !important;
+}
+
+.workspace-dark
+  .workspace-main
+  :is(
+    [class~="bg-[#fff0ec]"],
+    [class~="bg-[#ffede8]"],
+    [class~="bg-[#ffe7e2]"],
+    [class~="bg-[#ffe1da]"],
+    [class~="bg-[#ffb49f]"]
+  ) {
+  background-color: rgba(255, 115, 92, 0.14) !important;
+}
+
+.workspace-dark
+  .workspace-main
+  :is(
+    [class~="text-[#101114]"],
+    [class~="text-[#151619]"],
+    [class~="text-[#15171b]"],
+    [class~="text-[#17191d]"],
+    [class~="text-[#171a20]"],
+    [class~="text-[#1c2330]"]
+  ) {
+  color: #f5f7fb !important;
+}
+
+.workspace-dark
+  .workspace-main
+  :is(
+    [class*="text-[#6"],
+    [class*="text-[#7"],
+    [class*="text-[#8"],
+    [class*="text-[#9"],
+    [class~="text-[#aaa]"],
+    [class~="text-[#999]"]
+  ) {
+  color: #aeb5c2 !important;
+}
+
+.workspace-dark
+  .workspace-main
+  :is(
+    [class~="text-[#355cff]"],
+    [class~="text-[#315d91]"],
+    [class~="text-[#35518f]"]
+  ) {
+  color: #8fa5ff !important;
+}
+
+.workspace-dark
+  .workspace-main
+  :is(
+    [class~="text-[#3d7e18]"],
+    [class~="text-[#3e8218]"],
+    [class~="text-[#397313]"],
+    [class~="text-[#397613]"],
+    [class~="text-[#427a1d]"],
+    [class~="text-[#477d20]"],
+    [class~="text-[#497d27]"],
+    [class~="text-[#4f8129]"]
+  ) {
+  color: #aeea68 !important;
+}
+
+.workspace-dark
+  .workspace-main
+  :is([class*="border-black/"], [class~="border-[#dfe2e8]"]) {
+  border-color: rgba(255, 255, 255, 0.11) !important;
+}
+
+.workspace-dark .workspace-main :is(input, textarea, select) {
+  border-color: rgba(255, 255, 255, 0.14) !important;
+  background-color: #101319 !important;
+  color: #f5f7fb !important;
+}
+
+.workspace-dark .workspace-main :is(input, textarea)::placeholder {
+  color: #747c89 !important;
+}
+
+.workspace-dark .workspace-main > :last-child {
+  background-color: #0f1218 !important;
+  color: #f5f7fb !important;
+}
+
+.resolvex-voice-orb {
+  position: absolute;
+  isolation: isolate;
+  border-radius: 999px;
+  background:
+    radial-gradient(
+      circle at 38% 32%,
+      rgba(255, 255, 255, 0.96),
+      transparent 19%
+    ),
+    conic-gradient(
+      from 15deg,
+      #315dff,
+      #6de4de,
+      #efffff,
+      #2966dc,
+      #8df1df,
+      #315dff
+    );
+  box-shadow:
+    0 30px 70px rgba(39, 94, 204, 0.25),
+    inset 0 0 26px rgba(255, 255, 255, 0.42);
+  animation: resolvex-orb-breathe 4.6s ease-in-out infinite;
+}
+
+.resolvex-voice-orb::before,
+.resolvex-voice-orb::after {
+  content: "";
+  position: absolute;
+  border-radius: inherit;
+  pointer-events: none;
+}
+
+.resolvex-voice-orb::before {
+  inset: 7%;
+  background: repeating-conic-gradient(
+    from 0deg,
+    rgba(255, 255, 255, 0.02) 0deg 13deg,
+    rgba(5, 36, 110, 0.34) 14deg 31deg,
+    rgba(119, 244, 231, 0.18) 32deg 49deg
+  );
+  mix-blend-mode: soft-light;
+  filter: blur(3px);
+  animation: resolvex-orb-spin 12s linear infinite;
+}
+
+.resolvex-voice-orb::after {
+  inset: -12%;
+  z-index: -1;
+  background: radial-gradient(
+    circle,
+    rgba(85, 206, 240, 0.26),
+    transparent 68%
+  );
+  filter: blur(14px);
+  opacity: 0.7;
+  animation: resolvex-orb-glow 3.2s ease-in-out infinite;
+}
+
+.resolvex-voice-orb[data-state="listening"] {
+  animation-duration: 2.2s;
+}
+
+.resolvex-voice-orb[data-state="speaking"] {
+  animation-duration: 1.15s;
+  filter: saturate(1.18);
+}
+
+.resolvex-voice-orb[data-state="speaking"]::before {
+  animation-duration: 3.2s;
+}
+
+@keyframes resolvex-orb-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes resolvex-orb-breathe {
+  0%,
+  100% {
+    transform: scale(0.96) rotate(-1deg);
+  }
+  50% {
+    transform: scale(1.035) rotate(1deg);
+  }
+}
+
+@keyframes resolvex-orb-glow {
+  0%,
+  100% {
+    opacity: 0.42;
+    transform: scale(0.94);
+  }
+  50% {
+    opacity: 0.86;
+    transform: scale(1.08);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .resolvex-voice-orb,
+  .resolvex-voice-orb::before,
+  .resolvex-voice-orb::after {
+    animation: none !important;
+  }
 }
 
 .page-grid {
