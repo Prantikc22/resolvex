@@ -3,6 +3,7 @@
 import {
   AlertCircle,
   ArrowRight,
+  ExternalLink,
   Loader2,
   Mail,
   RefreshCw,
@@ -59,19 +60,15 @@ export function AttentionBrief({
   const connectedCount = Number(connected.gmail) + Number(connected.slack);
   return (
     <section
-      className={
-        compact
-          ? "border-b border-white/8 bg-[#0d1017] p-4"
-          : "mb-5 rounded-[11px] border border-black/8 bg-[#101319] p-5 text-white"
-      }
+      className={`attention-brief ${compact ? "attention-brief--compact border-b p-4" : "mb-5 rounded-[11px] border p-5"}`}
     >
       <div className="flex items-center justify-between gap-3">
         <div>
-          <p className="text-[10px] font-bold uppercase tracking-[.12em] text-[#d8ff70]">
+          <p className="attention-accent text-[10px] font-bold uppercase tracking-[.12em]">
             Needs your attention today
           </p>
           {!compact && (
-            <p className="mt-1 text-xs text-white/45">
+            <p className="attention-muted mt-1 text-xs">
               Live Gmail and Slack signals are classified on demand. ResolveX
               stores no mailbox copy.
             </p>
@@ -82,7 +79,7 @@ export function AttentionBrief({
           onClick={() => void load()}
           disabled={loading}
           aria-label="Refresh attention brief"
-          className="grid size-8 shrink-0 place-items-center rounded-[6px] border border-white/10 text-white/55"
+          className="attention-control grid size-8 shrink-0 place-items-center rounded-[6px] border"
         >
           {loading ? (
             <Loader2 size={13} className="animate-spin" />
@@ -95,7 +92,7 @@ export function AttentionBrief({
         <button
           type="button"
           onClick={onOpenIntegrations}
-          className="mt-4 flex w-full items-center justify-between rounded-[7px] border border-white/10 p-3 text-left text-xs text-white/65"
+          className="attention-control mt-4 flex w-full items-center justify-between rounded-[7px] border p-3 text-left text-xs"
         >
           Connect Gmail or Slack to build the brief
           <ArrowRight size={13} />
@@ -108,7 +105,7 @@ export function AttentionBrief({
             href={item.url ?? undefined}
             target={item.url ? "_blank" : undefined}
             rel={item.url ? "noreferrer" : undefined}
-            className="block rounded-[7px] border border-white/8 bg-white/[.045] p-3"
+            className="attention-item block rounded-[7px] border p-3"
           >
             <div className="flex items-center gap-2">
               {item.needsHuman >= 0.65 ? (
@@ -117,23 +114,24 @@ export function AttentionBrief({
                 <Mail size={13} className="shrink-0 text-[#96d8ff]" />
               )}
               <b className="min-w-0 flex-1 truncate text-xs">{item.subject}</b>
-              <span className="rounded-full bg-white/8 px-2 py-0.5 text-[9px] uppercase text-white/55">
+              <span className="attention-badge rounded-full px-2 py-0.5 text-[9px] uppercase">
                 {item.intent}
               </span>
+              {item.url && <ExternalLink size={12} className="opacity-45" />}
             </div>
             {!compact && (
-              <p className="mt-2 line-clamp-2 text-xs leading-5 text-white/45">
+              <p className="attention-muted mt-2 line-clamp-2 text-xs leading-5">
                 {item.preview || item.sender}
               </p>
             )}
-            <p className="mt-2 text-[9px] text-white/30">
+            <p className="attention-faint mt-2 text-[9px]">
               {item.source.toUpperCase()} · {Math.round(item.confidence * 100)}%
               decision confidence
             </p>
           </a>
         ))}
         {!loading && connectedCount > 0 && !items.length && (
-          <p className="rounded-[7px] border border-white/8 p-3 text-xs text-white/45">
+          <p className="attention-muted rounded-[7px] border border-black/8 p-3 text-xs">
             Nothing urgent was found in the connected sources.
           </p>
         )}

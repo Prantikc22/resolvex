@@ -9,7 +9,6 @@ import {
   CheckCircle2,
   CircleDollarSign,
   Clock3,
-  Link2,
   Loader2,
   Mic,
   MicOff,
@@ -1262,7 +1261,12 @@ export function CallsView() {
 
 type IntegrationData = {
   configured: boolean;
-  catalog: Array<{ slug: string; name: string; category: string }>;
+  catalog: Array<{
+    slug: string;
+    name: string;
+    category: string;
+    logo: string;
+  }>;
   connections: Array<{ id: string; toolkit: string; status: string }>;
   pending: Array<{ provider: string; status: string }>;
   employees?: Array<{
@@ -1281,6 +1285,44 @@ type ComposioTool = {
   tags: string[];
 };
 
+function IntegrationLogo({
+  logo,
+  name,
+  slug,
+}: {
+  logo: string;
+  name: string;
+  slug: string;
+}) {
+  const [failed, setFailed] = useState(false);
+  return (
+    <span className="grid size-11 place-items-center overflow-hidden rounded-[9px] border border-black/8 bg-white shadow-sm">
+      {failed ? (
+        <span className="text-xs font-bold uppercase text-[#59606c]">
+          {name
+            .split(" ")
+            .map((part) => part[0])
+            .join("")
+            .slice(0, 2)}
+        </span>
+      ) : (
+        // Composio publishes these toolkit marks from its own catalog service.
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={logo}
+          alt={`${name} logo`}
+          width={28}
+          height={28}
+          loading="lazy"
+          className="size-7 object-contain"
+          onError={() => setFailed(true)}
+          data-toolkit={slug}
+        />
+      )}
+    </span>
+  );
+}
+
 export function ConnectView() {
   const [data, setData] = useState<IntegrationData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -1292,6 +1334,7 @@ export function ConnectView() {
   const [toolArguments, setToolArguments] = useState("{}");
   const [employeeId, setEmployeeId] = useState("");
   const [toolResult, setToolResult] = useState<unknown>(null);
+  const [integrationSearch, setIntegrationSearch] = useState("");
   const load = useCallback(async () => {
     const response = await fetch("/api/integrations/composio", {
       cache: "no-store",
@@ -1386,12 +1429,20 @@ export function ConnectView() {
   const connections = new Map(
     data.connections.map((item) => [item.toolkit, item]),
   );
+  const filteredCatalog = data.catalog.filter((item) => {
+    const query = integrationSearch.trim().toLowerCase();
+    return (
+      !query ||
+      item.name.toLowerCase().includes(query) ||
+      item.category.toLowerCase().includes(query)
+    );
+  });
   return (
     <ModuleShell
       eyebrow="ResolveX Connect"
       title="Integrations"
       copy="Customers connect their own business accounts through ResolveX. Provider credentials stay server-side and every tool call is tenant-scoped, permission-checked, and logged."
-      tone="#f1f0f8"
+      tone="#f6f7f9"
       action={
         <button
           onClick={() => void load()}
@@ -1401,7 +1452,7 @@ export function ConnectView() {
         </button>
       }
     >
-      <div className="mb-5 flex gap-3 rounded-[8px] border border-black/8 bg-white p-4 text-xs">
+      <div className="mb-5 flex gap-3 rounded-[10px] border border-black/8 bg-white p-4 text-xs shadow-[0_1px_2px_rgba(16,17,20,.04)]">
         <ShieldCheck size={17} className="shrink-0 text-[#497d27]" />
         <p>
           <b>
@@ -1415,8 +1466,25 @@ export function ConnectView() {
           </span>
         </p>
       </div>
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <b className="text-sm">Business apps</b>
+          <p className="mt-1 text-xs text-[#777c85]">
+            {data.catalog.length} supported apps with tenant-isolated access
+          </p>
+        </div>
+        <label className="flex h-10 min-w-[240px] items-center gap-2 rounded-[7px] border border-black/10 bg-white px-3 text-[#727883] shadow-[0_1px_2px_rgba(16,17,20,.03)]">
+          <Search size={14} />
+          <input
+            value={integrationSearch}
+            onChange={(event) => setIntegrationSearch(event.target.value)}
+            placeholder="Search apps or categories"
+            className="min-w-0 flex-1 bg-transparent text-xs text-[#15171b] outline-none"
+          />
+        </label>
+      </div>
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        {data.catalog.map((item) => {
+        {filteredCatalog.map((item) => {
           const connection = connections.get(item.slug);
           const pending = data.pending.some(
             (stored) =>
@@ -1426,12 +1494,14 @@ export function ConnectView() {
           return (
             <article
               key={item.slug}
-              className="flex min-h-44 flex-col rounded-[9px] border border-black/10 bg-white p-4"
+              className="group flex min-h-48 flex-col rounded-[11px] border border-black/10 bg-white p-4 shadow-[0_1px_2px_rgba(16,17,20,.035)] transition hover:-translate-y-0.5 hover:border-black/20 hover:shadow-[0_12px_30px_rgba(16,17,20,.08)]"
             >
               <div className="flex items-start justify-between">
-                <span className="grid size-9 place-items-center rounded-[6px] bg-[#f1f0f8]">
-                  <Link2 size={15} />
-                </span>
+                <IntegrationLogo
+                  logo={item.logo}
+                  name={item.name}
+                  slug={item.slug}
+                />
                 <span
                   className={cn(
                     "rounded-full px-2 py-1 text-[9px] font-bold",
@@ -1447,7 +1517,9 @@ export function ConnectView() {
                       : "Available"}
                 </span>
               </div>
-              <h3 className="mt-5 text-sm font-semibold">{item.name}</h3>
+              <h3 className="mt-5 text-base font-semibold tracking-[-.015em]">
+                {item.name}
+              </h3>
               <p className="mt-1 text-[10px] text-[#858a93]">{item.category}</p>
               <button
                 disabled={!data.configured || busy === item.slug}
@@ -1483,6 +1555,11 @@ export function ConnectView() {
           );
         })}
       </div>
+      {!filteredCatalog.length && (
+        <div className="rounded-[10px] border border-dashed border-black/15 bg-white/70 p-10 text-center text-sm text-[#717680]">
+          No apps match “{integrationSearch}”.
+        </div>
+      )}
       {toolkit && (
         <section className="mt-6 rounded-[12px] border border-black/10 bg-white p-5 shadow-sm md:p-6">
           <div className="flex flex-wrap items-end justify-between gap-4">

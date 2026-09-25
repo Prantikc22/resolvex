@@ -133,15 +133,15 @@ export function LiveInbox({
   if (!current) return <EmptyInbox onNavigate={onNavigate} />;
 
   return (
-    <div className="grid min-h-0 flex-1 grid-cols-1 bg-[#11151e] text-white lg:grid-cols-[300px_1fr] xl:grid-cols-[300px_1fr_280px]">
-      <aside className="min-h-0 overflow-y-auto border-r border-white/8">
+    <div className="inbox-shell grid min-h-0 flex-1 grid-cols-1 bg-[#eef1f5] text-[#171a20] lg:grid-cols-[320px_1fr] xl:grid-cols-[320px_1fr_290px]">
+      <aside className="inbox-list min-h-0 overflow-y-auto border-r border-black/8 bg-white">
         <AttentionBrief
           compact
           onOpenIntegrations={() => onNavigate("integrations")}
         />
-        <div className="sticky top-0 z-10 border-b border-white/8 bg-[#11151e] p-4">
+        <div className="inbox-list-header sticky top-0 z-10 border-b border-black/8 bg-white p-4">
           <h2 className="text-sm font-semibold">Open conversations</h2>
-          <p className="mt-1 text-[10px] text-white/35">
+          <p className="inbox-muted mt-1 text-[10px]">
             {items.length} waiting or in progress
           </p>
         </div>
@@ -152,10 +152,10 @@ export function LiveInbox({
               key={item.id}
               onClick={() => setSelected(item.id)}
               className={cn(
-                "w-full border-b border-white/7 p-4 text-left transition",
+                "inbox-row w-full border-b border-black/7 p-4 text-left transition",
                 current.id === item.id
-                  ? "bg-white text-[#151619]"
-                  : "hover:bg-white/[.04]",
+                  ? "inbox-row-active bg-[#edf1ff] text-[#151619]"
+                  : "hover:bg-black/[.025]",
               )}
             >
               <div className="flex items-center justify-between gap-3">
@@ -165,7 +165,7 @@ export function LiveInbox({
                 <span
                   className={cn(
                     "text-[9px]",
-                    current.id === item.id ? "text-black/38" : "text-white/28",
+                    "inbox-muted",
                   )}
                 >
                   {new Date(item.last_message_at).toLocaleDateString()}
@@ -177,7 +177,7 @@ export function LiveInbox({
               <p
                 className={cn(
                   "mt-2 line-clamp-2 text-[10px] leading-relaxed",
-                  current.id === item.id ? "text-black/48" : "text-white/35",
+                  "inbox-muted",
                 )}
               >
                 {latest?.body ?? "No message yet"}
@@ -279,7 +279,7 @@ export function LiveInbox({
         </form>
       </section>
 
-      <aside className="hidden border-l border-white/8 bg-[#0d1017] p-5 xl:block">
+      <aside className="inbox-details hidden border-l border-black/8 bg-white p-5 xl:block">
         <span className="grid size-11 place-items-center rounded-full bg-[#c8ff73] text-xs font-bold text-[#213308]">
           {(current.contact?.name ?? "Website visitor")
             .split(" ")
@@ -290,36 +290,36 @@ export function LiveInbox({
         <h3 className="mt-5 font-semibold">
           {current.contact?.name ?? "Website visitor"}
         </h3>
-        <p className="mt-1 text-xs text-white/35">
+        <p className="inbox-muted mt-1 text-xs">
           {current.contact?.email ?? "Anonymous website session"}
         </p>
         {current.contact?.phone && (
-          <span className="mt-2 block text-xs text-white/45">
+          <span className="inbox-muted mt-2 block text-xs">
             {current.contact.phone}
           </span>
         )}
-        <div className="mt-8 space-y-4 border-t border-white/8 pt-5 text-xs">
+        <div className="mt-8 space-y-4 border-t border-black/8 pt-5 text-xs">
           <div>
-            <span className="block text-[9px] uppercase text-white/25">
+            <span className="inbox-faint block text-[9px] uppercase">
               Company
             </span>
-            <span className="mt-1 block text-white/65">
+            <span className="inbox-value mt-1 block">
               {current.contact?.company ?? "Not provided"}
             </span>
           </div>
           <div>
-            <span className="block text-[9px] uppercase text-white/25">
+            <span className="inbox-faint block text-[9px] uppercase">
               Channel
             </span>
-            <span className="mt-1 block capitalize text-white/65">
+            <span className="inbox-value mt-1 block capitalize">
               {current.inbox?.channel ?? "chat"}
             </span>
           </div>
           <div>
-            <span className="block text-[9px] uppercase text-white/25">
+            <span className="inbox-faint block text-[9px] uppercase">
               Priority
             </span>
-            <span className="mt-1 block capitalize text-white/65">
+            <span className="inbox-value mt-1 block capitalize">
               {current.priority}
             </span>
           </div>
@@ -332,7 +332,7 @@ export function LiveInbox({
 function EmptyInbox({
   onNavigate,
 }: {
-  onNavigate: (view: "knowledge" | "settings") => void;
+  onNavigate: (view: "knowledge" | "settings" | "integrations") => void;
 }) {
   return (
     <div className="grid min-h-0 flex-1 place-items-center bg-[#f5f6f8] p-6 text-[#171a20]">

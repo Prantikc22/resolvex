@@ -30,6 +30,14 @@ type Signal = {
   url: string | null;
 };
 
+function gmailMessageUrl(message: JsonRecord) {
+  const threadId = String(message.threadId ?? message.thread_id ?? "").trim();
+  if (threadId) {
+    return `https://mail.google.com/mail/u/0/#all/${encodeURIComponent(threadId)}`;
+  }
+  return typeof message.display_url === "string" ? message.display_url : null;
+}
+
 async function gmailSignals(organizationId: string) {
   const result = record(
     await executeComposioTool({
@@ -59,7 +67,7 @@ async function gmailSignals(organizationId: string) {
       occurredAt: message.messageTimestamp
         ? String(message.messageTimestamp)
         : null,
-      url: typeof message.display_url === "string" ? message.display_url : null,
+      url: gmailMessageUrl(message),
     };
   });
 }
@@ -97,20 +105,49 @@ async function slackSignals(organizationId: string) {
       const historyData = record(history.data);
       return records(
         historyData.messages ?? record(historyData.response).messages,
-      ).map<Signal>((message) => ({
-        id: `${id}:${String(message.ts ?? message.id ?? crypto.randomUUID())}`,
-        source: "slack",
-        sender: String(
-          message.username ?? message.user_name ?? message.user ?? "Slack",
-        ),
-        subject: `#${String(channel.name ?? channel.user ?? "conversation")}`,
-        preview: String(message.text ?? "").slice(0, 500),
-        occurredAt: message.ts ? String(message.ts) : null,
-        url: null,
-      }));
+      ).map((message) => ({ channel, channelId: id, message }));
     }),
   );
-  return batches.flat();
+  return Promise.all(
+    batches
+      .flat()
+      .slice(0, 12)
+      .map(async ({ channel, channelId, message }): Promise<Signal> => {
+        const messageTs = String(message.ts ?? message.id ?? "");
+        let url: string | null = null;
+        if (messageTs) {
+          try {
+            const permalinkResult = record(
+              await executeComposioTool({
+                organizationId,
+                toolkit: "slack",
+                toolSlug: "SLACK_RETRIEVE_MESSAGE_PERMALINK_URL",
+                arguments: { channel: channelId, message_ts: messageTs },
+              }),
+            );
+            const permalinkData = record(permalinkResult.data);
+            url =
+              typeof permalinkData.permalink === "string"
+                ? permalinkData.permalink
+                : null;
+          } catch {
+            // The attention brief still works if the connected Slack account
+            // does not grant chat.getPermalink; only the deep link is omitted.
+          }
+        }
+        return {
+          id: `${channelId}:${messageTs || crypto.randomUUID()}`,
+          source: "slack",
+          sender: String(
+            message.username ?? message.user_name ?? message.user ?? "Slack",
+          ),
+          subject: `#${String(channel.name ?? channel.user ?? "conversation")}`,
+          preview: String(message.text ?? "").slice(0, 500),
+          occurredAt: messageTs || null,
+          url,
+        };
+      }),
+  );
 }
 
 async function addDecisions(signals: Signal[]) {

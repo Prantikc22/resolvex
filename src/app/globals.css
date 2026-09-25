@@ -117,9 +117,134 @@ a {
   line-height: 1.35rem !important;
 }
 
+/* Workspace surfaces keep the light theme genuinely light while preserving
+   the same information hierarchy in dark mode. */
+.attention-brief {
+  border-color: rgba(15, 23, 42, 0.09);
+  background: #ffffff;
+  color: #171a20;
+  box-shadow: 0 1px 2px rgba(16, 17, 20, 0.035);
+}
+
+.attention-brief--compact {
+  background: #f8fafc;
+}
+
+.attention-accent {
+  color: #527a17;
+}
+
+.attention-muted,
+.inbox-muted {
+  color: #69717e;
+}
+
+.attention-faint,
+.inbox-faint {
+  color: #959ca7;
+}
+
+.attention-control,
+.attention-item {
+  border-color: rgba(15, 23, 42, 0.1);
+}
+
+.attention-control {
+  color: #5e6672;
+}
+
+.attention-item {
+  background: #ffffff;
+}
+
+.attention-item[href]:hover {
+  border-color: rgba(53, 92, 255, 0.28);
+  background: #f7f9ff;
+}
+
+.attention-badge {
+  background: #eef1f5;
+  color: #6b7280;
+}
+
+.inbox-value {
+  color: #4f5865;
+}
+
 .workspace-dark,
 html[data-workspace-theme="dark"] {
   color-scheme: dark;
+}
+
+.workspace-dark .attention-brief,
+.workspace-dark .attention-brief--compact {
+  border-color: rgba(255, 255, 255, 0.09);
+  background: #0d1017;
+  color: #f5f7fb;
+  box-shadow: none;
+}
+
+.workspace-dark .attention-accent {
+  color: #d8ff70;
+}
+
+.workspace-dark :is(.attention-muted, .inbox-muted) {
+  color: rgba(255, 255, 255, 0.48);
+}
+
+.workspace-dark :is(.attention-faint, .inbox-faint) {
+  color: rgba(255, 255, 255, 0.3);
+}
+
+.workspace-dark :is(.attention-control, .attention-item) {
+  border-color: rgba(255, 255, 255, 0.09);
+}
+
+.workspace-dark .attention-control {
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.workspace-dark .attention-item {
+  background: rgba(255, 255, 255, 0.045);
+}
+
+.workspace-dark .attention-item[href]:hover {
+  border-color: rgba(143, 165, 255, 0.4);
+  background: rgba(255, 255, 255, 0.07);
+}
+
+.workspace-dark .attention-badge {
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.58);
+}
+
+.workspace-dark .inbox-list,
+.workspace-dark .inbox-list-header,
+.workspace-dark .inbox-details {
+  border-color: rgba(255, 255, 255, 0.08) !important;
+  background: #11151e !important;
+  color: #f5f7fb;
+}
+
+.workspace-dark .inbox-row {
+  border-color: rgba(255, 255, 255, 0.07) !important;
+}
+
+.workspace-dark .inbox-row:not(.inbox-row-active):hover {
+  background: rgba(255, 255, 255, 0.04) !important;
+}
+
+.workspace-dark .inbox-row-active {
+  background: #f6f7f9 !important;
+  color: #151619 !important;
+}
+
+.workspace-dark .inbox-row-active .inbox-muted {
+  color: rgba(0, 0, 0, 0.48) !important;
+}
+
+.workspace-dark .inbox-value {
+  color: rgba(255, 255, 255, 0.68);
 }
 
 html[data-workspace-theme="dark"] body {

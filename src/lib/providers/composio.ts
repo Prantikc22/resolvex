@@ -1,18 +1,42 @@
 import "server-only";
 import { Composio } from "@composio/core";
 
+function toolkit<const T extends string>(
+  slug: T,
+  name: string,
+  category: string,
+) {
+  return {
+    slug,
+    name,
+    category,
+    logo: `https://logos.composio.dev/api/${slug}`,
+  } as const;
+}
+
 export const composioCatalog = [
-  { slug: "gmail", name: "Gmail", category: "Communication" },
-  { slug: "slack", name: "Slack", category: "Communication" },
-  { slug: "googlecalendar", name: "Google Calendar", category: "Scheduling" },
-  { slug: "googledrive", name: "Google Drive", category: "Productivity" },
-  { slug: "googlesheets", name: "Google Sheets", category: "Productivity" },
-  { slug: "notion", name: "Notion", category: "Productivity" },
-  { slug: "hubspot", name: "HubSpot", category: "CRM" },
-  { slug: "shopify", name: "Shopify", category: "Commerce" },
-  { slug: "zoom", name: "Zoom", category: "Meetings" },
-  { slug: "microsoft_teams", name: "Microsoft Teams", category: "Meetings" },
-  { slug: "googlemeet", name: "Google Meet", category: "Meetings" },
+  toolkit("gmail", "Gmail", "Communication"),
+  toolkit("slack", "Slack", "Communication"),
+  toolkit("github", "GitHub", "Developer tools"),
+  toolkit("notion", "Notion", "Productivity"),
+  toolkit("googlesheets", "Google Sheets", "Productivity"),
+  toolkit("googledrive", "Google Drive", "Productivity"),
+  toolkit("shopify", "Shopify", "Commerce"),
+  toolkit("supabase", "Supabase", "Data"),
+  toolkit("hubspot", "HubSpot", "CRM"),
+  toolkit("googlecalendar", "Google Calendar", "Scheduling"),
+  toolkit("zoom", "Zoom", "Meetings"),
+  toolkit("microsoft_teams", "Microsoft Teams", "Meetings"),
+  toolkit("googlemeet", "Google Meet", "Meetings"),
+  toolkit("salesforce", "Salesforce", "CRM"),
+  toolkit("jira", "Jira", "Project management"),
+  toolkit("linear", "Linear", "Project management"),
+  toolkit("airtable", "Airtable", "Productivity"),
+  toolkit("asana", "Asana", "Project management"),
+  toolkit("clickup", "ClickUp", "Project management"),
+  toolkit("outlook", "Microsoft Outlook", "Communication"),
+  toolkit("dropbox", "Dropbox", "Storage"),
+  toolkit("stripe", "Stripe", "Finance"),
 ] as const;
 
 export type ComposioToolkit = (typeof composioCatalog)[number]["slug"];
