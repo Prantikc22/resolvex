@@ -158,8 +158,34 @@ export async function dodoGet() {
       await currentSubscription(supabase, organizationId!),
     );
     const config = dodoConfiguration();
+    // A plan-change charge on an Indian mandate can stay "processing" for up
+    // to a day; surface it so the page explains the wait instead of offering
+    // actions that would be rejected.
+    let pendingPayment: {
+      amount: number;
+      currency: string;
+      createdAt: string;
+    } | null = null;
+    if (row?.provider_subscription_id) {
+      try {
+        for await (const payment of getDodo().payments.list({
+          subscription_id: row.provider_subscription_id,
+          status: "processing",
+        })) {
+          pendingPayment = {
+            amount: payment.total_amount / 100,
+            currency: payment.currency,
+            createdAt: payment.created_at,
+          };
+          break;
+        }
+      } catch (error) {
+        console.error("Pending payment lookup failed", error);
+      }
+    }
     return NextResponse.json({
       provider: "dodo",
+      pendingPayment,
       configured: config.configured,
       annualAvailable: Boolean(config.annualProductId),
       environment: config.environment,
@@ -188,7 +214,7 @@ export async function dodoPost(request: Request) {
   if (sync.success) return dodoSync(organization, sync.data.subscriptionId);
   const planAction = actionSchema.safeParse(body);
   if (planAction.success)
-    return dodoPlanAction(organization, planAction.data.action);
+    return dodoPlanAction(organization, planAction.data.action, request);
 
   const parsed = checkoutSchema.safeParse(body);
   if (!parsed.success)
@@ -294,16 +320,78 @@ async function dodoSync(organization: Organization, subscriptionId: string) {
   }
 }
 
+type PlanChangeError = { status?: number; error?: { code?: string } };
+
+const pause = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
 /**
- * Ends a free trial early or moves a monthly plan to annual. Dodo charges
- * immediately and, with prevent_change, leaves the plan untouched if the
- * payment fails. The workspace is re-synced from Dodo straight away.
+ * Reads the payment Dodo created for a plan change and reports what really
+ * happened. A change made with prevent_change only applies once that payment
+ * succeeds, so the response must never claim success before then.
+ */
+async function planChangeOutcome(
+  organization: Organization,
+  subscriptionId: string,
+  since: Date,
+) {
+  let payment: {
+    status?: string | null;
+    error_message?: string | null;
+  } | null = null;
+  for (let attempt = 0; attempt < 5; attempt += 1) {
+    for await (const item of getDodo().payments.list({
+      subscription_id: subscriptionId,
+      created_at_gte: since.toISOString(),
+    })) {
+      payment = item;
+      break;
+    }
+    if (payment && payment.status !== "processing") break;
+    await pause(1500);
+  }
+  const subscription = await getDodo().subscriptions.retrieve(subscriptionId);
+  await syncDodoSubscription(createAdminClient(), {
+    ...subscription,
+    metadata: {
+      ...subscription.metadata,
+      organization_id: organization.organizationId!,
+    },
+  });
+  if (payment?.status === "failed" || payment?.status === "cancelled")
+    return NextResponse.json(
+      {
+        error:
+          payment.error_message ??
+          "Your bank declined the payment. Nothing was changed.",
+      },
+      { status: 402 },
+    );
+  if (!payment || payment.status !== "succeeded")
+    return NextResponse.json(
+      {
+        pending: true,
+        message:
+          "Payment is processing. Indian bank mandates send a pre-debit notice first, so this can take up to 24 hours. Your plan updates automatically once it clears.",
+      },
+      { status: 202 },
+    );
+  return dodoGet();
+}
+
+/**
+ * Ends a free trial early or moves a monthly plan to annual. Preferred path:
+ * a Dodo payment link, so the customer authenticates the charge on a
+ * checkout page (required for Indian cards above the mandate ceiling). If
+ * the account has payment-link plan changes disabled, starting now charges
+ * the saved mandate and reports the real outcome, and annual moves through a
+ * fresh annual checkout that retires the monthly plan once paid.
  */
 async function dodoPlanAction(
   organization: Organization,
   action: "start_now" | "switch_annual",
+  request: Request,
 ) {
-  const { supabase, organizationId } = organization;
+  const { supabase, organizationId, user } = organization;
   const config = dodoConfiguration();
   const current = currentEnvironmentSubscription(
     await currentSubscription(supabase, organizationId!),
@@ -337,30 +425,84 @@ async function dodoPlanAction(
         { status: 409 },
       );
   }
+  const params = {
+    product_id:
+      action === "switch_annual" ? config.annualProductId! : currentProduct!,
+    quantity: seats,
+    // During a trial any change ends the trial and charges in full;
+    // mid-cycle, unused monthly time is credited toward the annual plan.
+    proration_billing_mode:
+      trialing || action === "start_now"
+        ? ("full_immediately" as const)
+        : ("prorated_immediately" as const),
+    effective_at: "immediately" as const,
+    on_payment_failure: "prevent_change" as const,
+  };
+  const pendingResponse = NextResponse.json(
+    {
+      pending: true,
+      message:
+        "A payment for a plan change is already processing. It completes automatically; check back shortly.",
+    },
+    { status: 202 },
+  );
+
   try {
-    await getDodo().subscriptions.changePlan(id, {
-      product_id:
-        action === "switch_annual" ? config.annualProductId! : currentProduct!,
-      quantity: seats,
-      // During a trial any change ends the trial and charges in full;
-      // mid-cycle, unused monthly time is credited toward the annual plan.
-      proration_billing_mode:
-        trialing || action === "start_now"
-          ? "full_immediately"
-          : "prorated_immediately",
-      effective_at: "immediately",
-      on_payment_failure: "prevent_change",
+    const link = await getDodo().subscriptions.changePlan(id, {
+      ...params,
+      collect_via_payment_link: true,
     });
-    const subscription = await getDodo().subscriptions.retrieve(id);
-    await syncDodoSubscription(createAdminClient(), {
-      ...subscription,
-      metadata: { ...subscription.metadata, organization_id: organizationId! },
-    });
-    return dodoGet();
+    if (link.payment_link)
+      return NextResponse.json({ checkoutUrl: link.payment_link });
   } catch (error) {
-    console.error("Dodo plan action failed", error);
+    const failure = error as PlanChangeError;
+    if (failure.status === 409) return pendingResponse;
+    if (failure.error?.code !== "PLAN_CHANGE_PAYMENT_LINK_DISABLED") {
+      console.error("Dodo plan change failed", error);
+      return NextResponse.json({ error: dodoError(error) }, { status: 402 });
+    }
+  }
+
+  if (action === "switch_annual") {
+    // Fresh annual checkout; the monthly plan is retired once it is paid.
+    try {
+      const session = await getDodo().checkoutSessions.create({
+        product_cart: [
+          { product_id: config.annualProductId!, quantity: seats },
+        ],
+        customer: user!.email
+          ? { email: user!.email, name: user!.email.split("@")[0] }
+          : undefined,
+        metadata: {
+          organization_id: organizationId!,
+          user_id: user!.id,
+          plan: "one",
+          agents: String(seats),
+          interval: "year",
+          replaces_subscription_id: id,
+        },
+        return_url: `${publicAppUrl(request)}/app?billing=return`,
+        cancel_url: `${publicAppUrl(request)}/app?billing=cancelled`,
+        customization: { theme: "system" },
+      });
+      if (!session.checkout_url)
+        throw new Error("Dodo Payments did not return a checkout URL.");
+      return NextResponse.json({ checkoutUrl: session.checkout_url });
+    } catch (error) {
+      console.error("Annual checkout failed", error);
+      return NextResponse.json({ error: dodoError(error) }, { status: 502 });
+    }
+  }
+
+  const since = new Date(Date.now() - 5_000);
+  try {
+    await getDodo().subscriptions.changePlan(id, params);
+  } catch (error) {
+    if ((error as PlanChangeError).status === 409) return pendingResponse;
+    console.error("Dodo trial start failed", error);
     return NextResponse.json({ error: dodoError(error) }, { status: 402 });
   }
+  return planChangeOutcome(organization, id, since);
 }
 
 export async function dodoPatch(request: Request) {

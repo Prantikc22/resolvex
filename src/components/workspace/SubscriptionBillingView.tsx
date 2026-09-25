@@ -35,6 +35,11 @@ type BillingResponse = {
   provider?: "dodo" | "razorpay";
   configured?: boolean;
   annualAvailable?: boolean;
+  pendingPayment?: {
+    amount: number;
+    currency: string;
+    createdAt: string;
+  } | null;
   keyId?: string;
   customer?: { email?: string; name?: string };
   subscription?: Subscription | null;
@@ -162,6 +167,8 @@ export function SubscriptionBillingView({
   const [busy, setBusy] = useState(false);
   const [annualAvailable, setAnnualAvailable] = useState(false);
   const [voiceRefresh, setVoiceRefresh] = useState(0);
+  const [pendingPayment, setPendingPayment] =
+    useState<BillingResponse["pendingPayment"]>(null);
   const [chosenInterval, setChosenInterval] = useState<"month" | "year">(
     "month",
   );
@@ -189,6 +196,7 @@ export function SubscriptionBillingView({
       setProvider(data.provider ?? "razorpay");
       setTestMode(data.environment === "test_mode");
       setAnnualAvailable(Boolean(data.annualAvailable));
+      setPendingPayment(data.pendingPayment ?? null);
       setSubscription(data.subscription ?? null);
       setUsage(data.usage);
       const minimum = data.requiredAgents ?? 1;
@@ -433,16 +441,44 @@ export function SubscriptionBillingView({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action }),
       });
-      const data = await billingResponse<BillingResponse>(response);
-      if (!response.ok)
+      const data = await billingResponse<
+        BillingResponse & {
+          checkoutUrl?: string;
+          pending?: boolean;
+          message?: string;
+        }
+      >(response);
+      if (!response.ok && response.status !== 202)
         throw new Error(data.error ?? "The payment could not be completed.");
+      if (data.checkoutUrl) {
+        // The customer confirms the charge on Dodo's secure checkout page.
+        toast.loading("Opening secure checkout…");
+        window.location.assign(data.checkoutUrl);
+        return;
+      }
+      if (data.pending) {
+        toast.info(data.message ?? "Payment is processing.", {
+          duration: 9000,
+        });
+        await load();
+        return;
+      }
       setSubscription(data.subscription ?? null);
       setUsage(data.usage);
-      toast.success(
+      const applied =
         action === "start_now"
-          ? "Your paid plan is active. Voice minutes are now available."
-          : "You’re on annual billing — two months free.",
-      );
+          ? data.subscription?.status === "active"
+          : data.subscription?.interval === "year";
+      if (applied)
+        toast.success(
+          action === "start_now"
+            ? "Your paid plan is active. Voice minutes are now available."
+            : "You’re on annual billing — two months free.",
+        );
+      else
+        toast.info(
+          "Dodo is still confirming the payment. This page updates once it clears.",
+        );
       setVoiceRefresh((value) => value + 1);
     } catch (error) {
       toast.error(
@@ -508,7 +544,26 @@ export function SubscriptionBillingView({
           </div>
         )}
 
-        {subscription?.status === "trialing" && (
+        {pendingPayment && (
+          <section className="mt-5 rounded-[10px] border border-[#dbb96d]/50 bg-[#fff7df] p-5">
+            <h3 className="flex items-center gap-2 text-[15px] font-semibold">
+              <Loader2 size={15} className="animate-spin text-[#b7791f]" />
+              Payment of{" "}
+              {new Intl.NumberFormat("en", {
+                style: "currency",
+                currency: pendingPayment.currency,
+              }).format(pendingPayment.amount)}{" "}
+              is processing
+            </h3>
+            <p className="mt-1 text-[13px] leading-relaxed text-[#766331]">
+              Indian bank mandates send you a pre-debit notice before the charge
+              clears, which can take up to 24 hours. Your plan updates
+              automatically — no need to click again.
+            </p>
+          </section>
+        )}
+
+        {!pendingPayment && subscription?.status === "trialing" && (
           <section className="mt-5 flex flex-col justify-between gap-4 rounded-[10px] border border-[#355cff]/20 bg-[#eef3ff] p-5 sm:flex-row sm:items-center">
             <div>
               <h3 className="text-[15px] font-semibold">
@@ -532,6 +587,7 @@ export function SubscriptionBillingView({
         )}
 
         {annualAvailable &&
+          !pendingPayment &&
           subscription?.interval === "month" &&
           ["active", "trialing"].includes(subscription.status ?? "") &&
           !subscription.cancelAtPeriodEnd && (
@@ -837,7 +893,7 @@ export function SubscriptionBillingView({
         {!activationGate && provider === "dodo" && (
           <VoicePacksCard
             key={voiceRefresh}
-            trialing={subscription?.status === "trialing"}
+            trialing={subscription?.status === "trialing" && !pendingPayment}
             onStartPaidPlan={() => void planAction("start_now")}
           />
         )}

@@ -82,6 +82,15 @@ export async function syncDodoSubscription(
     .eq("organization_id", organizationId)
     .maybeSingle();
   if (readError) throw readError;
+  // A replacement plan (e.g. monthly -> annual) must not displace the
+  // working subscription until it has actually been paid for.
+  const replaces = subscription.metadata?.replaces_subscription_id;
+  if (
+    replaces &&
+    !["active", "trialing"].includes(workspaceStatus(subscription))
+  ) {
+    return organizationId;
+  }
   // Never let a stale event for a replaced subscription overwrite the live one.
   if (
     current?.provider === "dodo" &&
@@ -112,7 +121,73 @@ export async function syncDodoSubscription(
     { onConflict: "organization_id" },
   );
   if (error) throw error;
+  if (replaces) {
+    await retireReplacedSubscription(admin, organizationId, subscription);
+  }
   return organizationId;
+}
+
+/**
+ * After a replacement subscription is paid, cancel the one it replaced and
+ * refund that plan's unused paid time pro rata. Runs once per replacement.
+ */
+async function retireReplacedSubscription(
+  admin: SupabaseClient,
+  organizationId: string,
+  replacement: Subscription,
+) {
+  const rawOldId = replacement.metadata?.replaces_subscription_id;
+  if (typeof rawOldId !== "string" || !rawOldId) return;
+  const oldId = rawOldId;
+  const { data: row } = await admin
+    .from("subscriptions")
+    .select("metadata")
+    .eq("organization_id", organizationId)
+    .maybeSingle();
+  const metadata = (row?.metadata ?? {}) as StoredMetadata;
+  if (metadata.retired_subscription_id === oldId) return;
+
+  const dodo = getDodo();
+  const old = await dodo.subscriptions.retrieve(oldId);
+  if (!["cancelled", "expired", "failed"].includes(old.status)) {
+    await dodo.subscriptions.update(oldId, { status: "cancelled" });
+  }
+
+  let refundedMinor = 0;
+  const periodStart = new Date(old.previous_billing_date).getTime();
+  const periodEnd = new Date(old.next_billing_date).getTime();
+  const remaining = (periodEnd - Date.now()) / (periodEnd - periodStart);
+  if (Number.isFinite(remaining) && remaining > 0 && remaining < 1) {
+    for await (const payment of dodo.payments.list({
+      subscription_id: oldId,
+      status: "succeeded",
+    })) {
+      if (payment.total_amount <= 0) continue;
+      // List rows omit the cart; the full payment carries the line items.
+      const full = await dodo.payments.retrieve(payment.payment_id);
+      const line = full.product_cart?.[0];
+      const amount = Math.floor(payment.total_amount * remaining);
+      if (line && amount > 0) {
+        await dodo.refunds.create({
+          payment_id: payment.payment_id,
+          reason: "Unused monthly time after switching to annual billing",
+          items: [{ item_id: line.product_id, amount }],
+        });
+        refundedMinor = amount;
+      }
+      break;
+    }
+  }
+  await admin
+    .from("subscriptions")
+    .update({
+      metadata: {
+        ...metadata,
+        retired_subscription_id: oldId,
+        retired_refund_minor: refundedMinor,
+      },
+    })
+    .eq("organization_id", organizationId);
 }
 
 /**
