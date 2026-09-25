@@ -2,7 +2,8 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { employeeTemplates } from "@/lib/ai/employee-templates";
 import { hasWorkspaceAccess } from "@/lib/billing/access";
-import { voiceIncluded } from "@/lib/pricing";
+import { voiceBalance } from "@/lib/billing/voice-credits";
+import { voiceIncluded, voiceLimits } from "@/lib/pricing";
 import {
   assignBolnaInboundAgent,
   bolnaConfigured,
@@ -68,7 +69,13 @@ export async function POST(
       .select("status,provider,metadata")
       .eq("organization_id", organizationId)
       .maybeSingle();
-    const voiceAllowed = voiceIncluded(subscription);
+    const voiceMinutes = await voiceBalance(
+      createAdminClient(),
+      organizationId,
+    );
+    const voiceAllowed =
+      voiceIncluded(subscription) &&
+      voiceMinutes >= voiceLimits.suspendBelowMinutes;
     const deferredChannels = voiceAllowed
       ? []
       : (employee.assigned_channels ?? []).filter((channel: string) =>
@@ -272,6 +279,11 @@ export async function POST(
           channel,
         })),
         deferredChannels,
+        deferredReason: deferredChannels.length
+          ? voiceIncluded(subscription)
+            ? `Add a voice pack under Billing (at least ${voiceLimits.suspendBelowMinutes} minutes), then activate again to switch on voice and phone.`
+            : "Voice and phone switch on with an active paid plan. Activate again once it starts."
+          : null,
       });
     } catch (providerError) {
       const message =

@@ -53,9 +53,7 @@ export function CookieConsent() {
     setPreferences(next);
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
     document.cookie = `resolvex_consent=${encodeURIComponent(JSON.stringify(next))}; Max-Age=31536000; Path=/; SameSite=Lax`;
-    window.dispatchEvent(
-      new CustomEvent("resolvex:consent", { detail: next }),
-    );
+    window.dispatchEvent(new CustomEvent("resolvex:consent", { detail: next }));
     setVisible(false);
     setCustomizing(false);
   }

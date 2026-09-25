@@ -72,7 +72,7 @@ const questions = [
   ],
   [
     "How is voice billed?",
-    "AI voice is $0.20 per connected minute on your website or phone line, covering the speech and language models. Phone numbers stay with your own carrier (Twilio, Plivo, Exotel, Vonage or any SIP provider), which bills its own call rates. Voice and phone agents start with the paid plan; the free trial includes Arlo text replies.",
+    "AI voice uses prepaid minute packs: 100 minutes for $22, 500 for $99 or 2,000 for $380 — from $0.19 per minute, covering the speech and language models, on your website or phone line. Minutes never expire and calls round up to the next minute. Phone numbers stay with your own carrier (Twilio, Plivo, Exotel, Vonage or any SIP provider), which bills its own call rates. Voice and phone agents start with the paid plan; the free trial includes Arlo text replies.",
   ],
   [
     "Can we keep data in our own environment?",
@@ -135,12 +135,16 @@ export function PricingPage() {
                   / agent / month
                 </span>
               </div>
+              <div className="mt-2 text-sm text-white/55">
+                or {money(pricing.annualSeat / 12)} / agent / month billed
+                yearly ({money(pricing.annualSeat)}) — two months free
+              </div>
               <div className="mt-6 space-y-3 text-sm text-white/65">
                 {[
                   `${pricing.includedResolutions} AI resolutions included`,
                   `${money(pricing.resolution)} per completed resolution after 50`,
                   "Unlimited collaborators",
-                  "No setup fee or annual lock-in",
+                  "Monthly or annual — no setup fee",
                 ].map((item) => (
                   <div key={item} className="flex items-center gap-2">
                     <Check size={15} className="text-[#d8ff70]" />
@@ -236,7 +240,7 @@ export function PricingPage() {
             [
               Phone,
               "Voice",
-              "$0.20 per connected AI voice minute. Your phone carrier bills its own rates.",
+              "Prepaid packs from $0.19 per minute. Minutes never expire; your phone carrier bills its own rates.",
             ],
             [
               ShieldCheck,

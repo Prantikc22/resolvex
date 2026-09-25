@@ -14,6 +14,7 @@ import {
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { money, pricing } from "@/lib/pricing";
+import { VoicePacksCard } from "@/components/workspace/VoicePacksCard";
 
 type Subscription = {
   id: string | null;
@@ -24,12 +25,14 @@ type Subscription = {
   currentPeriodEnd: string | null;
   cancelAtPeriodEnd: boolean;
   seatPaymentPending: boolean;
+  interval?: "month" | "year";
   shortUrl: string | null;
 };
 
 type BillingResponse = {
   provider?: "dodo" | "razorpay";
   configured?: boolean;
+  annualAvailable?: boolean;
   keyId?: string;
   customer?: { email?: string; name?: string };
   subscription?: Subscription | null;
@@ -155,7 +158,15 @@ export function SubscriptionBillingView({
   const [loading, setLoading] = useState(true);
   const [testMode, setTestMode] = useState(false);
   const [busy, setBusy] = useState(false);
-  const estimatedTotal = useMemo(() => agents * pricing.agent, [agents]);
+  const [annualAvailable, setAnnualAvailable] = useState(false);
+  const [chosenInterval, setChosenInterval] = useState<"month" | "year">(
+    "month",
+  );
+  // An existing subscription fixes the interval; otherwise the toggle decides.
+  const interval = subscription?.interval ?? chosenInterval;
+  const yearly = interval === "year";
+  const seatPrice = yearly ? pricing.annualSeat : pricing.agent;
+  const estimatedTotal = useMemo(() => agents * seatPrice, [agents, seatPrice]);
   const canEditSeats =
     subscription?.status === "active" ||
     subscription?.status === "authenticated" ||
@@ -174,6 +185,7 @@ export function SubscriptionBillingView({
       setConfigured(Boolean(data.configured));
       setProvider(data.provider ?? "razorpay");
       setTestMode(data.environment === "test_mode");
+      setAnnualAvailable(Boolean(data.annualAvailable));
       setSubscription(data.subscription ?? null);
       setUsage(data.usage);
       const minimum = data.requiredAgents ?? 1;
@@ -271,7 +283,7 @@ export function SubscriptionBillingView({
       const response = await fetch("/api/billing/subscription", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ agents }),
+        body: JSON.stringify({ agents, interval: chosenInterval }),
       });
       const data = await billingResponse<BillingResponse>(response);
       if (!response.ok)
@@ -439,16 +451,15 @@ export function SubscriptionBillingView({
           <p className="mt-2 max-w-2xl text-sm leading-relaxed text-[#74777f]">
             Authorise recurring billing through{" "}
             {provider === "dodo" ? "Dodo Payments" : "Razorpay"}, manage paid
-            seats,
-            and cancel at the end of a billing cycle from one place.
+            seats, and cancel at the end of a billing cycle from one place.
           </p>
         </div>
 
         {configured && testMode && (
           <div className="mt-5 rounded-[8px] border border-[#355cff]/20 bg-[#eef2ff] px-4 py-3 text-xs leading-relaxed text-[#26357a]">
-            <strong>Test mode.</strong> Checkout uses Dodo Payments test mode —
-            no real card is charged. Use test card 4242 4242 4242 4242, any
-            future expiry, and any CVC.
+            <strong>Test mode.</strong> No real card is charged. US / USD
+            checkout: 4242 4242 4242 4242. India / INR checkout: 4576 2389 1277
+            1450 or UPI success@upi. Expiry 06/32, CVC 123.
           </div>
         )}
 
@@ -501,13 +512,39 @@ export function SubscriptionBillingView({
             <div className="p-5 md:p-6">
               <div className="flex flex-col justify-between gap-6 rounded-[8px] bg-[#f5f4ef] p-5 sm:flex-row sm:items-center">
                 <div>
+                  {annualAvailable && !subscription?.interval && (
+                    <div className="mb-3 inline-flex rounded-[7px] bg-white p-1 shadow-sm">
+                      {(["month", "year"] as const).map((option) => (
+                        <button
+                          key={option}
+                          type="button"
+                          onClick={() => setChosenInterval(option)}
+                          className={`h-8 rounded-[5px] px-3 text-xs font-semibold transition-colors ${
+                            chosenInterval === option
+                              ? "bg-[#17191d] text-white"
+                              : "text-[#6b6e75]"
+                          }`}
+                        >
+                          {option === "month" ? "Monthly" : "Annual · save 20%"}
+                        </button>
+                      ))}
+                    </div>
+                  )}
                   <div className="text-[10px] font-bold uppercase tracking-[.1em] text-[#858891]">
-                    {activationGate ? "Due today" : "Agents billed monthly"}
+                    {activationGate
+                      ? "Due today"
+                      : yearly
+                        ? "Agents billed yearly"
+                        : "Agents billed monthly"}
                   </div>
                   <div className="mt-2 text-2xl font-semibold">
-                    {money(activationGate ? 0 : pricing.agent)}
+                    {money(activationGate ? 0 : seatPrice)}
                     <span className="ml-1 text-xs font-normal text-[#858891]">
-                      {activationGate ? " now" : " / agent"}
+                      {activationGate
+                        ? " now"
+                        : yearly
+                          ? " / agent / year"
+                          : " / agent"}
                     </span>
                   </div>
                   {activationGate && (
@@ -579,7 +616,7 @@ export function SubscriptionBillingView({
                     {!activationGate && (
                       <span className="text-xs font-normal text-[#92959c]">
                         {" "}
-                        / month
+                        / {yearly ? "year" : "month"}
                       </span>
                     )}
                   </div>
@@ -652,17 +689,21 @@ export function SubscriptionBillingView({
                 <div>
                   <div className="text-sm font-semibold">ResolveX One</div>
                   <div className="mt-1 text-[10px] text-white/38">
-                    Monthly recurring subscription
+                    {yearly
+                      ? "Annual subscription · two months free"
+                      : "Monthly recurring subscription"}
                   </div>
                 </div>
               </div>
               <div className="mt-6 space-y-3 text-xs">
                 {[
                   "7 days free before the first billing cycle",
-                  "First 50 AI resolutions included",
+                  yearly
+                    ? `${pricing.includedResolutionsAnnual} AI resolutions included per year`
+                    : `First ${pricing.includedResolutions} AI resolutions included each month`,
                   `${provider === "dodo" ? "Dodo Payments" : "Razorpay"} stores and secures payment details`,
                   provider === "dodo"
-                    ? `${money(pricing.resolution)} per completed AI resolution after 50`
+                    ? `${money(pricing.resolution)} per completed AI resolution after that`
                     : "Human handoff after the included allowance",
                   "Cancel at the end of the current cycle",
                 ].map((item) => (
@@ -724,6 +765,7 @@ export function SubscriptionBillingView({
             </section>
           </div>
         </div>
+        {!activationGate && provider === "dodo" && <VoicePacksCard />}
       </div>
     </div>
   );

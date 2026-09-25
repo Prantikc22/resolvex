@@ -82,6 +82,8 @@ async function agentConfig(input: ElevenLabsAgentInput) {
     name: input.name,
     tags: ["resolvex"],
     conversation_config: {
+      // Matches the phone cap so a call can never outrun prepaid minutes.
+      conversation: { max_duration_seconds: 900 },
       agent: {
         first_message: input.greeting,
         language: input.language,

@@ -318,7 +318,8 @@ export function AIEmployeesView() {
     if (actionName === "activate" && data.deferredChannels?.length) {
       toast.success(`${employee.name} is active on chat and email.`, {
         description:
-          "Voice and phone switch on when your paid plan starts. Activate again after the trial to enable them.",
+          data.deferredReason ??
+          "Voice and phone switch on with an active paid plan and prepaid minutes.",
       });
       await load();
       return;

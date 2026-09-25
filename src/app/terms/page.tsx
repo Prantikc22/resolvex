@@ -25,16 +25,15 @@ export default function TermsPage() {
         cancelled. Full-agent seats, voice usage, taxes, and any separately
         agreed enterprise services are charged as shown at checkout or in an
         order form. Completed AI resolutions above the included monthly
-        allowance are usage-billed at the price displayed at checkout.
-        Pricing details are published on the <a href="/pricing">Pricing page</a>
-        .
+        allowance are usage-billed at the price displayed at checkout. Pricing
+        details are published on the <a href="/pricing">Pricing page</a>.
       </p>
       <h2>Trials, cancellation, and refunds</h2>
       <p>
-        Dodo Payments, our merchant of record, may securely authorise a payment method when a trial begins.
-        Cancellation stops future renewal and access continues through the paid
-        period unless the account is terminated for misuse. Refund eligibility and processing are
-        described in our{" "}
+        Dodo Payments, our merchant of record, may securely authorise a payment
+        method when a trial begins. Cancellation stops future renewal and access
+        continues through the paid period unless the account is terminated for
+        misuse. Refund eligibility and processing are described in our{" "}
         <a href="/refund-policy">Cancellation and refund policy</a>.
       </p>
       <h2>Customer data</h2>

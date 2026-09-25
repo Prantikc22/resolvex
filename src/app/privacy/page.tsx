@@ -10,9 +10,9 @@ export default function PrivacyPage() {
       <p>
         We process account details, workspace configuration, billing records,
         customer conversations, support contacts, uploaded knowledge, call
-        metadata, and product usage events required to operate ResolveX.
-        Payment credentials are handled by our payment provider and are not
-        stored as complete card details by ResolveX.
+        metadata, and product usage events required to operate ResolveX. Payment
+        credentials are handled by our payment provider and are not stored as
+        complete card details by ResolveX.
       </p>
       <h2>How information is used</h2>
       <p>

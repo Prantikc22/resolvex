@@ -68,8 +68,10 @@ ResolveX Flows use the native durable `employee_jobs` queue. Event-triggered flo
    the product ID; set it as `DODO_PAYMENTS_PRODUCT_ID`.
 2. Sign in as a workspace owner, open Billing, choose seats and press
    **Start ResolveX One**. You are redirected to Dodo's hosted checkout.
-3. Pay with test card `4242 4242 4242 4242`, any future expiry, any CVC.
-   Declines can be tested with `4000 0000 0000 0002`.
+3. Pay with a test card that matches the checkout currency. USD:
+   `4242 4242 4242 4242`. INR (India): `4576 2389 1277 1450` or UPI
+   `success@upi`. Expiry 06/32, CVC 123. Declines: `4000 0000 0000 0002`
+   (USD) or `4706 1312 1121 2123` (INR).
 4. Dodo returns you to `/app?billing=return`; the workspace pulls the
    subscription directly and shows **Trial active** within a few seconds.
 5. Change seats (increase = prorated immediately, decrease = next renewal),
@@ -77,7 +79,10 @@ ResolveX Flows use the native durable `employee_jobs` queue. Event-triggered flo
    cancel at period end.
 6. Resolve a conversation that Arlo answered. Within a minute the worker
    reports it to the `ai.resolution` meter; check Dodo → Subscriptions →
-   usage. Completed calls are reported to the `voice.minute` meter.
+   usage.
+7. Choose **Annual** before checkout to test yearly billing ($144 / seat).
+8. On an active paid plan, buy a voice pack under Billing → Voice minutes.
+   Minutes appear after return; each finished call deducts its minutes.
 
 ## Required provider checks
 

@@ -6,7 +6,6 @@ import { dodoConfiguration } from "@/lib/billing/provider";
 import { workspaceStatus } from "@/lib/billing/dodo-status";
 
 export const DODO_RESOLUTION_EVENT = "ai.resolution";
-export const DODO_VOICE_MINUTE_EVENT = "voice.minute";
 
 let instance: DodoPayments | null = null;
 
@@ -22,6 +21,12 @@ export function getDodo() {
     });
   }
   return instance;
+}
+
+/** "year" for the annual product, otherwise "month". */
+export function billingInterval(productId: unknown) {
+  const annual = dodoConfiguration().annualProductId;
+  return annual && productId === annual ? "year" : "month";
 }
 
 type StoredMetadata = Record<string, unknown>;
@@ -118,8 +123,10 @@ export async function changeDodoSeats(
   subscriptionId: string,
   currentSeats: number,
   seats: number,
+  subscriptionProductId?: string | null,
 ) {
-  const productId = dodoConfiguration().productId;
+  // Stay on the customer's own product so annual plans remain annual.
+  const productId = subscriptionProductId || dodoConfiguration().productId;
   if (!productId) throw new Error("Dodo Payments product is not configured.");
   const increasing = seats > currentSeats;
   await getDodo().subscriptions.changePlan(subscriptionId, {
@@ -133,16 +140,11 @@ export async function changeDodoSeats(
 }
 
 type UsageRow = { id: number; organization_id: string };
-type CallRow = {
-  id: string;
-  organization_id: string;
-  duration_seconds: number;
-};
 
 /**
- * Sends completed AI resolutions and connected voice minutes to Dodo meters.
- * Event IDs are derived from our own row IDs, so a retry after a partial
- * failure is de-duplicated by Dodo rather than double-billed.
+ * Sends completed AI resolutions to the Dodo meter. Event IDs are derived
+ * from our own row IDs, so a retry after a partial failure is de-duplicated
+ * by Dodo rather than double-billed. Voice is prepaid (see voice-credits).
  */
 export async function reportDodoUsage(admin: SupabaseClient) {
   const config = dodoConfiguration();
@@ -164,78 +166,36 @@ export async function reportDodoUsage(admin: SupabaseClient) {
         ? metadata.subscribed_at
         : null;
     if (!since) continue;
-    const customerId = subscription.provider_customer_id as string;
 
-    const [
-      { data: resolutions, error: resolutionError },
-      { data: calls, error: callError },
-    ] = await Promise.all([
-      admin
-        .from("usage_events")
-        .select("id,organization_id")
-        .eq("organization_id", subscription.organization_id)
-        .eq("event_type", "ai_resolution")
-        .is("billing_reported_at", null)
-        .gte("created_at", since)
-        .limit(500),
-      admin
-        .from("calls")
-        .select("id,organization_id,duration_seconds")
-        .eq("organization_id", subscription.organization_id)
-        // Transferred, abandoned and failed calls still used minutes.
-        .not("status", "in", "(queued,ringing,in_progress)")
-        .gt("duration_seconds", 0)
-        .is("billing_reported_at", null)
-        .gte("created_at", since)
-        .limit(500),
-    ]);
+    const { data: resolutions, error: resolutionError } = await admin
+      .from("usage_events")
+      .select("id,organization_id")
+      .eq("organization_id", subscription.organization_id)
+      .eq("event_type", "ai_resolution")
+      .is("billing_reported_at", null)
+      .gte("created_at", since)
+      .limit(500);
     if (resolutionError) throw resolutionError;
-    if (callError) throw callError;
+    const rows = (resolutions ?? []) as UsageRow[];
+    if (!rows.length) continue;
 
-    const resolutionRows = (resolutions ?? []) as UsageRow[];
-    const callRows = (calls ?? []) as CallRow[];
-    const events = [
-      ...resolutionRows.map((row) => ({
+    await getDodo().usageEvents.ingest({
+      events: rows.map((row) => ({
         event_id: `rx_res_${row.id}`,
-        customer_id: customerId,
+        customer_id: subscription.provider_customer_id as string,
         event_name: DODO_RESOLUTION_EVENT,
         metadata: { organization_id: row.organization_id },
       })),
-      ...callRows.map((row) => ({
-        event_id: `rx_call_${row.id}`,
-        customer_id: customerId,
-        event_name: DODO_VOICE_MINUTE_EVENT,
-        metadata: {
-          organization_id: row.organization_id,
-          minutes: Math.ceil(row.duration_seconds / 60),
-        },
-      })),
-    ];
-    if (!events.length) continue;
-
-    await getDodo().usageEvents.ingest({ events });
-    const reportedAt = new Date().toISOString();
-    if (resolutionRows.length) {
-      const { error: markError } = await admin
-        .from("usage_events")
-        .update({ billing_reported_at: reportedAt })
-        .in(
-          "id",
-          resolutionRows.map((row) => row.id),
-        );
-      if (markError) throw markError;
-    }
-    if (callRows.length) {
-      const { error: markError } = await admin
-        .from("calls")
-        .update({ billing_reported_at: reportedAt })
-        .in(
-          "id",
-          callRows.map((row) => row.id),
-        );
-      if (markError) throw markError;
-    }
-    reported += events.length;
+    });
+    const { error: markError } = await admin
+      .from("usage_events")
+      .update({ billing_reported_at: new Date().toISOString() })
+      .in(
+        "id",
+        rows.map((row) => row.id),
+      );
+    if (markError) throw markError;
+    reported += rows.length;
   }
   return { reported };
 }

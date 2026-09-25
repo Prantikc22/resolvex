@@ -58,6 +58,9 @@ export async function syncSubscriptionSeats(
       row.provider_subscription_id,
       current,
       seats,
+      typeof row.metadata?.product_id === "string"
+        ? row.metadata.product_id
+        : null,
     );
     const metadata = {
       ...(row.metadata ?? {}),

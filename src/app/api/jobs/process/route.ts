@@ -6,6 +6,7 @@ import {
 import { createAdminClient } from "@/lib/supabase/admin";
 import { reportDodoUsage } from "@/lib/billing/dodo";
 import { billingProvider } from "@/lib/billing/provider";
+import { settleVoiceUsage } from "@/lib/billing/voice-credits";
 import { suspendLapsedVoice } from "@/lib/voice/suspension";
 
 function authorized(request: Request) {
@@ -29,11 +30,16 @@ export async function POST(request: Request) {
             return { reported: 0, error: "usage_report_failed" };
           })
         : null;
+    // Settle finished calls before the sweep so it sees the true balance.
+    const voiceUsage = await settleVoiceUsage(admin).catch((error) => {
+      console.error("Voice settlement failed", error);
+      return { settled: 0, error: "voice_settlement_failed" };
+    });
     const voice = await suspendLapsedVoice(admin).catch((error) => {
       console.error("Voice suspension sweep failed", error);
       return { suspended: 0, error: "voice_sweep_failed" };
     });
-    return NextResponse.json({ scheduled, jobs, usage, voice });
+    return NextResponse.json({ scheduled, jobs, usage, voiceUsage, voice });
   } catch (error) {
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "Worker failed." },

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { voiceStartCheck } from "@/lib/billing/voice-credits";
 import { voiceSpendCeilingMinor } from "@/lib/pricing";
 import { z } from "zod";
 import { makeBolnaCall } from "@/lib/providers/bolna";
@@ -97,6 +98,13 @@ export async function POST(request: Request) {
         { error: "The workspace telephone spending limit has been reached." },
         { status: 402 },
       );
+    const start = await voiceStartCheck(
+      createAdminClient(),
+      organizationId,
+      subscription,
+    );
+    if (!start.ok)
+      return NextResponse.json({ error: start.error }, { status: 402 });
     const { data: phone } = input.phoneNumberId
       ? await supabase
           .from("phone_numbers")

@@ -162,12 +162,7 @@ export function LiveInbox({
                 <b className="truncate text-xs">
                   {item.contact?.name ?? "Website visitor"}
                 </b>
-                <span
-                  className={cn(
-                    "text-[9px]",
-                    "inbox-muted",
-                  )}
-                >
+                <span className={cn("text-[9px]", "inbox-muted")}>
                   {new Date(item.last_message_at).toLocaleDateString()}
                 </span>
               </div>

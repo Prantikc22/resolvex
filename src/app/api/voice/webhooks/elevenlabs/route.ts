@@ -184,7 +184,7 @@ export async function POST(request: Request) {
             elevenlabs: data,
             event_type: eventType,
             provider_credits: providerCredits,
-            billing_basis: "ResolveX voice $0.20/minute",
+            billing_basis: "Prepaid ResolveX voice minutes",
           },
           updated_at: new Date().toISOString(),
         },

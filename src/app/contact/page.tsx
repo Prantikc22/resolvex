@@ -44,11 +44,7 @@ export default function ContactPage() {
             {[
               [Mail, "Product and account", "support@resolutexhq.com"],
               [Mail, "Billing", "billing@resolutexhq.com"],
-              [
-                MessageCircle,
-                "In-product help",
-                "Open the ResolveX messenger",
-              ],
+              [MessageCircle, "In-product help", "Open the ResolveX messenger"],
             ].map(([Icon, label, value]) => {
               const I = Icon as typeof Mail;
               return (

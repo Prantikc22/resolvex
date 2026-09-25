@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { voiceIncluded } from "@/lib/pricing";
+import { voiceStartCheck } from "@/lib/billing/voice-credits";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { createSignedConversationUrl } from "@/lib/providers/elevenlabs";
 import { getCurrentOrganization } from "@/lib/supabase/current-org";
 
@@ -20,14 +21,13 @@ export async function POST(
       .select("status,provider,metadata")
       .eq("organization_id", organizationId)
       .maybeSingle();
-    if (!voiceIncluded(subscription))
-      return NextResponse.json(
-        {
-          error:
-            "Voice runs on an active paid plan. Trials and scheduled cancellations are text-only.",
-        },
-        { status: 402 },
-      );
+    const start = await voiceStartCheck(
+      createAdminClient(),
+      organizationId,
+      subscription,
+    );
+    if (!start.ok)
+      return NextResponse.json({ error: start.error }, { status: 402 });
     const { data: employee } = await supabase
       .from("ai_employees")
       .select("id,status,external_agent_id,provider,usage_budget_cents")

@@ -18,7 +18,7 @@ const requestSchema = z.object({
 });
 
 const context =
-  "ResolveX provides a shared inbox, Arlo AI resolutions, a help center, website chat, approved knowledge ingestion, workflows, reports, and provider-connected voice handoff. The One plan is $15 per full agent each month and includes 50 AI resolutions. Additional completed AI resolutions are $0.39 each; drafts and human handoffs are not billed. Human collaborators are free. The trial lasts 7 days, includes Arlo text replies, and Dodo Payments securely authorises a payment method at checkout. AI voice ($0.20 per minute) and AI phone calls on the customer's own number start with the paid plan.";
+  "ResolveX provides a shared inbox, Arlo AI resolutions, a help center, website chat, approved knowledge ingestion, workflows, reports, and provider-connected voice handoff. The One plan is $15 per full agent each month and includes 50 AI resolutions. Additional completed AI resolutions are $0.39 each; drafts and human handoffs are not billed. Human collaborators are free. The trial lasts 7 days, includes Arlo text replies, and Dodo Payments securely authorises a payment method at checkout. AI voice and phone calls on the customer's own number use prepaid minute packs (100 minutes $22, 500 minutes $99, 2,000 minutes $380) on a paid plan. Annual billing is $144 per seat per year (two months free).";
 
 export async function POST(request: Request) {
   try {

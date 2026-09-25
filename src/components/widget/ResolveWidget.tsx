@@ -500,7 +500,9 @@ function WidgetVoiceExperience({
     >
       <div className="flex items-center justify-between border-b border-black/7 bg-white px-5 py-4">
         <div>
-          <div className="text-[13px] font-semibold">Voice with {agentName}</div>
+          <div className="text-[13px] font-semibold">
+            Voice with {agentName}
+          </div>
           <div className="mt-0.5 flex items-center gap-1.5 text-[10px] text-[#7b818b]">
             <span
               className={cn(

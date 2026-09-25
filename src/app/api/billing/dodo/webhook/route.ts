@@ -3,6 +3,8 @@ import type { Subscription } from "dodopayments/resources/subscriptions";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getDodo, syncDodoSubscription } from "@/lib/billing/dodo";
 import { dodoConfiguration } from "@/lib/billing/provider";
+import { creditVoicePack } from "@/lib/billing/voice-credits";
+import type { VoicePackId } from "@/lib/pricing";
 
 export async function POST(request: Request) {
   const rawBody = await request.text();
@@ -49,7 +51,23 @@ export async function POST(request: Request) {
   }
 
   try {
-    if (event.type.startsWith("subscription.")) {
+    const payment = event.data as {
+      payment_id?: string;
+      metadata?: Record<string, string>;
+      status?: string | null;
+    };
+    if (
+      event.type === "payment.succeeded" &&
+      payment.metadata?.kind === "voice_pack" &&
+      payment.metadata.organization_id &&
+      payment.payment_id
+    ) {
+      await creditVoicePack(admin, {
+        organizationId: payment.metadata.organization_id,
+        pack: payment.metadata.pack as VoicePackId,
+        paymentId: payment.payment_id,
+      });
+    } else if (event.type.startsWith("subscription.")) {
       await syncDodoSubscription(admin, event.data as Subscription, {
         id: webhookId,
         type: event.type,

@@ -4,6 +4,27 @@ export const pricing = {
   resolution: 0.39,
   voicePlatformMinute: 0.2,
   trialDays: 7,
+  /** Annual plan: price per seat per year and resolutions included per year. */
+  annualSeat: 144,
+  includedResolutionsAnnual: 600,
+};
+
+/** Prepaid voice minutes. The largest pack still clears provider cost ~2x. */
+export const voicePacks = [
+  { id: "voice_100", minutes: 100, price: 22 },
+  { id: "voice_500", minutes: 500, price: 99 },
+  { id: "voice_2000", minutes: 2000, price: 380 },
+] as const;
+
+export type VoicePackId = (typeof voicePacks)[number]["id"];
+
+export const voiceLimits = {
+  /** Providers hang up every call at this length. */
+  callCapMinutes: 15,
+  /** A call may start only if a full-length call is still prepaid. */
+  startMinimumMinutes: 15,
+  /** Below this balance, phone agents are removed so inbound calls stop. */
+  suspendBelowMinutes: 45,
 };
 
 /**

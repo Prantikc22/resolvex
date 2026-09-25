@@ -59,15 +59,14 @@ Add the Razorpay keys to `.env.local`, configure the webhook URL as `/api/billin
 Billing defaults to Dodo Payments (set `BILLING_PROVIDER=razorpay` only for the
 legacy flow). Add `DODO_PAYMENTS_API_KEY` and `DODO_PAYMENTS_ENVIRONMENT`
 (`test_mode` or `live_mode`), then run `npm run dodo:setup`. It idempotently
-creates the AI-resolution and voice-minute meters and the "ResolveX One"
-product ($15/seat/month, 50 included resolutions, $0.39 per extra resolution,
-$0.20 per voice minute) and prints `DODO_PAYMENTS_PRODUCT_ID`.
+creates the AI-resolution meter, the monthly and annual "ResolveX One"
+products, and the prepaid voice packs, and prints their environment variables.
 
 Register a webhook in Dodo pointing at `/api/billing/dodo/webhook` and put its
 signing secret in `DODO_PAYMENTS_WEBHOOK_KEY`. Customers are also synced when
 they return from checkout, so test-mode checkouts work before the webhook is
 registered. The minute worker (`/api/jobs/process`) reports completed AI
-resolutions and voice minutes to the meters with idempotent event IDs.
+resolutions to the meter and deducts finished calls from prepaid voice minutes.
 
 ## Welcome email
 

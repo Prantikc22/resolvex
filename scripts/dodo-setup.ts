@@ -1,18 +1,17 @@
 /**
  * Idempotently provisions the ResolveX catalog in Dodo Payments:
- *   - "AI resolutions" and "Voice minutes" usage meters
- *   - the "ResolveX One" subscription product ($15 per seat / month with
- *     50 included resolutions, $0.39 per additional resolution and $0.20 per
- *     connected voice minute)
- * Then previews a 3-seat checkout so the totals can be checked by eye.
+ *   - "AI resolutions" usage meter
+ *   - ResolveX One monthly: $15 per seat, 50 resolutions included, $0.39 after
+ *   - ResolveX One annual: $144 per seat per year, 600 resolutions included
+ *   - Prepaid voice packs: 100, 500 and 2,000 minutes (one-time purchases)
+ * Voice is prepaid only, so neither subscription carries a voice meter.
+ * Prints the environment variables the app needs, then previews checkouts.
  *
  * Usage: npm run dodo:setup            (uses DODO_PAYMENTS_ENVIRONMENT)
  */
 import DodoPayments from "dodopayments";
 
 const RESOLUTION_EVENT = "ai.resolution";
-const VOICE_EVENT = "voice.minute";
-const PRODUCT_KEY = "resolvex_one";
 
 const apiKey = process.env.DODO_PAYMENTS_API_KEY?.trim();
 if (!apiKey) throw new Error("DODO_PAYMENTS_API_KEY is required in .env.local");
@@ -22,65 +21,96 @@ const environment =
     : "test_mode";
 const dodo = new DodoPayments({ bearerToken: apiKey, environment });
 
-async function ensureMeter(
-  eventName: string,
-  create: DodoPayments.MeterCreateParams,
-) {
-  for await (const meter of dodo.meters.list()) {
-    if (meter.event_name === eventName) return meter;
-  }
-  return dodo.meters.create(create);
-}
+type Price = DodoPayments.ProductCreateParams["price"];
+type CatalogItem = {
+  key: string;
+  env: string;
+  name: string;
+  description: string;
+  price: (resolutionMeterId: string) => Price;
+};
 
-function productPrice(resolutionMeterId: string, voiceMeterId: string) {
+function subscriptionPrice(
+  resolutionMeterId: string,
+  interval: "Month" | "Year",
+): Price {
+  const yearly = interval === "Year";
   return {
-    type: "usage_based_price" as const,
-    currency: "USD" as const,
-    fixed_price: 1500,
+    type: "usage_based_price",
+    currency: "USD",
+    fixed_price: yearly ? 14400 : 1500,
     payment_frequency_count: 1,
-    payment_frequency_interval: "Month" as const,
+    payment_frequency_interval: interval,
     subscription_period_count: 10,
-    subscription_period_interval: "Year" as const,
+    subscription_period_interval: "Year",
     tax_inclusive: false,
     meters: [
-      { meter_id: resolutionMeterId, price_per_unit: "39", free_threshold: 50 },
-      { meter_id: voiceMeterId, price_per_unit: "20", free_threshold: 0 },
+      {
+        meter_id: resolutionMeterId,
+        price_per_unit: "39",
+        free_threshold: yearly ? 600 : 50,
+      },
     ],
   };
 }
 
-async function ensureProduct(resolutionMeterId: string, voiceMeterId: string) {
-  const price = productPrice(resolutionMeterId, voiceMeterId);
-  for await (const product of dodo.products.list()) {
-    if (product.metadata?.resolvex_key !== PRODUCT_KEY) continue;
-    const full = await dodo.products.retrieve(product.product_id);
-    const meters =
-      full.price.type === "usage_based_price" ? (full.price.meters ?? []) : [];
-    const voice = meters.find((meter) => meter.meter_id === voiceMeterId);
-    const current = price.meters.find(
-      (meter) => meter.meter_id === voiceMeterId,
-    );
-    if (
-      !voice ||
-      Number(voice.price_per_unit) !== Number(current?.price_per_unit)
-    ) {
-      await dodo.products.update(product.product_id, { price });
-      console.log("Updated product meters.");
-    }
-    return product;
-  }
-  return dodo.products.create({
+function voicePackPrice(cents: number): Price {
+  return {
+    type: "one_time_price",
+    currency: "USD",
+    price: cents,
+    discount: 0,
+    purchasing_power_parity: false,
+    tax_inclusive: false,
+  };
+}
+
+const catalog: CatalogItem[] = [
+  {
+    key: "resolvex_one",
+    env: "DODO_PAYMENTS_PRODUCT_ID",
     name: "ResolveX One",
     description:
       "AI customer service workspace. Priced per paid agent seat; includes 50 completed AI resolutions each month.",
-    tax_category: "saas",
-    metadata: { resolvex_key: PRODUCT_KEY },
-    price,
-  });
-}
+    price: (meter) => subscriptionPrice(meter, "Month"),
+  },
+  {
+    key: "resolvex_one_annual",
+    env: "DODO_PAYMENTS_ANNUAL_PRODUCT_ID",
+    name: "ResolveX One (Annual)",
+    description:
+      "ResolveX One billed yearly per agent seat — two months free. Includes 600 completed AI resolutions per year.",
+    price: (meter) => subscriptionPrice(meter, "Year"),
+  },
+  {
+    key: "voice_pack_100",
+    env: "DODO_PAYMENTS_VOICE_PACK_100",
+    name: "ResolveX voice minutes — 100",
+    description: "100 prepaid AI voice minutes for web voice and phone agents.",
+    price: () => voicePackPrice(2200),
+  },
+  {
+    key: "voice_pack_500",
+    env: "DODO_PAYMENTS_VOICE_PACK_500",
+    name: "ResolveX voice minutes — 500",
+    description: "500 prepaid AI voice minutes for web voice and phone agents.",
+    price: () => voicePackPrice(9900),
+  },
+  {
+    key: "voice_pack_2000",
+    env: "DODO_PAYMENTS_VOICE_PACK_2000",
+    name: "ResolveX voice minutes — 2,000",
+    description:
+      "2,000 prepaid AI voice minutes for web voice and phone agents.",
+    price: () => voicePackPrice(38000),
+  },
+];
 
-async function main() {
-  const resolutionMeter = await ensureMeter(RESOLUTION_EVENT, {
+async function ensureResolutionMeter() {
+  for await (const meter of dodo.meters.list()) {
+    if (meter.event_name === RESOLUTION_EVENT) return meter;
+  }
+  return dodo.meters.create({
     name: "AI resolutions",
     description:
       "Completed AI resolutions. Drafts and human handoffs are never sent.",
@@ -88,36 +118,60 @@ async function main() {
     measurement_unit: "resolutions",
     aggregation: { type: "count" },
   });
-  const voiceMeter = await ensureMeter(VOICE_EVENT, {
-    name: "Voice minutes",
-    description: "Connected AI voice minutes, rounded up per call.",
-    event_name: VOICE_EVENT,
-    measurement_unit: "minutes",
-    aggregation: { type: "sum", key: "minutes" },
-  });
-  const product = await ensureProduct(resolutionMeter.id, voiceMeter.id);
-  console.log(`Environment: ${environment}`);
-  console.log(`DODO_PAYMENTS_PRODUCT_ID=${product.product_id}`);
+}
 
-  const preview = await dodo.checkoutSessions.preview({
-    product_cart: [{ product_id: product.product_id, quantity: 3 }],
-    billing_address: { country: "US" },
-    subscription_data: { trial_period_days: 7 },
+async function ensureProduct(item: CatalogItem, resolutionMeterId: string) {
+  const price = item.price(resolutionMeterId);
+  for await (const product of dodo.products.list()) {
+    if (product.metadata?.resolvex_key !== item.key) continue;
+    // Keep the live definition in step with this file (drops old meters too).
+    await dodo.products.update(product.product_id, {
+      name: item.name,
+      description: item.description,
+      price,
+    });
+    return product.product_id;
+  }
+  const created = await dodo.products.create({
+    name: item.name,
+    description: item.description,
+    tax_category: "saas",
+    metadata: { resolvex_key: item.key },
+    price,
   });
-  console.log(
-    "3-seat preview:",
-    JSON.stringify(
-      {
-        total_price: preview.total_price,
-        currency: preview.currency,
-        trial_period_days: preview.trial_period_days,
-        recurring: preview.recurring_breakup,
-        cart: preview.product_cart,
-      },
-      null,
-      2,
-    ),
-  );
+  return created.product_id;
+}
+
+async function main() {
+  const meter = await ensureResolutionMeter();
+  console.log(`Environment: ${environment}`);
+  const ids: Record<string, string> = {};
+  for (const item of catalog) {
+    ids[item.env] = await ensureProduct(item, meter.id);
+    console.log(`${item.env}=${ids[item.env]}`);
+  }
+
+  for (const [label, productId, quantity] of [
+    ["3 seats monthly", ids.DODO_PAYMENTS_PRODUCT_ID, 3],
+    ["3 seats annual", ids.DODO_PAYMENTS_ANNUAL_PRODUCT_ID, 3],
+    ["500-minute voice pack", ids.DODO_PAYMENTS_VOICE_PACK_500, 1],
+  ] as const) {
+    const preview = await dodo.checkoutSessions.preview({
+      product_cart: [{ product_id: productId, quantity }],
+      billing_address: { country: "US" },
+    });
+    console.log(
+      `${label}: ${preview.currency} ${(preview.total_price / 100).toFixed(2)}`,
+      JSON.stringify(
+        preview.product_cart.map((line) => ({
+          subscription: line.is_subscription,
+          meters: line.meters?.map(
+            (m) => `${m.name} ${m.price_per_unit}c after ${m.free_threshold}`,
+          ),
+        })),
+      ),
+    );
+  }
 }
 
 main().catch((error) => {

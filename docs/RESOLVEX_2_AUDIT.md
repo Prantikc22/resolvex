@@ -39,7 +39,7 @@ ResolveX will extend its native communication and automation systems rather than
 - Website messenger installation, configuration, public key rotation, inbound message persistence, and real live inbox display.
 - Human reply and resolve actions, including stopping AI replies after a human takes over.
 - Approved website/PDF knowledge ingestion and grounded Arlo replies through OpenRouter.
-- AI resolution and voice-minute metering reported to Dodo Payments meters.
+- AI resolution metering reported to Dodo Payments; voice runs on prepaid minute packs.
 - Team invitations, roles, paid-seat checks, and provider seat synchronization.
 - Webhook integrations with URL and private-network validation.
 - Public marketing, demo, pricing, resources, help, comparison, legal, and status surfaces.

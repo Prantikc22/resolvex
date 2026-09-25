@@ -6,6 +6,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { requiredPaidSeats } from "@/lib/billing/seats";
 import { dodoConfiguration } from "@/lib/billing/provider";
 import {
+  billingInterval,
   changeDodoSeats,
   getDodo,
   syncDodoSubscription,
@@ -14,6 +15,9 @@ import { publicAppUrl } from "@/lib/app-url";
 import { pricing } from "@/lib/pricing";
 
 const agentsSchema = z.object({ agents: z.number().int().min(1).max(500) });
+const checkoutSchema = agentsSchema.extend({
+  interval: z.enum(["month", "year"]).default("month"),
+});
 const syncSchema = z.object({ subscriptionId: z.string().min(4).max(80) });
 const manageable = (role: string | null) =>
   role === "owner" || role === "admin";
@@ -40,6 +44,7 @@ function publicSubscription(row: StoredSubscription | null) {
         agents: Number(metadata.agents ?? 1),
         pendingAgents: null,
         currentPeriodEnd: row.current_period_end,
+        interval: billingInterval(metadata.product_id),
         cancelAtPeriodEnd: Boolean(metadata.cancel_at_period_end),
         seatPaymentPending: false,
         shortUrl: null,
@@ -95,18 +100,16 @@ async function usageSummary(
   const allowanceUsed = (data ?? [])
     .filter((event) => event.event_type === "ai_allowance")
     .reduce((sum, event) => sum + Number(event.quantity ?? 0), 0);
-  const billableResolutions = Math.max(
-    0,
-    resolutions - pricing.includedResolutions,
-  );
+  const included =
+    billingInterval(subscription?.metadata?.product_id) === "year"
+      ? pricing.includedResolutionsAnnual
+      : pricing.includedResolutions;
+  const billableResolutions = Math.max(0, resolutions - included);
   return {
     resolutions,
-    includedResolutions: pricing.includedResolutions,
+    includedResolutions: included,
     allowanceUsed,
-    allowanceRemaining: Math.max(
-      0,
-      pricing.includedResolutions - allowanceUsed,
-    ),
+    allowanceRemaining: Math.max(0, included - allowanceUsed),
     billableResolutions,
     estimatedOverage: billableResolutions * pricing.resolution,
     periodStart: periodStart.toISOString(),
@@ -155,6 +158,7 @@ export async function dodoGet() {
     return NextResponse.json({
       provider: "dodo",
       configured: config.configured,
+      annualAvailable: Boolean(config.annualProductId),
       environment: config.environment,
       subscription: publicSubscription(row),
       requiredAgents: await requiredPaidSeats(supabase, organizationId!),
@@ -180,7 +184,7 @@ export async function dodoPost(request: Request) {
   const sync = syncSchema.safeParse(body);
   if (sync.success) return dodoSync(organization, sync.data.subscriptionId);
 
-  const parsed = agentsSchema.safeParse(body);
+  const parsed = checkoutSchema.safeParse(body);
   if (!parsed.success)
     return NextResponse.json(
       { error: "Invalid agent count." },
@@ -193,9 +197,16 @@ export async function dodoPost(request: Request) {
       { status: 409 },
     );
   const config = dodoConfiguration();
-  if (!config.configured || !config.productId)
+  const productId =
+    parsed.data.interval === "year" ? config.annualProductId : config.productId;
+  if (!config.configured || !productId)
     return NextResponse.json(
-      { error: "Dodo Payments checkout is not configured." },
+      {
+        error:
+          parsed.data.interval === "year"
+            ? "Annual billing is not configured yet."
+            : "Dodo Payments checkout is not configured.",
+      },
       { status: 503 },
     );
   const existing = currentEnvironmentSubscription(
@@ -217,9 +228,7 @@ export async function dodoPost(request: Request) {
         ? user!.user_metadata.full_name
         : undefined;
     const session = await getDodo().checkoutSessions.create({
-      product_cart: [
-        { product_id: config.productId, quantity: parsed.data.agents },
-      ],
+      product_cart: [{ product_id: productId, quantity: parsed.data.agents }],
       customer: user!.email
         ? { email: user!.email, name: fullName ?? user!.email.split("@")[0] }
         : undefined,
@@ -229,6 +238,7 @@ export async function dodoPost(request: Request) {
         user_id: user!.id,
         plan: "one",
         agents: String(parsed.data.agents),
+        interval: parsed.data.interval,
       },
       return_url: `${publicAppUrl(request)}/app?billing=return`,
       cancel_url: `${publicAppUrl(request)}/app?billing=cancelled`,
@@ -322,6 +332,9 @@ export async function dodoPatch(request: Request) {
       id,
       Number(current.metadata?.agents ?? 1),
       parsed.data.agents,
+      typeof current.metadata?.product_id === "string"
+        ? current.metadata.product_id
+        : null,
     );
     const metadata = {
       ...(current.metadata ?? {}),

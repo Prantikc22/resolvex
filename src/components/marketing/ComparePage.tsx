@@ -19,7 +19,7 @@ export function compareFaq(competitor: Competitor) {
     ],
     [
       `How does ResolveX pricing compare with ${competitor.name}?`,
-      `${competitor.name}: ${competitor.pricingModel} ResolveX is ${money(pricing.agent)} per agent seat per month, includes ${pricing.includedResolutions} AI resolutions, then ${money(pricing.resolution)} per completed resolution. AI voice is ${money(pricing.voicePlatformMinute)} per minute. Collaborators are free.`,
+      `${competitor.name}: ${competitor.pricingModel} ResolveX is ${money(pricing.agent)} per agent seat per month, includes ${pricing.includedResolutions} AI resolutions, then ${money(pricing.resolution)} per completed resolution. AI voice uses prepaid minute packs from $0.19 per minute. Annual billing is ${money(pricing.annualSeat)} per seat per year. Collaborators are free.`,
     ],
     [
       `Can I move from ${competitor.name} to ResolveX?`,

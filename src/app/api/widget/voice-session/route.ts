@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { subscriptionHasWorkspaceAccess } from "@/lib/billing/access";
+import { voiceStartCheck } from "@/lib/billing/voice-credits";
 import { voiceIncluded, voiceSpendCeilingMinor } from "@/lib/pricing";
 import { createSignedConversationUrl } from "@/lib/providers/elevenlabs";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -161,6 +162,9 @@ export async function POST(request: Request) {
         },
         { status: 402 },
       );
+    const start = await voiceStartCheck(admin, organization.id, subscription);
+    if (!start.ok)
+      return NextResponse.json({ error: start.error }, { status: 402 });
     const result = await createSignedConversationUrl(
       providerAgent.external_agent_id,
     );

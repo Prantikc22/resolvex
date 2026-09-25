@@ -1,6 +1,7 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { voiceIncluded } from "@/lib/pricing";
+import { voiceBalance } from "@/lib/billing/voice-credits";
+import { voiceIncluded, voiceLimits } from "@/lib/pricing";
 import { deleteBolnaAgent } from "@/lib/providers/bolna";
 import { deleteElevenLabsAgent } from "@/lib/providers/elevenlabs";
 
@@ -13,7 +14,7 @@ type ProviderAgent = {
 
 /**
  * Removes live voice and phone agents for workspaces whose subscription no
- * longer pays for voice. Inbound phone calls reach the provider directly, so
+ * longer pays for voice or whose prepaid minutes are running out. Inbound phone calls reach the provider directly, so
  * deleting the agent is the only way to guarantee no unbillable minutes.
  * Reactivating an AI employee recreates the agents and reattaches numbers.
  */
@@ -38,9 +39,18 @@ export async function suspendLapsedVoice(admin: SupabaseClient) {
     (subscriptions ?? []).map((row) => [row.organization_id, row]),
   );
 
+  const balances = new Map<string, number>();
+  for (const organizationId of organizationIds) {
+    balances.set(organizationId, await voiceBalance(admin, organizationId));
+  }
+
   let suspended = 0;
   for (const agent of rows) {
-    if (voiceIncluded(byOrganization.get(agent.organization_id))) continue;
+    const funded =
+      (balances.get(agent.organization_id) ?? 0) >=
+      voiceLimits.suspendBelowMinutes;
+    if (voiceIncluded(byOrganization.get(agent.organization_id)) && funded)
+      continue;
     try {
       if (agent.external_agent_id) {
         if (agent.provider === "bolna")
@@ -55,7 +65,9 @@ export async function suspendLapsedVoice(admin: SupabaseClient) {
       .from("ai_provider_agents")
       .update({
         status: "paused",
-        last_error: "Voice paused: no active paid subscription.",
+        last_error: funded
+          ? "Voice paused: no active paid subscription."
+          : "Voice paused: prepaid voice minutes are low. Add a voice pack and reactivate.",
       })
       .eq("id", agent.id);
     if (updateError) throw updateError;

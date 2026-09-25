@@ -305,7 +305,8 @@ export function KnowledgeManager({ demo = false }: { demo?: boolean }) {
         body: JSON.stringify({ domain: domainInput }),
       });
       const data = await response.json();
-      if (!response.ok) throw new Error(data.error ?? "Could not connect domain.");
+      if (!response.ok)
+        throw new Error(data.error ?? "Could not connect domain.");
       setHelp((value) => ({ ...value, ...data.domain }));
       setDomainInput(data.domain?.custom_domain ?? domainInput);
       toast.success(
@@ -314,7 +315,9 @@ export function KnowledgeManager({ demo = false }: { demo?: boolean }) {
           : "Domain saved. An administrator must enable Vercel domain registration before it can go live.",
       );
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Could not connect domain.");
+      toast.error(
+        error instanceof Error ? error.message : "Could not connect domain.",
+      );
     } finally {
       setDomainLoading(false);
     }
@@ -329,12 +332,16 @@ export function KnowledgeManager({ demo = false }: { demo?: boolean }) {
         body: JSON.stringify({ action: "verify" }),
       });
       const data = await response.json();
-      if (!response.ok) throw new Error(data.error ?? "Could not verify domain.");
+      if (!response.ok)
+        throw new Error(data.error ?? "Could not verify domain.");
       setHelp((value) => ({ ...value, ...data.domain }));
-      if (!data.verified) throw new Error(data.error ?? "DNS is not ready yet.");
+      if (!data.verified)
+        throw new Error(data.error ?? "DNS is not ready yet.");
       toast.success("Custom domain verified and ready.");
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Could not verify domain.");
+      toast.error(
+        error instanceof Error ? error.message : "Could not verify domain.",
+      );
     } finally {
       setDomainLoading(false);
     }
@@ -344,9 +351,12 @@ export function KnowledgeManager({ demo = false }: { demo?: boolean }) {
     if (!window.confirm("Disconnect this custom help-center domain?")) return;
     setDomainLoading(true);
     try {
-      const response = await fetch("/api/help-centers/domain", { method: "DELETE" });
+      const response = await fetch("/api/help-centers/domain", {
+        method: "DELETE",
+      });
       const data = await response.json();
-      if (!response.ok) throw new Error(data.error ?? "Could not disconnect domain.");
+      if (!response.ok)
+        throw new Error(data.error ?? "Could not disconnect domain.");
       setDomainInput("");
       setHelp((value) => ({
         ...value,
@@ -358,7 +368,9 @@ export function KnowledgeManager({ demo = false }: { demo?: boolean }) {
       }));
       toast.success("Custom domain disconnected.");
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Could not disconnect domain.");
+      toast.error(
+        error instanceof Error ? error.message : "Could not disconnect domain.",
+      );
     } finally {
       setDomainLoading(false);
     }
@@ -691,11 +703,13 @@ export function KnowledgeManager({ demo = false }: { demo?: boolean }) {
                               TXT{" "}
                               <b className="break-all text-[#17191d]">
                                 {help.custom_domain_verification?.name ??
-                                  "_resolvex-verification." + help.custom_domain}
+                                  "_resolvex-verification." +
+                                    help.custom_domain}
                               </b>{" "}
                               →{" "}
                               <b className="break-all text-[#17191d]">
-                                {help.custom_domain_verification?.value ?? "copy the value from Connect"}
+                                {help.custom_domain_verification?.value ??
+                                  "copy the value from Connect"}
                               </b>
                             </span>
                             {providerChallenge && (
