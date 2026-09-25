@@ -21,6 +21,9 @@ export async function GET() {
     organizationResult,
     employeeResult,
     phoneResult,
+    approvalResult,
+    jobResult,
+    nextJobResult,
   ] = await Promise.all([
     supabase
       .from("knowledge_sources")
@@ -73,6 +76,28 @@ export async function GET() {
       .from("phone_numbers")
       .select("id,status")
       .eq("organization_id", organizationId),
+    supabase
+      .from("approval_requests")
+      .select("id,title,risk,created_at", { count: "exact" })
+      .eq("organization_id", organizationId)
+      .eq("status", "pending")
+      .order("created_at", { ascending: false })
+      .limit(3),
+    supabase
+      .from("employee_jobs")
+      .select("status")
+      .eq("organization_id", organizationId)
+      .gte("updated_at", new Date(Date.now() - 86400_000).toISOString())
+      .limit(2000),
+    supabase
+      .from("employee_jobs")
+      .select("job_type,trigger_type,run_at")
+      .eq("organization_id", organizationId)
+      .in("status", ["queued", "retrying"])
+      .gt("run_at", new Date().toISOString())
+      .order("run_at", { ascending: true })
+      .limit(1)
+      .maybeSingle(),
   ]);
   const error = [
     sourcesResult,
@@ -85,6 +110,9 @@ export async function GET() {
     organizationResult,
     employeeResult,
     phoneResult,
+    approvalResult,
+    jobResult,
+    nextJobResult,
   ].find((result) => result.error)?.error;
   if (error)
     return NextResponse.json({ error: error.message }, { status: 400 });
@@ -227,6 +255,23 @@ export async function GET() {
       total: automationResult.data?.length ?? 0,
       enabled: (automationResult.data ?? []).filter((item) => item.enabled)
         .length,
+    },
+    workforce: {
+      activeEmployees: (employeeResult.data ?? []).filter(
+        (employee) => employee.status === "active",
+      ).length,
+      totalEmployees: employeeResult.data?.length ?? 0,
+      runs24h: (jobResult.data ?? []).length,
+      succeeded24h: (jobResult.data ?? []).filter(
+        (job) => job.status === "succeeded",
+      ).length,
+      failed24h: (jobResult.data ?? []).filter((job) => job.status === "failed")
+        .length,
+      nextJob: nextJobResult.data ?? null,
+    },
+    approvals: {
+      pending: approvalResult.count ?? 0,
+      latest: approvalResult.data ?? [],
     },
     integrations: {
       total: integrationResult.data?.length ?? 0,

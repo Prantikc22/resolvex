@@ -9,7 +9,9 @@ const columns = [
   {
     title: "Product",
     links: [
-      ["Features", "/#features"],
+      ["AI employees", "/#employees"],
+      ["Sales CRM", "/#crm"],
+      ["Integrations", "/#integrations"],
       ["Live demo", "/demo"],
       ["Pricing", "/pricing"],
       ["Install messenger", "/install"],
@@ -52,41 +54,43 @@ const columns = [
   },
 ];
 
-export function MarketingFooter() {
+export function MarketingFooter({ cta = true }: { cta?: boolean }) {
   return (
     <footer className="bg-[#101114] px-4 pb-7 pt-6 text-white sm:px-6">
       <div className="mx-auto max-w-[1380px]">
-        <div className="grid gap-8 border-b border-white/10 py-14 lg:grid-cols-[1.2fr_.8fr] lg:items-end">
-          <div>
-            <div className="text-[11px] font-bold uppercase tracking-[0.14em] text-[#d8ff70]">
-              No sales call required
+        {cta && (
+          <div className="grid gap-8 border-b border-white/10 py-14 lg:grid-cols-[1.2fr_.8fr] lg:items-end">
+            <div>
+              <div className="text-[11px] font-bold uppercase tracking-[0.14em] text-[#d8ff70]">
+                No sales call required
+              </div>
+              <h2 className="mt-5 max-w-3xl text-balance text-4xl font-semibold leading-[0.96] tracking-[-0.05em] sm:text-6xl">
+                Put a real support desk behind your next reply.
+              </h2>
             </div>
-            <h2 className="mt-5 max-w-3xl text-balance text-4xl font-semibold leading-[0.96] tracking-[-0.05em] sm:text-6xl">
-              Put a real support desk behind your next reply.
-            </h2>
+            <div className="flex flex-col gap-3 sm:flex-row lg:justify-end">
+              <Link
+                href="/signup"
+                className="button-bright flex h-14 items-center justify-center gap-2 rounded-[6px] bg-[#ff5c35] px-6 text-sm font-semibold"
+              >
+                Start 7 days free <ArrowRight size={16} />
+              </Link>
+              <button
+                type="button"
+                onClick={() =>
+                  document
+                    .querySelector<HTMLButtonElement>(
+                      '[aria-label="Open ResolveX messenger"]',
+                    )
+                    ?.click()
+                }
+                className="flex h-14 items-center justify-center gap-2 rounded-[6px] border border-white/18 px-6 text-sm font-semibold transition-colors hover:bg-white/8"
+              >
+                <MessageCircle size={16} /> Ask a question
+              </button>
+            </div>
           </div>
-          <div className="flex flex-col gap-3 sm:flex-row lg:justify-end">
-            <Link
-              href="/signup"
-              className="button-bright flex h-14 items-center justify-center gap-2 rounded-[6px] bg-[#ff5c35] px-6 text-sm font-semibold"
-            >
-              Start 7 days free <ArrowRight size={16} />
-            </Link>
-            <button
-              type="button"
-              onClick={() =>
-                document
-                  .querySelector<HTMLButtonElement>(
-                    '[aria-label="Open ResolveX messenger"]',
-                  )
-                  ?.click()
-              }
-              className="flex h-14 items-center justify-center gap-2 rounded-[6px] border border-white/18 px-6 text-sm font-semibold transition-colors hover:bg-white/8"
-            >
-              <MessageCircle size={16} /> Ask a question
-            </button>
-          </div>
-        </div>
+        )}
 
         <div className="grid gap-12 border-b border-white/10 py-14 lg:grid-cols-[1.1fr_2fr]">
           <div>

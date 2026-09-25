@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { executeComposioTool } from "@/lib/providers/composio";
 import { askJev, jevConfigured, type JevQuestion } from "@/lib/providers/jev";
 import { getCurrentOrganization } from "@/lib/supabase/current-org";
+import { gmailMessageUrl } from "@/lib/integrations/gmail-link";
 
 type JsonRecord = Record<string, unknown>;
 
@@ -28,25 +29,48 @@ type Signal = {
   preview: string;
   occurredAt: string | null;
   url: string | null;
+  automated?: boolean;
 };
 
-function gmailMessageUrl(message: JsonRecord) {
-  const threadId = String(message.threadId ?? message.thread_id ?? "").trim();
-  if (threadId) {
-    return `https://mail.google.com/mail/u/0/#all/${encodeURIComponent(threadId)}`;
+const AUTOMATED_SENDER =
+  /(no-?reply|do-?not-?reply|notifications?|alerts?|mailer-daemon|bounce|updates?)@/i;
+
+function senderName(raw: string) {
+  const match = raw.match(/^\s*"?([^"<]+?)"?\s*<([^>]+)>/);
+  return {
+    name: (match?.[1] ?? raw).trim() || "Email sender",
+    address: (match?.[2] ?? raw).trim(),
+  };
+}
+
+async function gmailMailbox(organizationId: string) {
+  try {
+    const profile = record(
+      await executeComposioTool({
+        organizationId,
+        toolkit: "gmail",
+        toolSlug: "GMAIL_GET_PROFILE",
+        arguments: { user_id: "me" },
+      }),
+    );
+    const email = record(profile.data).emailAddress;
+    return typeof email === "string" && email.includes("@") ? email : null;
+  } catch {
+    return null;
   }
-  return typeof message.display_url === "string" ? message.display_url : null;
 }
 
 async function gmailSignals(organizationId: string) {
-  const result = record(
-    await executeComposioTool({
+  const [mailbox, fetched] = await Promise.all([
+    gmailMailbox(organizationId),
+    executeComposioTool({
       organizationId,
       toolkit: "gmail",
       toolSlug: "GMAIL_FETCH_EMAILS",
       arguments: {
         user_id: "me",
-        query: "is:unread newer_than:7d -category:promotions",
+        query:
+          "is:unread newer_than:7d -category:promotions -category:social -category:forums",
         max_results: 12,
         include_payload: false,
         include_spam_trash: false,
@@ -54,20 +78,22 @@ async function gmailSignals(organizationId: string) {
         verbose: false,
       },
     }),
-  );
-  const messages = records(record(result.data).messages);
+  ]);
+  const messages = records(record(record(fetched).data).messages);
   return messages.map<Signal>((message) => {
     const preview = record(message.preview);
+    const sender = senderName(String(message.sender ?? "Email sender"));
     return {
       id: String(message.messageId ?? message.id ?? crypto.randomUUID()),
       source: "gmail",
-      sender: String(message.sender ?? "Email sender"),
+      sender: sender.name,
+      automated: AUTOMATED_SENDER.test(sender.address),
       subject: String(message.subject ?? preview.subject ?? "Email"),
       preview: String(message.messageText ?? preview.body ?? "").slice(0, 500),
       occurredAt: message.messageTimestamp
         ? String(message.messageTimestamp)
         : null,
-      url: gmailMessageUrl(message),
+      url: gmailMessageUrl(message, mailbox),
     };
   });
 }
@@ -150,6 +176,11 @@ async function slackSignals(organizationId: string) {
   );
 }
 
+// People outrank automated notifications; urgency breaks ties.
+function priority(item: Signal & { needsHuman: number; urgency: number }) {
+  return item.needsHuman + item.urgency / 3 - (item.automated ? 0.75 : 0);
+}
+
 async function addDecisions(signals: Signal[]) {
   const candidates = signals
     .filter((item) => item.preview || item.subject)
@@ -215,9 +246,7 @@ async function addDecisions(signals: Signal[]) {
       urgency: Number(answers[`urgency_${index}`]?.score ?? 0),
       needsHuman: Number(answers[`human_${index}`]?.noul ?? 0),
     }))
-    .sort(
-      (a, b) => b.needsHuman + b.urgency / 3 - (a.needsHuman + a.urgency / 3),
-    )
+    .sort((a, b) => priority(b) - priority(a))
     .slice(0, 8);
 }
 

@@ -10,8 +10,8 @@ export const brand = {
 };
 
 export const marketingNav = [
-  { label: "Features", href: "/#features" },
   { label: "AI Employees", href: "/#employees" },
+  { label: "Channels", href: "/#widget" },
   { label: "Sales CRM", href: "/#crm" },
   { label: "Integrations", href: "/#integrations" },
   { label: "Pricing", href: "/pricing" },

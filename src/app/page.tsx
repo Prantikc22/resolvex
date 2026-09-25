@@ -8,12 +8,12 @@ import { createAdminClient } from "@/lib/supabase/admin";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "ResolveX - Your customers reach out. ResolveX gets it done.",
+  title: "ResolveX - AI employees for customer support and sales",
   description:
-    "One workspace for customer conversations, AI employees, phone calls and business operations.",
+    "AI employees that answer every customer and follow up every lead across chat, email and phone — with your team in control. From $15 per seat.",
   alternates: { canonical: "/" },
   openGraph: {
-    title: "ResolveX - Your customers reach out. ResolveX gets it done.",
+    title: "ResolveX - AI employees for customer support and sales",
     description:
       "Answer enquiries, capture leads and resolve requests across every connected channel.",
     url: "/",

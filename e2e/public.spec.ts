@@ -6,11 +6,11 @@ test("marketing page presents the ResolveX 2.0 promise without fabricated proof"
   await page.goto("/");
   await expect(
     page.getByRole("heading", {
-      name: "Your customers reach out. ResolveX gets it done.",
+      name: "Every customer answered. Every lead followed up.",
     }),
   ).toBeVisible();
   await expect(
-    page.getByRole("link", { name: "Get Started Free" }).first(),
+    page.getByRole("link", { name: "Start free trial" }).first(),
   ).toHaveAttribute("href", "/signup");
   await expect(
     page.getByText("Trusted by teams at 100+ companies."),

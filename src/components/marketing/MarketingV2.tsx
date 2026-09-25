@@ -10,18 +10,14 @@ import {
 import {
   Activity,
   ArrowRight,
-  ArrowUpRight,
   AtSign,
   BookOpen,
   Bot,
-  CalendarDays,
   Check,
-  CheckCircle2,
   FileText,
   Globe2,
   Inbox,
   Link2,
-  Mic,
   Phone,
   Play,
   Search,
@@ -40,15 +36,15 @@ import { BillCalculator } from "@/components/marketing/BillCalculator";
 import { Header } from "@/components/marketing/Header";
 import { MarketingFooter } from "@/components/marketing/MarketingFooter";
 import { ResolveWidget } from "@/components/widget/ResolveWidget";
-import { blogPosts } from "@/lib/blog";
 import { money, pricing } from "@/lib/pricing";
 import { cn } from "@/lib/utils";
 import {
   AttentionSection,
+  Counter,
   CrmSection,
   GuardrailsSection,
   IntegrationsSection,
-  ProofStrip,
+  integrationCount,
   WidgetStudio,
   WorkforceSection,
 } from "@/components/marketing/HomeSections";
@@ -339,6 +335,17 @@ function ProductCanvas() {
   );
 }
 
+const heroStats = [
+  { to: 5, label: "AI employee roles, ready to hire" },
+  { to: integrationCount, suffix: "+", label: "business apps they can use" },
+  { to: pricing.includedResolutions, label: "AI resolutions included monthly" },
+  {
+    to: pricing.agent,
+    prefix: "$",
+    label: "per agent seat · collaborators free",
+  },
+];
+
 function Hero() {
   const ref = useRef<HTMLElement>(null);
   const { scrollYProgress } = useScroll({
@@ -407,7 +414,7 @@ function Hero() {
                 className="inline-flex items-center gap-2 rounded-full border border-black/10 bg-white/88 px-4 py-2 text-xs font-semibold shadow-sm backdrop-blur-md"
               >
                 <span className="size-2 rounded-full bg-[#69a834]" />
-                Customer operations, finished.
+                AI employees for support and sales
               </motion.div>
               <motion.h1
                 initial={{ opacity: 0, y: 30 }}
@@ -415,10 +422,10 @@ function Hero() {
                 transition={{ duration: 0.9, delay: 0.14, ease }}
                 className="mt-5 text-balance text-[clamp(3.35rem,6.3vw,6.35rem)] font-semibold leading-[.88] tracking-[-.06em]"
               >
-                Your customers reach out.
+                Every customer answered.
                 <br />
                 <span className="font-display font-normal italic tracking-[-.035em] text-[#ff5c35]">
-                  ResolveX gets it done.
+                  Every lead followed up.
                 </span>
               </motion.h1>
               <motion.p
@@ -427,9 +434,10 @@ function Hero() {
                 transition={{ duration: 0.7, delay: 0.3 }}
                 className="mx-auto mt-5 max-w-3xl text-balance text-base leading-relaxed text-[#4f535b] md:text-lg"
               >
-                One workspace for customer conversations, AI employees, phone
-                calls and business operations. Answer enquiries, capture leads
-                and resolve requests across every connected channel.
+                ResolveX puts AI employees on your chat, email and phone. They
+                resolve support requests, qualify leads and keep your CRM
+                current — and hand over to your team the moment a person should
+                step in.
               </motion.p>
               <motion.div
                 initial={{ opacity: 0, y: 18 }}
@@ -437,7 +445,7 @@ function Hero() {
                 transition={{ delay: 0.4 }}
                 className="mx-auto mt-5 inline-flex items-center rounded-full border border-black/10 bg-white/85 px-4 py-2 text-xs font-semibold text-[#3f434b] shadow-sm backdrop-blur-xl"
               >
-                7 days free · First 50 AI resolutions included · Free migration
+                7 days free · 50 AI resolutions included · Live in an afternoon
               </motion.div>
               <motion.div
                 initial={{ opacity: 0, y: 18 }}
@@ -449,14 +457,14 @@ function Hero() {
                   href="/signup"
                   className="button-bright flex h-14 items-center justify-center gap-3 rounded-[6px] bg-[#ff5c35] px-7 text-sm font-semibold text-white shadow-[0_18px_50px_rgba(255,92,53,.28)]"
                 >
-                  Get Started Free <ArrowRight size={18} />
+                  Start free trial <ArrowRight size={18} />
                 </Link>
                 <Link
                   href="/demo"
                   className="flex h-14 items-center justify-center gap-3 rounded-[6px] border border-black/12 bg-white px-7 text-sm font-semibold hover:border-black/30"
                 >
                   <Play size={16} fill="currentColor" />
-                  See ResolveX in Action
+                  Try the live demo
                 </Link>
               </motion.div>
             </div>
@@ -494,49 +502,44 @@ function Hero() {
         <div className="mx-auto max-w-xl text-center">
           <div className="inline-flex items-center gap-2 rounded-full border border-black/10 bg-white px-3 py-2 text-[11px] font-semibold shadow-sm">
             <span className="size-2 rounded-full bg-[#69a834]" />
-            Customer operations, finished.
+            AI employees for support and sales
           </div>
           <h1 className="mt-6 text-balance text-[3.25rem] font-semibold leading-[.9] tracking-[-.055em]">
-            Your customers reach out.
+            Every customer answered.
             <br />
             <span className="font-display font-normal italic tracking-[-.025em] text-[#ff5c35]">
-              ResolveX gets it done.
+              Every lead followed up.
             </span>
           </h1>
           <p className="mx-auto mt-6 max-w-md text-balance text-[15px] leading-relaxed text-[#555961]">
-            One workspace for customer conversations, AI employees, phone calls
-            and business operations. Answer enquiries, capture leads and resolve
-            requests across every connected channel.
+            ResolveX puts AI employees on your chat, email and phone. They
+            resolve support requests, qualify leads and keep your CRM current —
+            and hand over to your team the moment a person should step in.
           </p>
           <div className="mt-7 grid gap-3">
             <Link
               href="/signup"
               className="button-bright flex h-14 items-center justify-center gap-2 rounded-[6px] bg-[#ff5c35] px-6 text-sm font-semibold text-white shadow-[0_18px_44px_rgba(255,92,53,.25)]"
             >
-              Get Started Free <ArrowRight size={16} />
+              Start free trial <ArrowRight size={16} />
             </Link>
             <Link
               href="/demo"
               className="flex h-14 items-center justify-center gap-2 rounded-[6px] border border-black/12 bg-white px-6 text-sm font-semibold"
             >
               <Play size={14} fill="currentColor" />
-              See ResolveX in Action
+              Try the live demo
             </Link>
           </div>
           <div className="mt-4 rounded-full border border-black/10 bg-white px-4 py-2 text-xs font-semibold leading-relaxed text-[#4d5159] shadow-sm">
-            7 days free · First 50 AI resolutions included · Free migration
+            7 days free · 50 AI resolutions included · Live in an afternoon
           </div>
         </div>
       </section>
 
       <section className="relative z-[60] bg-[#f5f4ef] px-4 sm:px-6 md:mt-[calc(752px-100svh)]">
         <div className="mx-auto grid max-w-[1380px] overflow-hidden rounded-[7px] border border-black/10 border-t-[#111318] bg-white shadow-[0_18px_45px_rgba(24,28,38,.10)] sm:grid-cols-2 md:border-t-[5px] lg:grid-cols-4">
-          {[
-            ["< 1 minute", "to install the widget"],
-            ["$15", "per full agent / month"],
-            ["50", "AI resolutions included"],
-            ["24 / 7", "AI coverage, human control"],
-          ].map(([value, label], index) => (
+          {heroStats.map(({ label, ...counter }, index) => (
             <div
               key={label}
               className={cn(
@@ -546,430 +549,15 @@ function Hero() {
                 index === 1 && "sm:border-t-0",
               )}
             >
-              <div className="font-display text-3xl">{value}</div>
-              <div className="mt-1 text-xs text-[#74777e]">{label}</div>
+              <div className="text-4xl font-semibold tracking-[-.05em]">
+                <Counter {...counter} />
+              </div>
+              <div className="mt-1 text-sm text-[#74777e]">{label}</div>
             </div>
           ))}
         </div>
       </section>
-      <TrustMarquee />
     </>
-  );
-}
-
-const trustedCompanies = [
-  "Ecommerce",
-  "SaaS",
-  "Clinics",
-  "Real Estate",
-  "Restaurants",
-  "Professional Services",
-];
-
-function TrustMarquee() {
-  return (
-    <section
-      aria-labelledby="trusted-heading"
-      className="overflow-hidden bg-[#f5f4ef] px-4 pb-16 pt-10 sm:px-6 md:pb-24 md:pt-14"
-    >
-      <div className="mx-auto max-w-[1380px]">
-        <div className="flex flex-col gap-3 border-b border-black/10 pb-7 sm:flex-row sm:items-end sm:justify-between">
-          <h2
-            id="trusted-heading"
-            className="max-w-2xl text-balance text-3xl font-semibold leading-[1.02] tracking-[-.04em] md:text-5xl"
-          >
-            Built for the places where{" "}
-            <span className="font-display italic">
-              customers need an answer.
-            </span>
-          </h2>
-          <p className="max-w-md text-sm leading-relaxed text-[#6b6e75] sm:text-right">
-            Start with an industry template, then shape the employees,
-            knowledge, channels, and workflows around how your business works.
-          </p>
-        </div>
-        <div
-          className="marquee-mask mt-7 overflow-hidden"
-          aria-label="Customer companies"
-        >
-          <div className="logo-marquee flex w-max items-center">
-            {[0, 1].map((copy) => (
-              <div
-                key={copy}
-                aria-hidden={copy === 1}
-                className="flex shrink-0 items-center"
-              >
-                {trustedCompanies.map((company, index) => (
-                  <div
-                    key={`${copy}-${company}`}
-                    className="flex min-w-[210px] items-center justify-center border-r border-black/10 px-8 py-5 md:min-w-[250px]"
-                  >
-                    <span
-                      className={cn(
-                        "whitespace-nowrap text-xl font-semibold tracking-[-.035em] text-[#222328] md:text-2xl",
-                        index === 2 &&
-                          "font-display text-2xl italic md:text-3xl",
-                        index === 3 && "tracking-[-.06em]",
-                        index === 5 && "font-display text-2xl md:text-3xl",
-                      )}
-                    >
-                      {company}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-    </section>
-  );
-}
-
-const systemFeatures = [
-  {
-    visual: "inbox",
-    title: "One priority inbox",
-    copy: "Email, web chat, calls, forms and API events with identity, history and CRM context attached.",
-  },
-  {
-    visual: "ai",
-    title: "AI that resolves",
-    copy: "Answers from approved sources, completes safe actions, and pays attention to risk.",
-  },
-  {
-    visual: "handoff",
-    title: "Human handoff",
-    copy: "A concise summary, attempted steps, sentiment, and account context arrive together.",
-  },
-  {
-    visual: "help",
-    title: "Branded help center",
-    copy: "Publish searchable answers on help.yourbrand.com — custom domain, verified DNS, no extra CMS.",
-  },
-  {
-    visual: "voice",
-    title: "AI voice, web and phone",
-    copy: "A talking assistant on your website, and AI phone agents on the number you already own.",
-  },
-  {
-    visual: "outcomes",
-    title: "Outcomes, visible",
-    copy: "Resolution rate, first reply, CSAT, AI quality, knowledge gaps, and cost per outcome.",
-  },
-];
-
-function FeatureVisual({ type }: { type: string }) {
-  if (type === "inbox") {
-    return (
-      <div className="feature-visual bg-[#12151a] text-white">
-        <div className="flex items-center justify-between text-[9px] text-white/42">
-          <span>Priority queue</span>
-          <span className="text-[#d9ff72]">3 live</span>
-        </div>
-        <div className="mt-3 space-y-2">
-          {["Billing cycle", "SSO metadata", "Webhook failure"].map(
-            (label, index) => (
-              <motion.div
-                key={label}
-                initial={{ opacity: 0, x: -10 }}
-                whileInView={{ opacity: 1, x: 0 }}
-                transition={{ delay: index * 0.1 }}
-                className="flex items-center gap-2 rounded-[5px] border border-white/8 bg-white/[.04] p-2"
-              >
-                <span
-                  className={cn(
-                    "size-2 rounded-full",
-                    index === 1 ? "bg-[#ff735c]" : "bg-[#d9ff72]",
-                  )}
-                />
-                <span className="flex-1 text-[10px]">{label}</span>
-                <span className="font-mono text-[8px] text-white/35">
-                  {index === 0 ? "NOW" : `${index * 4}M`}
-                </span>
-              </motion.div>
-            ),
-          )}
-        </div>
-      </div>
-    );
-  }
-
-  if (type === "ai") {
-    return (
-      <div className="feature-visual bg-[#edf2ff]">
-        <div className="w-[78%] rounded-[5px] bg-white p-2 text-[9px] shadow-sm">
-          Can I move our billing date?
-        </div>
-        <motion.div
-          initial={{ opacity: 0, y: 8 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          className="ml-auto mt-2 w-[88%] rounded-[5px] bg-[#17191e] p-2.5 text-[9px] leading-relaxed text-white"
-        >
-          Yes. An owner can change it before the next invoice.
-          <div className="mt-2 flex items-center justify-between border-t border-white/10 pt-2 text-[8px]">
-            <span className="text-[#d9ff72]">Policy cited</span>
-            <span className="text-white/40">96%</span>
-          </div>
-        </motion.div>
-      </div>
-    );
-  }
-
-  if (type === "handoff") {
-    return (
-      <div className="feature-visual bg-[#fff1ed]">
-        <div className="text-[9px] font-semibold uppercase tracking-[.08em] text-[#c4482d]">
-          Human needed
-        </div>
-        <div className="mt-3 grid grid-cols-[1fr_auto_1fr] items-center gap-2">
-          <div className="rounded-[5px] border border-[#e8bbb0] bg-white p-2">
-            <div className="text-[8px] text-[#8d6961]">Arlo brief</div>
-            <div className="mt-1 text-[10px] font-semibold">
-              Refund exception
-            </div>
-          </div>
-          <motion.span
-            animate={{ x: [0, 4, 0] }}
-            transition={{ repeat: Infinity, duration: 1.8 }}
-            className="text-[#d04d31]"
-          >
-            →
-          </motion.span>
-          <div className="rounded-[5px] bg-[#17191e] p-2 text-white">
-            <div className="flex items-center gap-1.5">
-              <span className="grid size-5 place-items-center rounded-full bg-[#d9ff72] text-[7px] font-bold text-black">
-                MK
-              </span>
-              <span className="text-[9px] font-semibold">Maya</span>
-            </div>
-            <div className="mt-2 text-[8px] text-white/45">
-              Context attached
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (type === "help") {
-    return (
-      <div className="feature-visual bg-[#f2ecff]">
-        <div className="flex h-9 items-center gap-2 rounded-[5px] border border-black/10 bg-white px-3 text-[9px] text-[#888] shadow-sm">
-          <Search size={11} /> Search the help center
-        </div>
-        <div className="mt-3 grid grid-cols-3 gap-2">
-          {["Billing", "Security", "Setup"].map((label, index) => (
-            <motion.div
-              key={label}
-              whileHover={{ y: -3 }}
-              className="rounded-[5px] border border-black/8 bg-white p-2"
-            >
-              <div className="font-mono text-[8px] text-[#7351ad]">
-                0{index + 1}
-              </div>
-              <div className="mt-4 text-[9px] font-semibold">{label}</div>
-            </motion.div>
-          ))}
-        </div>
-      </div>
-    );
-  }
-
-  if (type === "voice") {
-    return (
-      <div className="feature-visual bg-[#fff6cf]">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <span className="grid size-8 place-items-center rounded-full bg-[#17191e] text-[9px] font-semibold text-white">
-              AM
-            </span>
-            <div>
-              <div className="text-[10px] font-semibold">Avery Morgan</div>
-              <div className="text-[8px] text-[#83794f]">Connected</div>
-            </div>
-          </div>
-          <span className="font-mono text-[10px]">06:42</span>
-        </div>
-        <div className="mt-5 flex h-10 items-center justify-center gap-1">
-          {[12, 22, 16, 30, 20, 34, 16, 25, 13, 20].map((height, index) => (
-            <motion.span
-              key={index}
-              animate={{ height: [height, Math.max(8, 36 - height), height] }}
-              transition={{
-                repeat: Infinity,
-                duration: 1.2,
-                delay: index * 0.05,
-              }}
-              className="w-1 rounded-full bg-[#17191e]"
-            />
-          ))}
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="feature-visual bg-[#e9f8ef]">
-      <div className="flex items-end justify-between">
-        <div>
-          <div className="text-[8px] uppercase tracking-[.08em] text-[#4f8062]">
-            Resolution rate
-          </div>
-          <div className="mt-1 text-2xl font-semibold">63.4%</div>
-        </div>
-        <span className="rounded-[4px] bg-[#c7f0d6] px-2 py-1 text-[8px] font-semibold text-[#277748]">
-          +12.8%
-        </span>
-      </div>
-      <div className="mt-4 flex h-12 items-end gap-1.5">
-        {[28, 35, 31, 43, 51, 58, 66, 76, 72, 88].map((height, index) => (
-          <motion.span
-            key={index}
-            initial={{ height: 0 }}
-            whileInView={{ height: `${height}%` }}
-            transition={{ duration: 0.55, delay: index * 0.04 }}
-            className="flex-1 rounded-t-[2px] bg-[#1b7543]"
-          />
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function Features() {
-  return (
-    <section id="features" className="bg-white px-4 py-24 sm:px-6 md:py-36">
-      <div className="mx-auto max-w-[1380px]">
-        <Reveal className="grid gap-8 lg:grid-cols-[.8fr_1.2fr] lg:items-end">
-          <div>
-            <Label>Everything support needs</Label>
-            <h2 className="mt-5 text-balance text-5xl font-semibold leading-[.95] tracking-[-.055em] md:text-7xl">
-              One system.
-              <br />
-              <span className="font-display font-normal italic text-[#85878d]">
-                No add-on hunt.
-              </span>
-            </h2>
-          </div>
-          <p className="max-w-2xl text-lg leading-relaxed text-[#666970] lg:justify-self-end">
-            ResolveX combines the parts that usually arrive as separate
-            products, invoices, and browser tabs. Every feature shares the same
-            customer memory.
-          </p>
-        </Reveal>
-        <div className="mt-16 grid border-l border-t border-black/10 sm:grid-cols-2 lg:grid-cols-3">
-          {systemFeatures.map((feature, index) => {
-            return (
-              <Reveal
-                key={feature.title}
-                delay={(index % 3) * 0.05}
-                className="group min-h-[390px] border-b border-r border-black/10 p-5 transition-colors hover:bg-[#f7f7f4] md:p-7"
-              >
-                <FeatureVisual type={feature.visual} />
-                <div className="mt-8 flex items-start justify-between gap-4">
-                  <div>
-                    <h3 className="text-2xl font-semibold tracking-[-.03em]">
-                      {feature.title}
-                    </h3>
-                    <p className="mt-3 text-sm leading-relaxed text-[#777a82]">
-                      {feature.copy}
-                    </p>
-                  </div>
-                  <ArrowUpRight
-                    size={18}
-                    className="shrink-0 text-[#aaa] transition-transform group-hover:-translate-y-1 group-hover:translate-x-1"
-                  />
-                </div>
-              </Reveal>
-            );
-          })}
-        </div>
-      </div>
-    </section>
-  );
-}
-
-function ArloSection() {
-  const ref = useRef<HTMLElement>(null);
-  const { scrollYProgress } = useScroll({
-    target: ref,
-    offset: ["start end", "end start"],
-  });
-  const sceneScale = useTransform(scrollYProgress, [0, 1], [1, 1.055]);
-  const sceneY = useTransform(scrollYProgress, [0, 1], [0, -34]);
-  const copyY = useTransform(scrollYProgress, [0, 1], [24, -12]);
-
-  return (
-    <section
-      ref={ref}
-      id="arlo"
-      className="relative min-h-[960px] overflow-hidden bg-[#07090c] text-white md:min-h-[1080px]"
-    >
-      <motion.div
-        aria-hidden="true"
-        style={{
-          scale: sceneScale,
-          y: sceneY,
-          backgroundImage: "url('/arlo-world.jpg')",
-        }}
-        className="absolute inset-x-0 top-0 h-[680px] bg-cover bg-[center_top] md:h-[820px]"
-      />
-      <div
-        aria-hidden="true"
-        className="absolute inset-0 bg-[linear-gradient(180deg,rgba(4,6,9,.06)_0%,rgba(4,6,9,.16)_30%,rgba(7,9,12,.72)_54%,#07090c_76%,#07090c_100%)]"
-      />
-      <div
-        aria-hidden="true"
-        className="absolute inset-x-0 top-[29%] h-px bg-[linear-gradient(90deg,transparent,rgba(216,255,112,.58),transparent)] shadow-[0_0_60px_rgba(216,255,112,.22)] md:top-[30%]"
-      />
-
-      <motion.div
-        style={{ y: copyY }}
-        className="relative z-20 mx-auto flex min-h-[960px] max-w-[1380px] flex-col items-center px-4 pb-16 pt-[350px] text-center sm:px-6 md:min-h-[1080px] md:pb-20 md:pt-[390px]"
-      >
-        <div className="rounded-full border border-white/22 bg-black/74 px-4 py-2 text-[10px] font-bold uppercase tracking-[.14em] text-[#d8ff70] shadow-[0_14px_45px_rgba(0,0,0,.5)] backdrop-blur-xl">
-          Arlo AI - grounded, inspectable, accountable
-        </div>
-        <h2 className="mt-6 max-w-5xl text-balance text-[2.8rem] font-semibold leading-[.94] tracking-[-.045em] text-white drop-shadow-[0_3px_22px_rgba(0,0,0,.95)] md:text-7xl">
-          One intelligence layer for
-          <br />
-          <span className="font-display font-normal italic tracking-[-.02em] text-[#ff8064]">
-            every customer moment.
-          </span>
-        </h2>
-        <p className="mt-6 max-w-2xl text-balance text-[15px] leading-relaxed text-white/82 drop-shadow-[0_2px_12px_rgba(0,0,0,.9)] md:text-lg">
-          Arlo reads only approved knowledge, completes low-risk work, and knows
-          when a person should take over. Every answer keeps its source and
-          every handoff keeps its context.
-        </p>
-        <div className="mt-8 grid w-full max-w-4xl gap-px overflow-hidden rounded-[8px] border border-white/18 bg-white/18 text-left shadow-[0_28px_80px_rgba(0,0,0,.42)] sm:grid-cols-3">
-          {[
-            ["01", "Answer", "Cites the exact approved source."],
-            ["02", "Act", "Runs only work your team allows."],
-            ["03", "Escalate", "Hands over the history, not a summary void."],
-          ].map(([number, title, copy]) => (
-            <div key={title} className="bg-[#0d0f13]/96 p-5 backdrop-blur-xl">
-              <div className="font-mono text-[10px] text-[#d8ff70]">
-                {number}
-              </div>
-              <div className="mt-5 text-lg font-semibold text-white">
-                {title}
-              </div>
-              <div className="mt-2 text-xs leading-relaxed text-white/68">
-                {copy}
-              </div>
-            </div>
-          ))}
-        </div>
-        <Link
-          href="/resources#ai-resolution"
-          className="button-bright mt-8 flex h-12 items-center gap-2 rounded-[6px] bg-[#ff5c35] px-5 text-sm font-semibold"
-        >
-          See how Arlo decides <ArrowRight size={15} />
-        </Link>
-      </motion.div>
-    </section>
   );
 }
 
@@ -1263,163 +851,6 @@ function KnowledgeSection() {
   );
 }
 
-function VoiceSection() {
-  return (
-    <section id="voice" className="bg-[#c5dcff] px-4 py-24 sm:px-6 md:py-32">
-      <div className="mx-auto grid max-w-[1380px] gap-12 lg:grid-cols-[.9fr_1.1fr] lg:items-center">
-        <Reveal>
-          <Label>When typing is not enough</Label>
-          <h2 className="mt-5 text-balance text-5xl font-semibold leading-[.95] tracking-[-.055em] md:text-7xl">
-            Pick up every call.
-            <br />
-            <span className="font-display font-normal italic">
-              Even at 3 a.m.
-            </span>
-          </h2>
-          <p className="mt-7 max-w-xl text-lg leading-relaxed text-[#4f617a]">
-            Visitors can talk to your assistant right on your website. Connect
-            the number you already own from Twilio, Plivo, Exotel, Vonage or any
-            SIP carrier, and an AI employee answers, books, qualifies and
-            transfers — with the transcript on the customer’s timeline.
-          </p>
-          <div className="mt-8 grid gap-3 sm:grid-cols-2">
-            {[
-              "Talking assistant in your web widget",
-              "Bring your own number over SIP",
-              "Transcripts and summaries on the timeline",
-              "Warm transfer to a human anytime",
-            ].map((item) => (
-              <div key={item} className="flex items-center gap-2 text-sm">
-                <CheckCircle2 size={16} className="text-[#285fa8]" />
-                {item}
-              </div>
-            ))}
-          </div>
-        </Reveal>
-        <Reveal className="relative min-h-[500px] overflow-hidden rounded-[8px] bg-[#111214] p-5 text-white shadow-[0_35px_90px_rgba(35,65,105,.2)] sm:p-8">
-          <div className="flex items-center justify-between">
-            <div>
-              <div className="text-xs text-white/35">
-                Inbound · Arlo Receptionist
-              </div>
-              <div className="mt-2 text-xl font-semibold">Avery Morgan</div>
-            </div>
-            <span className="rounded-[5px] bg-[#d8ff70]/10 px-2.5 py-1.5 text-[10px] font-semibold text-[#d8ff70]">
-              Consent confirmed
-            </span>
-          </div>
-          <div className="grid min-h-[330px] place-items-center">
-            <div className="text-center">
-              <motion.div
-                animate={{ scale: [1, 1.08, 1] }}
-                transition={{ duration: 2.4, repeat: Infinity }}
-                className="mx-auto grid size-28 place-items-center rounded-full border border-white/10 bg-white/5"
-              >
-                <span className="grid size-20 place-items-center rounded-full bg-[#ff5c35] shadow-[0_0_0_18px_rgba(255,92,53,.08)]">
-                  <Phone size={28} fill="currentColor" />
-                </span>
-              </motion.div>
-              <div className="mt-8 font-mono text-3xl">06:42</div>
-              <div className="mt-2 text-xs text-white/35">
-                Answered by AI on your business number
-              </div>
-            </div>
-          </div>
-          <div className="grid grid-cols-4 gap-2">
-            {[
-              [Mic, "Mute"],
-              [Sparkles, "Notes"],
-              [Users, "Transfer"],
-              [Phone, "End"],
-            ].map(([Icon, label], index) => {
-              const I = Icon as typeof Phone;
-              return (
-                <button
-                  key={label as string}
-                  className={cn(
-                    "grid min-h-16 place-items-center rounded-[6px] border border-white/8 text-[9px]",
-                    index === 3 ? "bg-[#ff5c35]" : "bg-white/5",
-                  )}
-                >
-                  <I size={16} />
-                  <span>{label as string}</span>
-                </button>
-              );
-            })}
-          </div>
-        </Reveal>
-      </div>
-    </section>
-  );
-}
-
-function Comparison() {
-  const rows = [
-    ["Full agent seat", "$15 / month", "Often $50-$100+"],
-    ["AI resolutions", "50 included · then $0.39 each", "Often usage-priced"],
-    ["Collaborators", "Unlimited", "Often paid"],
-    ["Help center + widget", "Included", "Plan or add-on dependent"],
-    ["Standard migration", "Included", "Often services-led"],
-    ["Billing model", "One readable plan", "Tiers and add-ons"],
-  ];
-  return (
-    <section id="compare" className="bg-white px-4 py-24 sm:px-6 md:py-36">
-      <div className="mx-auto max-w-[1180px]">
-        <Reveal className="text-center">
-          <h2 className="mx-auto max-w-4xl text-balance text-5xl font-semibold leading-[.95] tracking-[-.055em] md:text-7xl">
-            Less software tax.
-            <br />
-            <span className="font-display font-normal italic text-[#888b91]">
-              More support.
-            </span>
-          </h2>
-          <p className="mx-auto mt-6 max-w-2xl text-lg leading-relaxed text-[#666970]">
-            We publish our math. Competitor columns are directional because
-            plans and bundles change. Use the calculator with your real invoice.
-          </p>
-        </Reveal>
-        <Reveal className="mt-14 overflow-hidden rounded-[8px] border border-black/10">
-          <div className="grid grid-cols-[1.1fr_.8fr_.8fr] bg-[#111214] text-sm font-semibold text-white">
-            <span className="px-4 py-5 sm:px-6">Cost driver</span>
-            <span className="border-x border-[#d8ff70]/20 bg-[#d8ff70]/10 px-4 py-5 text-[#d8ff70] sm:px-6">
-              ResolveX
-            </span>
-            <span className="px-4 py-5 text-white/45 sm:px-6">
-              Typical legacy stack
-            </span>
-          </div>
-          {rows.map(([label, ours, legacy]) => (
-            <div
-              key={label}
-              className="grid grid-cols-[1.1fr_.8fr_.8fr] border-b border-black/8 text-xs last:border-b-0 sm:text-sm"
-            >
-              <span className="px-4 py-5 font-semibold sm:px-6">{label}</span>
-              <span className="border-x border-[#8ebc37]/20 bg-[#f1f8e2] px-4 py-5 font-semibold text-[#386913] sm:px-6">
-                {ours}
-              </span>
-              <span className="px-4 py-5 text-[#797c83] sm:px-6">{legacy}</span>
-            </div>
-          ))}
-        </Reveal>
-        <div className="mt-7 flex flex-wrap justify-center gap-3">
-          <Link
-            href="/compare/intercom"
-            className="flex h-11 items-center gap-2 rounded-[6px] border border-black/12 px-4 text-xs font-semibold"
-          >
-            Compare with Intercom <ArrowRight size={14} />
-          </Link>
-          <Link
-            href="/compare/freshdesk"
-            className="flex h-11 items-center gap-2 rounded-[6px] border border-black/12 px-4 text-xs font-semibold"
-          >
-            Compare with Freshdesk <ArrowRight size={14} />
-          </Link>
-        </div>
-      </div>
-    </section>
-  );
-}
-
 function PricingPreview() {
   return (
     <section id="pricing" className="bg-[#f5f4ef] px-4 py-24 sm:px-6 md:py-36">
@@ -1473,107 +904,6 @@ function PricingPreview() {
   );
 }
 
-function BlogSection() {
-  const [featured, ...articles] = blogPosts;
-
-  return (
-    <section className="bg-[#ece9e1] px-4 py-24 sm:px-6 md:py-32">
-      <div className="mx-auto max-w-[1380px]">
-        <Reveal className="flex flex-col gap-7 border-b border-black/10 pb-10 lg:flex-row lg:items-end lg:justify-between">
-          <div>
-            <Label>ResolveX field notes</Label>
-            <h2 className="mt-5 max-w-4xl text-balance text-5xl font-semibold leading-[.94] tracking-[-.055em] md:text-7xl">
-              Practical answers for
-              <br />
-              <span className="font-display font-normal italic text-[#777a80]">
-                modern support teams.
-              </span>
-            </h2>
-          </div>
-          <div className="max-w-lg">
-            <p className="text-base leading-relaxed text-[#63666d]">
-              Clear, sourceable guides on AI customer support, helpdesk costs,
-              automation boundaries, and implementation—written for people and
-              answer engines.
-            </p>
-            <Link
-              href="/blog"
-              className="mt-5 inline-flex items-center gap-2 text-sm font-semibold"
-            >
-              Read all field notes <ArrowRight size={15} />
-            </Link>
-          </div>
-        </Reveal>
-
-        <div className="mt-8 grid gap-3 lg:grid-cols-[1.25fr_.75fr]">
-          <Reveal>
-            <Link
-              href={`/blog/${featured.slug}`}
-              className="group flex min-h-[530px] flex-col overflow-hidden rounded-[9px] bg-[#111318] p-6 text-white transition-transform hover:-translate-y-1 sm:p-9"
-            >
-              <div className="flex items-center justify-between gap-4 text-[10px] font-bold uppercase tracking-[.13em] text-[#d8ff70]">
-                <span>{featured.category}</span>
-                <span>{featured.readTime}</span>
-              </div>
-              <div className="relative my-10 flex-1 overflow-hidden rounded-[7px] border border-white/10 bg-[radial-gradient(circle_at_25%_35%,rgba(255,92,53,.52),transparent_28%),radial-gradient(circle_at_68%_56%,rgba(216,255,112,.26),transparent_30%),linear-gradient(135deg,#16191f,#090a0d)]">
-                <div className="absolute left-[18%] top-[24%] size-36 rounded-full border border-white/20 shadow-[0_0_80px_rgba(255,92,53,.32)] sm:size-52" />
-                <div className="absolute bottom-[18%] right-[15%] size-24 rounded-full bg-[#d8ff70] text-[#111318] shadow-[0_0_70px_rgba(216,255,112,.22)] sm:size-32">
-                  <Sparkles className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2" />
-                </div>
-                <div className="absolute inset-x-[15%] top-1/2 h-px bg-white/18" />
-              </div>
-              <h3 className="max-w-3xl text-balance text-3xl font-semibold leading-[1.02] tracking-[-.04em] sm:text-5xl">
-                {featured.title}
-              </h3>
-              <p className="mt-4 max-w-2xl text-sm leading-relaxed text-white/54">
-                {featured.description}
-              </p>
-              <span className="mt-7 inline-flex items-center gap-2 text-xs font-bold uppercase tracking-[.1em] text-[#d8ff70]">
-                Read the guide
-                <ArrowRight
-                  size={14}
-                  className="transition-transform group-hover:translate-x-1"
-                />
-              </span>
-            </Link>
-          </Reveal>
-
-          <div className="grid gap-3">
-            {articles.slice(0, 2).map((post, index) => (
-              <Reveal key={post.slug} delay={index * 0.06}>
-                <Link
-                  href={`/blog/${post.slug}`}
-                  className={cn(
-                    "group flex min-h-[258px] flex-col rounded-[9px] border border-black/10 p-6 transition-transform hover:-translate-y-1 sm:p-7",
-                    index === 0 ? "bg-[#c5dcff]" : "bg-[#fff7cf]",
-                  )}
-                >
-                  <div className="flex items-center justify-between gap-3 text-[10px] font-bold uppercase tracking-[.12em] text-black/48">
-                    <span>{post.category}</span>
-                    <span className="flex items-center gap-1.5">
-                      <CalendarDays size={12} /> {post.readTime}
-                    </span>
-                  </div>
-                  <h3 className="mt-auto text-balance text-2xl font-semibold leading-[1.03] tracking-[-.035em] sm:text-3xl">
-                    {post.title}
-                  </h3>
-                  <p className="mt-3 text-sm leading-relaxed text-black/56">
-                    {post.description}
-                  </p>
-                  <ArrowUpRight
-                    size={19}
-                    className="mt-5 transition-transform group-hover:-translate-y-1 group-hover:translate-x-1"
-                  />
-                </Link>
-              </Reveal>
-            ))}
-          </div>
-        </div>
-      </div>
-    </section>
-  );
-}
-
 function BigCTA() {
   return (
     <section className="bg-[#ff5c35] px-4 py-24 text-white sm:px-6 md:py-36">
@@ -1617,22 +947,16 @@ export function MarketingV2() {
     <main className="bg-white">
       <Header />
       <Hero />
-      <ProofStrip />
-      <Features />
       <WorkforceSection />
-      <ArloSection />
+      <WidgetStudio />
+      <KnowledgeSection />
       <CrmSection />
       <AttentionSection />
-      <KnowledgeSection />
-      <WidgetStudio />
-      <VoiceSection />
       <IntegrationsSection />
       <GuardrailsSection />
       <PricingPreview />
-      <Comparison />
-      <BlogSection />
       <BigCTA />
-      <MarketingFooter />
+      <MarketingFooter cta={false} />
       <ResolveWidget />
     </main>
   );

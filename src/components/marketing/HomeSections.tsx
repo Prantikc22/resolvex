@@ -41,7 +41,6 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { ease, Label, Reveal } from "@/components/marketing/primitives";
-import { pricing } from "@/lib/pricing";
 import { cn } from "@/lib/utils";
 
 /* ------------------------------------------------------------------ */
@@ -92,6 +91,7 @@ const apps = [
 ] as const;
 
 type AppSlug = (typeof apps)[number][0];
+export const integrationCount = apps.length;
 const appName = Object.fromEntries(apps) as Record<AppSlug, string>;
 
 function AppLogo({
@@ -136,7 +136,7 @@ function AppLogo({
   );
 }
 
-function Counter({
+export function Counter({
   to,
   prefix = "",
   suffix = "",
@@ -163,58 +163,6 @@ function Counter({
       {value}
       {suffix}
     </span>
-  );
-}
-
-/* ------------------------------------------------------------------ */
-/* Proof strip                                                         */
-/* ------------------------------------------------------------------ */
-
-export function ProofStrip() {
-  const stats = [
-    { to: 5, label: "AI employee roles, ready to hire" },
-    { to: apps.length, suffix: "+", label: "business apps they can use" },
-    { to: 24, suffix: "/7", label: "coverage without an always-on bot" },
-    {
-      to: pricing.includedResolutions,
-      label: "AI resolutions included monthly",
-    },
-    {
-      to: pricing.agent,
-      prefix: "$",
-      label: "per agent seat. Collaborators free.",
-    },
-  ];
-  return (
-    <section
-      id="at-a-glance"
-      aria-label="ResolveX at a glance"
-      className="border-y border-black/10 bg-[#f5f4ef] px-4 sm:px-6"
-    >
-      <div className="mx-auto grid max-w-[1380px] grid-cols-2 md:grid-cols-5">
-        {stats.map((stat, index) => (
-          <Reveal
-            key={stat.label}
-            delay={index * 0.06}
-            className={cn(
-              "border-black/10 px-3 py-8 md:px-6 md:py-10",
-              index % 2 === 0 && "border-r md:border-r",
-              index % 2 === 1 && "md:border-r",
-              index === 4 &&
-                "col-span-2 border-r-0 border-t md:col-span-1 md:border-t-0",
-              index < 4 && index > 1 && "border-t md:border-t-0",
-            )}
-          >
-            <div className="text-4xl font-semibold tracking-[-.05em] md:text-5xl">
-              <Counter to={stat.to} prefix={stat.prefix} suffix={stat.suffix} />
-            </div>
-            <p className="mt-2 max-w-[14rem] text-sm leading-snug text-[#6b6e75]">
-              {stat.label}
-            </p>
-          </Reveal>
-        ))}
-      </div>
-    </section>
   );
 }
 
@@ -1069,7 +1017,7 @@ export function WidgetStudio() {
       <div className="mx-auto max-w-[1380px]">
         <Reveal className="grid gap-8 lg:grid-cols-[1fr_.9fr] lg:items-end">
           <div>
-            <Label>Website messenger</Label>
+            <Label>Chat, voice and phone</Label>
             <h2 className="mt-5 text-balance text-5xl font-semibold leading-[.95] tracking-[-.055em] md:text-7xl">
               Your brand.
               <br />
@@ -1079,8 +1027,9 @@ export function WidgetStudio() {
             </h2>
           </div>
           <p className="max-w-xl text-lg leading-relaxed text-[#4f617a] lg:justify-self-end">
-            Colours, logo, name, welcome message, position and voice — change
-            them in minutes and install with one line. Try it here.
+            One assistant across chat, voice and phone. Change its colours,
+            logo, name, greeting and position in minutes, then install with one
+            line. Try it here.
           </p>
         </Reveal>
 
@@ -1260,6 +1209,40 @@ export function WidgetStudio() {
               </div>
             </motion.div>
           </Reveal>
+        </div>
+
+        <div className="mt-5 grid gap-px overflow-hidden rounded-[14px] border border-black/10 bg-black/10 md:grid-cols-3">
+          {[
+            {
+              icon: Mic,
+              title: "Talk on your website",
+              copy: "Visitors tap “Talk to AI” and speak with your assistant in the browser — interruptions, transcripts and all.",
+            },
+            {
+              icon: PhoneCall,
+              title: "Answer your phone line",
+              copy: "Connect the number you already own from Twilio, Plivo, Exotel, Vonage or any SIP carrier. AI picks up at 3 a.m.",
+            },
+            {
+              icon: Mail,
+              title: "Email and one inbox",
+              copy: "Chats, emails and calls land in one priority inbox with the transcript and CRM context attached.",
+            },
+          ].map(({ icon: Icon, title, copy }, index) => (
+            <Reveal
+              key={title}
+              delay={index * 0.06}
+              className="bg-white p-6 md:p-7"
+            >
+              <span className="grid size-11 place-items-center rounded-[10px] bg-[#eef3ff] text-[#355cff]">
+                <Icon size={19} />
+              </span>
+              <div className="mt-4 text-lg font-semibold">{title}</div>
+              <p className="mt-2 text-[15px] leading-relaxed text-[#5b6170]">
+                {copy}
+              </p>
+            </Reveal>
+          ))}
         </div>
       </div>
     </section>

@@ -26,7 +26,7 @@ import {
   Users,
   X,
 } from "lucide-react";
-import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
+import { FormEvent, useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { AttentionBrief } from "@/components/workspace/AttentionBrief";
@@ -1912,193 +1912,440 @@ export function UsageView() {
   );
 }
 
+type OverviewData = {
+  metrics?: Record<string, number | null>;
+  knowledge?: Record<string, number>;
+  setup?: {
+    steps?: Array<{
+      id: string;
+      label: string;
+      complete: boolean;
+      view: string;
+      optional?: boolean;
+    }>;
+  };
+  automations?: Record<string, number>;
+  integrations?: Record<string, number>;
+  workforce?: {
+    activeEmployees: number;
+    totalEmployees: number;
+    runs24h: number;
+    succeeded24h: number;
+    failed24h: number;
+    nextJob: { job_type: string; trigger_type: string; run_at: string } | null;
+  };
+  approvals?: {
+    pending: number;
+    latest: Array<{ id: string; title: string; risk: string }>;
+  };
+};
+
+function relativeTime(value: string) {
+  const minutes = Math.round((new Date(value).getTime() - Date.now()) / 60000);
+  const format = new Intl.RelativeTimeFormat("en", { numeric: "auto" });
+  if (Math.abs(minutes) < 60) return format.format(minutes, "minute");
+  const hours = Math.round(minutes / 60);
+  if (Math.abs(hours) < 48) return format.format(hours, "hour");
+  return format.format(Math.round(hours / 24), "day");
+}
+
 export function OverviewDashboard({
   onNavigate,
 }: {
   onNavigate: (view: string) => void;
 }) {
-  const [overview, setOverview] = useState<Record<string, unknown> | null>(
-    null,
-  );
+  const [overview, setOverview] = useState<OverviewData | null>(null);
   useEffect(() => {
     fetch("/api/workspace/overview", { cache: "no-store" })
       .then((response) => response.json())
       .then(setOverview)
       .catch(() => setOverview({}));
   }, []);
-  const metrics = useMemo(
-    () => (overview?.metrics ?? {}) as Record<string, number | null>,
-    [overview],
-  );
-  const knowledge = (overview?.knowledge ?? {}) as Record<string, number>;
-  const setupSteps = ((overview?.setup as Record<string, unknown> | undefined)
-    ?.steps ?? []) as Array<{
-    id: string;
+  if (!overview) return <Loading />;
+
+  const metrics = overview.metrics ?? {};
+  const knowledge = overview.knowledge ?? {};
+  const workforce = overview.workforce;
+  const approvals = overview.approvals ?? { pending: 0, latest: [] };
+  const steps = overview.setup?.steps ?? [];
+  const required = steps.filter((step) => !step.optional);
+  const done = required.filter((step) => step.complete).length;
+  const setupComplete = required.length > 0 && done === required.length;
+  const nextStep = steps.find((step) => !step.complete && !step.optional);
+  const conversations = metrics.conversations ?? 0;
+  const aiResolved = metrics.aiResolutions ?? 0;
+  const aiRate = conversations
+    ? Math.round((aiResolved / conversations) * 100)
+    : null;
+  const open = metrics.open ?? 0;
+
+  const summary = [
+    open ? `${open} open conversation${open === 1 ? "" : "s"}` : null,
+    approvals.pending
+      ? `${approvals.pending} approval${approvals.pending === 1 ? "" : "s"} waiting`
+      : null,
+    workforce?.failed24h
+      ? `${workforce.failed24h} failed run${workforce.failed24h === 1 ? "" : "s"}`
+      : null,
+  ].filter(Boolean);
+
+  const stats: Array<{
     label: string;
-    complete: boolean;
+    value: string;
+    hint: string;
+    icon: typeof Activity;
     view: string;
-    optional?: boolean;
-  }>;
-  const requiredSteps = setupSteps.filter((step) => !step.optional);
-  const completedSteps = requiredSteps.filter((step) => step.complete).length;
-  const stats = useMemo(
-    () => [
-      ["Enquiries handled", metrics.conversations ?? 0, InboxIcon],
-      ["AI-resolved", metrics.aiResolutions ?? 0, Sparkles],
-      ["Open now", metrics.open ?? 0, Clock3],
-      [
-        "First response",
+    alert?: boolean;
+  }> = [
+    {
+      label: "Conversations",
+      value: String(conversations),
+      hint: "last 30 days",
+      icon: Users,
+      view: "inbox",
+    },
+    {
+      label: "AI-resolved",
+      value: String(aiResolved),
+      hint:
+        aiRate == null ? "no conversations yet" : `${aiRate}% resolution rate`,
+      icon: Sparkles,
+      view: "analytics",
+    },
+    {
+      label: "Open now",
+      value: String(open),
+      hint: open ? "waiting on your team or AI" : "inbox zero",
+      icon: Clock3,
+      view: "inbox",
+    },
+    {
+      label: "First response",
+      value:
         metrics.firstResponseMinutes == null
           ? "—"
           : `${metrics.firstResponseMinutes}m`,
-        Activity,
-      ],
-    ],
-    [metrics],
-  );
-  if (!overview) return <Loading />;
+      hint: "average, last 30 days",
+      icon: Activity,
+      view: "analytics",
+    },
+    {
+      label: "Approvals",
+      value: String(approvals.pending),
+      hint: approvals.pending ? "need a decision" : "nothing waiting",
+      icon: ShieldCheck,
+      view: "approvals",
+      alert: approvals.pending > 0,
+    },
+  ];
+
   return (
     <ModuleShell
-      eyebrow="ResolveX 2.0"
-      title="Customer operations, in one place."
-      copy="See the outcomes that matter, then move directly into the conversation, employee, call, relationship, or workflow responsible."
-      tone="#edf1ea"
+      eyebrow={new Intl.DateTimeFormat("en", {
+        weekday: "long",
+        day: "numeric",
+        month: "long",
+      }).format(new Date())}
+      title="Here’s your day."
+      copy={
+        summary.length
+          ? `${summary.join(" · ")}.`
+          : "Everything is handled. Your AI employees are covering the queue."
+      }
+      tone="#f4f5f2"
+      action={
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={() => onNavigate("inbox")}
+            className="flex h-10 items-center gap-2 rounded-[8px] bg-[#17191d] px-4 text-[13px] font-semibold text-white"
+          >
+            Open inbox <ArrowRight size={14} />
+          </button>
+          <button
+            type="button"
+            onClick={() => onNavigate("employees")}
+            className="flex h-10 items-center gap-2 rounded-[8px] border border-black/10 bg-white px-4 text-[13px] font-semibold"
+          >
+            <Bot size={15} /> AI employees
+          </button>
+        </div>
+      }
     >
-      <AttentionBrief onOpenIntegrations={() => onNavigate("integrations")} />
-      <section className="mb-5 rounded-[11px] border border-black/8 bg-white p-5 md:p-6">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <p className="text-[10px] font-bold uppercase tracking-[.12em] text-[#355cff]">
-              Workspace setup
-            </p>
-            <h3 className="mt-2 text-xl font-semibold">
-              {completedSteps === requiredSteps.length
-                ? "Core setup complete"
-                : `${completedSteps} of ${requiredSteps.length} core steps complete`}
-            </h3>
+      {setupComplete ? (
+        <div className="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-[10px] border border-black/8 bg-white px-4 py-3">
+          <div className="flex items-center gap-2.5 text-[13px]">
+            <span className="grid size-6 place-items-center rounded-full bg-[#dff8bc] text-[#3e8218]">
+              <Check size={13} strokeWidth={3} />
+            </span>
+            <b>Workspace setup complete.</b>
+            <span className="text-[#717680]">
+              All {required.length} core steps are done.
+            </span>
           </div>
-          <div className="h-2 w-44 overflow-hidden rounded-full bg-[#e7e9ee]">
-            <div
-              className="h-full rounded-full bg-[#355cff] transition-all"
-              style={{
-                width: `${requiredSteps.length ? (completedSteps / requiredSteps.length) * 100 : 0}%`,
-              }}
-            />
-          </div>
-        </div>
-        <div className="mt-5 grid gap-2 md:grid-cols-2 xl:grid-cols-3">
-          {setupSteps.map((step) => (
+          {steps.some((step) => step.optional && !step.complete) && (
             <button
-              key={step.id}
-              onClick={() => onNavigate(step.view)}
-              className="flex min-h-11 items-center gap-3 rounded-[7px] border border-black/8 px-3 text-left text-sm hover:border-[#355cff]/40"
+              type="button"
+              onClick={() => onNavigate("phone_numbers")}
+              className="flex items-center gap-1.5 text-[13px] font-semibold text-[#355cff]"
             >
-              <span
-                className={cn(
-                  "grid size-6 shrink-0 place-items-center rounded-full",
-                  step.complete
-                    ? "bg-[#d8ff70] text-[#2f5300]"
-                    : "bg-[#eef0f4] text-[#717680]",
-                )}
-              >
-                {step.complete ? <Check size={13} /> : <ArrowRight size={12} />}
-              </span>
-              <span>
-                {step.label}
-                {step.optional && (
-                  <small className="ml-1 text-[#858a92]">optional</small>
-                )}
-              </span>
+              <PhoneCall size={14} /> Connect a phone number (optional)
             </button>
-          ))}
+          )}
         </div>
-      </section>
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        {stats.map(([label, value, Icon]) => {
-          const I = Icon as typeof Activity;
-          return (
-            <div
-              key={String(label)}
-              className="rounded-[9px] border border-black/8 bg-white p-5"
-            >
-              <I size={16} className="text-[#355cff]" />
-              <p className="mt-7 text-[10px] font-bold uppercase tracking-[.1em] text-[#858a92]">
-                {label as string}
+      ) : (
+        <section className="mb-5 rounded-[12px] border border-black/8 bg-white p-5">
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div>
+              <p className="text-[12px] font-bold uppercase tracking-[.12em] text-[#355cff]">
+                Get set up · {done} of {required.length}
               </p>
-              <p className="mt-1 text-3xl font-semibold">{String(value)}</p>
+              <h3 className="mt-1.5 text-lg font-semibold">
+                {nextStep ? `Next: ${nextStep.label}` : "Almost there"}
+              </h3>
             </div>
-          );
-        })}
-      </div>
-      <div className="mt-5 grid gap-4 lg:grid-cols-[1.35fr_1fr]">
-        <section className="rounded-[11px] bg-[#15171b] p-6 text-white">
-          <p className="text-[10px] font-bold uppercase tracking-[.12em] text-[#d8ff70]">
-            Today’s operating system
-          </p>
-          <h3 className="mt-4 text-2xl font-semibold">
-            Conversations become completed work.
-          </h3>
-          <p className="mt-3 max-w-xl text-xs leading-5 text-white/45">
-            Arlo answers from approved knowledge, uses connected tools within
-            policy, pauses for approval, and hands context to a person when
-            judgment is needed.
-          </p>
-          <div className="mt-7 grid grid-cols-2 gap-2">
-            {[
-              ["inbox", "Open inbox"],
-              ["employees", "Manage employees"],
-              ["calls", "Review calls"],
-              ["flows", "Inspect flows"],
-            ].map(([view, label]) => (
+            {nextStep && (
               <button
-                key={view}
-                onClick={() => onNavigate(view)}
-                className="flex h-10 items-center justify-between rounded-[6px] border border-white/10 px-3 text-[10px] font-semibold hover:bg-white/5"
+                type="button"
+                onClick={() => onNavigate(nextStep.view)}
+                className="flex h-10 items-center gap-2 rounded-[8px] bg-[#355cff] px-4 text-[13px] font-semibold text-white"
               >
-                {label}
-                <ArrowRight size={12} />
+                Continue <ArrowRight size={14} />
+              </button>
+            )}
+          </div>
+          <div className="mt-4 flex gap-1.5">
+            {required.map((step) => (
+              <span
+                key={step.id}
+                className={cn(
+                  "h-1.5 flex-1 rounded-full",
+                  step.complete ? "bg-[#355cff]" : "setup-track",
+                )}
+              />
+            ))}
+          </div>
+          <div className="mt-4 flex flex-wrap gap-2">
+            {steps.map((step) => (
+              <button
+                key={step.id}
+                type="button"
+                onClick={() => onNavigate(step.view)}
+                className={cn(
+                  "flex min-h-9 items-center gap-2 rounded-full border px-3 py-1.5 text-left text-[13px]",
+                  step.complete
+                    ? "border-black/8 text-[#717680]"
+                    : "border-[#355cff]/30 font-medium",
+                )}
+              >
+                {step.complete ? (
+                  <CheckCircle2 size={14} className="text-[#477d20]" />
+                ) : (
+                  <ArrowRight size={13} className="text-[#355cff]" />
+                )}
+                <span>
+                  {step.label
+                    .replace(/^Optional: /, "")
+                    .replace(/^./, (letter) => letter.toUpperCase())}
+                  {step.optional && (
+                    <span className="text-[#858a92]"> · optional</span>
+                  )}
+                </span>
               </button>
             ))}
           </div>
         </section>
-        <section className="rounded-[11px] border border-black/8 bg-white p-6">
-          <p className="text-[10px] font-bold uppercase tracking-[.12em] text-[#858a92]">
-            Readiness
-          </p>
-          {[
-            ["Approved knowledge", knowledge.approved ?? 0],
-            ["Knowledge pages", knowledge.pages ?? 0],
-            [
-              "Active flows",
-              Number(
-                (overview.automations as Record<string, number> | undefined)
-                  ?.enabled ?? 0,
-              ),
-            ],
-            [
-              "Connected systems",
-              Number(
-                (overview.integrations as Record<string, number> | undefined)
-                  ?.connected ?? 0,
-              ),
-            ],
-          ].map(([label, value]) => (
-            <div
-              key={String(label)}
-              className="flex items-center justify-between border-b border-black/7 py-3 text-xs"
-            >
-              <span className="text-[#737881]">{label}</span>
-              <b>{value}</b>
+      )}
+
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-5">
+        {stats.map(({ label, value, hint, icon: Icon, view, alert }) => (
+          <button
+            key={label}
+            type="button"
+            onClick={() => onNavigate(view)}
+            className={cn(
+              "group rounded-[12px] border bg-white p-4 text-left transition-colors hover:border-[#355cff]/35",
+              alert ? "border-[#ffcf70]" : "border-black/8",
+            )}
+          >
+            <div className="flex items-center justify-between">
+              <span className="text-[13px] font-medium text-[#717680]">
+                {label}
+              </span>
+              <Icon
+                size={16}
+                className={alert ? "text-[#b7791f]" : "text-[#355cff]"}
+              />
             </div>
-          ))}
-        </section>
+            <div className="mt-3 text-3xl font-semibold tracking-[-.03em] tabular-nums">
+              {value}
+            </div>
+            <div className="mt-1 text-[12px] text-[#858a92]">{hint}</div>
+          </button>
+        ))}
+      </div>
+
+      <div className="mt-5 grid gap-5 xl:grid-cols-[1.45fr_1fr]">
+        <AttentionBrief onOpenIntegrations={() => onNavigate("integrations")} />
+
+        <div className="space-y-5">
+          <section className="rounded-[12px] bg-[#15171b] p-5 text-white">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <span className="relative flex size-2.5">
+                  {Boolean(workforce?.activeEmployees) && (
+                    <span className="absolute inline-flex size-full animate-ping rounded-full bg-[#d8ff70] opacity-60" />
+                  )}
+                  <span
+                    className={cn(
+                      "relative inline-flex size-2.5 rounded-full",
+                      workforce?.activeEmployees
+                        ? "bg-[#d8ff70]"
+                        : "bg-white/30",
+                    )}
+                  />
+                </span>
+                <span className="text-[15px] font-semibold">AI workforce</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => onNavigate("employees")}
+                className="text-[13px] font-semibold text-white/60 hover:text-white"
+              >
+                Manage →
+              </button>
+            </div>
+            <div className="mt-4 grid grid-cols-3 gap-2">
+              {[
+                [
+                  "Active",
+                  `${workforce?.activeEmployees ?? 0}/${workforce?.totalEmployees ?? 0}`,
+                ],
+                ["Runs · 24h", String(workforce?.runs24h ?? 0)],
+                ["Failed", String(workforce?.failed24h ?? 0)],
+              ].map(([label, value]) => (
+                <div key={label} className="rounded-[8px] bg-white/[.06] p-3">
+                  <div className="text-[12px] text-white/45">{label}</div>
+                  <div
+                    className={cn(
+                      "mt-1 text-xl font-semibold tabular-nums",
+                      label === "Failed" && value !== "0" && "text-[#ff9c89]",
+                    )}
+                  >
+                    {value}
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="mt-3 rounded-[8px] border border-white/10 px-3 py-2.5 text-[13px] text-white/65">
+              {workforce?.nextJob ? (
+                <>
+                  <CalendarClockIcon />
+                  Next scheduled run{" "}
+                  <b className="text-white">
+                    {relativeTime(workforce.nextJob.run_at)}
+                  </b>{" "}
+                  · {workforce.nextJob.job_type.replace(/_/g, " ")}
+                </>
+              ) : workforce?.activeEmployees ? (
+                "No scheduled runs queued. Employees react to new chats, calls and events."
+              ) : (
+                "Activate an AI employee to cover chats, calls and follow-ups 24/7."
+              )}
+            </div>
+          </section>
+
+          <section className="rounded-[12px] border border-black/8 bg-white">
+            <div className="flex items-center justify-between border-b border-black/8 px-5 py-4">
+              <span className="text-[15px] font-semibold">
+                Waiting for approval
+              </span>
+              <button
+                type="button"
+                onClick={() => onNavigate("approvals")}
+                className="text-[13px] font-semibold text-[#355cff]"
+              >
+                View all
+              </button>
+            </div>
+            {approvals.latest.length ? (
+              approvals.latest.map((item) => (
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={() => onNavigate("approvals")}
+                  className="flex w-full items-center gap-3 border-b border-black/6 px-5 py-3 text-left last:border-0 hover:bg-[#f5f6f8]"
+                >
+                  <span
+                    className={cn(
+                      "rounded-full px-2 py-0.5 text-[11px] font-semibold capitalize",
+                      item.risk === "high" || item.risk === "critical"
+                        ? "bg-[#ffe1da] text-[#8c2d18]"
+                        : "bg-[#fff1c9] text-[#73520a]",
+                    )}
+                  >
+                    {item.risk}
+                  </span>
+                  <span className="min-w-0 flex-1 truncate text-[14px]">
+                    {item.title}
+                  </span>
+                  <ArrowRight size={14} className="text-[#858a92]" />
+                </button>
+              ))
+            ) : (
+              <p className="px-5 py-5 text-[13px] text-[#717680]">
+                Nothing waiting. Actions that send, spend or delete will appear
+                here before they run.
+              </p>
+            )}
+          </section>
+
+          <section className="rounded-[12px] border border-black/8 bg-white p-5">
+            <span className="text-[15px] font-semibold">Readiness</span>
+            <div className="mt-3 grid grid-cols-2 gap-2">
+              {[
+                ["Approved sources", knowledge.approved ?? 0, "knowledge"],
+                ["Knowledge pages", knowledge.pages ?? 0, "knowledge"],
+                ["Active flows", overview.automations?.enabled ?? 0, "flows"],
+                [
+                  "Connected apps",
+                  overview.integrations?.connected ?? 0,
+                  "integrations",
+                ],
+              ].map(([label, value, view]) => (
+                <button
+                  key={String(label)}
+                  type="button"
+                  onClick={() => onNavigate(String(view))}
+                  className="rounded-[8px] bg-[#f5f6f8] p-3 text-left hover:bg-[#eef0f4]"
+                >
+                  <div className="text-[12px] text-[#717680]">{label}</div>
+                  <div className="mt-1 text-lg font-semibold tabular-nums">
+                    {String(value)}
+                  </div>
+                </button>
+              ))}
+            </div>
+            {Boolean(knowledge.pending) && (
+              <button
+                type="button"
+                onClick={() => onNavigate("knowledge")}
+                className="mt-3 flex w-full items-center justify-between rounded-[8px] bg-[#fff1c9] px-3 py-2.5 text-[13px] font-medium text-[#73520a]"
+              >
+                {knowledge.pending} knowledge source
+                {knowledge.pending === 1 ? "" : "s"} waiting for review
+                <ArrowRight size={14} />
+              </button>
+            )}
+          </section>
+        </div>
       </div>
     </ModuleShell>
   );
 }
 
-function InboxIcon({ size, className }: { size?: number; className?: string }) {
-  return <Users size={size} className={className} />;
+function CalendarClockIcon() {
+  return <Clock3 size={13} className="mr-1.5 inline -translate-y-px" />;
 }
 
 export function ChannelsView() {
@@ -2128,13 +2375,13 @@ export function ChannelsView() {
           ],
           [
             "Telephone",
-            "Number required",
-            "Complete number authorization, compliance, SIP routing, and a real test call.",
+            "Bring your number",
+            "Connect a number you own from Twilio, Plivo, Exotel, Vonage or any SIP carrier under Phone numbers.",
           ],
           [
             "WhatsApp",
-            "Not connected",
-            "Requires an approved provider account and verified sender.",
+            "Via integrations",
+            "Connect WhatsApp Business under Integrations so AI employees can send confirmations and replies.",
           ],
           [
             "Instagram & Messenger",

@@ -23,7 +23,7 @@ const instrumentSerif = Instrument_Serif({
 export const metadata: Metadata = {
   metadataBase: new URL("https://www.getresolvex.com"),
   title: {
-    default: "ResolveX - Your customers reach out. ResolveX gets it done.",
+    default: "ResolveX - AI employees for customer support and sales",
     template: "%s | ResolveX",
   },
   description:
@@ -55,7 +55,7 @@ export const metadata: Metadata = {
     shortcut: "/icon.svg",
   },
   openGraph: {
-    title: "ResolveX - Your customers reach out. ResolveX gets it done.",
+    title: "ResolveX - AI employees for customer support and sales",
     description:
       "Answer enquiries, capture leads and resolve requests across every connected channel.",
     type: "website",
