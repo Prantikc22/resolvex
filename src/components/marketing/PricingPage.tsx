@@ -72,7 +72,7 @@ const questions = [
   ],
   [
     "How is voice billed?",
-    "AI voice is $0.12 per connected minute on your website or phone line, covering the speech and language models. Phone numbers stay with your own carrier (Twilio, Plivo, Exotel, Vonage or any SIP provider), which bills its own call rates. Voice and phone agents start with the paid plan; the free trial includes Arlo text replies.",
+    "AI voice is $0.20 per connected minute on your website or phone line, covering the speech and language models. Phone numbers stay with your own carrier (Twilio, Plivo, Exotel, Vonage or any SIP provider), which bills its own call rates. Voice and phone agents start with the paid plan; the free trial includes Arlo text replies.",
   ],
   [
     "Can we keep data in our own environment?",
@@ -236,7 +236,7 @@ export function PricingPage() {
             [
               Phone,
               "Voice",
-              "$0.12 per connected AI voice minute. Your phone carrier bills its own rates.",
+              "$0.20 per connected AI voice minute. Your phone carrier bills its own rates.",
             ],
             [
               ShieldCheck,

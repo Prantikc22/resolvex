@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { executeComposioTool } from "@/lib/providers/composio";
+import { reserveEmployeeAction } from "@/lib/billing/guards";
+import { createAdminClient } from "@/lib/supabase/admin";
 import {
   defaultToolAccess,
   sanitizeToolOutput,
@@ -169,6 +171,7 @@ export async function POST(request: Request) {
       .single();
     if (startError) throw startError;
     try {
+      await reserveEmployeeAction(createAdminClient(), organizationId);
       const result = sanitizeToolOutput(
         await executeComposioTool({
           organizationId,

@@ -90,7 +90,7 @@ export async function POST(request: Request) {
         Number(limits?.monthly_limit_minor ?? employee.usage_budget_cents),
         Number(employee.usage_budget_cents),
       ),
-      subscription?.status,
+      subscription,
     );
     if (limits?.hard_stop !== false && spentMinor >= limitMinor)
       return NextResponse.json(

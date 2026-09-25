@@ -10,10 +10,7 @@ const PLATFORM_HOSTS = new Set([
 ]);
 
 export type HelpCenterDomainStatus =
-  | "unconfigured"
-  | "pending"
-  | "verified"
-  | "error";
+  "unconfigured" | "pending" | "verified" | "error";
 
 export type HelpCenterDomainVerification = {
   type?: "TXT";

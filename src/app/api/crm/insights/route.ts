@@ -2,6 +2,9 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { askJev } from "@/lib/providers/jev";
 import { getCurrentOrganization } from "@/lib/supabase/current-org";
+import { consumeUsageGuard } from "@/lib/billing/guards";
+import { usageGuards } from "@/lib/pricing";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 const schema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("contact"), id: z.string().uuid() }),
@@ -22,6 +25,22 @@ export async function POST(request: Request) {
       return NextResponse.json(
         { error: "A read-only member cannot refresh CRM decisions." },
         { status: 403 },
+      );
+
+    if (
+      !(await consumeUsageGuard(
+        createAdminClient(),
+        `crm-insights:${organizationId}`,
+        usageGuards.crmInsightsPerHour,
+        3_600,
+      ))
+    )
+      return NextResponse.json(
+        {
+          error:
+            "CRM insights refresh up to 60 times an hour. Try again shortly.",
+        },
+        { status: 429 },
       );
 
     const table = input.type === "contact" ? "contacts" : "deals";

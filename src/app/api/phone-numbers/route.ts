@@ -102,11 +102,11 @@ export async function POST(request: Request) {
         { error: "An active subscription is required for telephone service." },
         { status: 402 },
       );
-    if (!voiceIncluded(subscription?.status))
+    if (!voiceIncluded(subscription))
       return NextResponse.json(
         {
           error:
-            "AI phone calls start with the paid plan. The free trial includes Arlo text replies only.",
+            "AI phone calls need an active paid plan. Trials, unpaid invoices and scheduled cancellations are text-only.",
         },
         { status: 402 },
       );

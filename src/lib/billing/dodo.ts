@@ -182,7 +182,8 @@ export async function reportDodoUsage(admin: SupabaseClient) {
         .from("calls")
         .select("id,organization_id,duration_seconds")
         .eq("organization_id", subscription.organization_id)
-        .eq("status", "completed")
+        // Transferred, abandoned and failed calls still used minutes.
+        .not("status", "in", "(queued,ringing,in_progress)")
         .gt("duration_seconds", 0)
         .is("billing_reported_at", null)
         .gte("created_at", since)

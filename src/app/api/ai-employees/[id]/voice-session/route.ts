@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { voiceIncluded } from "@/lib/pricing";
 import { createSignedConversationUrl } from "@/lib/providers/elevenlabs";
 import { getCurrentOrganization } from "@/lib/supabase/current-org";
 
@@ -13,6 +14,19 @@ export async function POST(
       return NextResponse.json(
         { error: "Workspace not found." },
         { status: 401 },
+      );
+    const { data: subscription } = await supabase
+      .from("subscriptions")
+      .select("status,provider,metadata")
+      .eq("organization_id", organizationId)
+      .maybeSingle();
+    if (!voiceIncluded(subscription))
+      return NextResponse.json(
+        {
+          error:
+            "Voice runs on an active paid plan. Trials and scheduled cancellations are text-only.",
+        },
+        { status: 402 },
       );
     const { data: employee } = await supabase
       .from("ai_employees")

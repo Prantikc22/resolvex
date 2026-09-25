@@ -1,13 +1,31 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { voiceIncluded, voiceSpendCeilingMinor } from "../src/lib/pricing";
+import {
+  subscriptionSeats,
+  voiceIncluded,
+  voiceSpendCeilingMinor,
+} from "../src/lib/pricing";
 
-test("free trials include text only, never voice or phone minutes", () => {
-  assert.equal(voiceIncluded("trialing"), false);
-  assert.equal(voiceSpendCeilingMinor(5000, "trialing"), 0);
+const paid = { provider: "dodo", status: "active", metadata: { agents: 3 } };
+
+test("voice runs only on an active, paid, non-cancelling subscription", () => {
+  assert.equal(voiceIncluded(paid), true);
+  assert.equal(voiceSpendCeilingMinor(5000, paid), 5000);
+  for (const blocked of [
+    { ...paid, status: "trialing" },
+    { ...paid, status: "past_due" },
+    { ...paid, status: "cancelled" },
+    { ...paid, metadata: { cancel_at_period_end: true } },
+    { ...paid, provider: "paddle" },
+    null,
+  ]) {
+    assert.equal(voiceIncluded(blocked), false);
+    assert.equal(voiceSpendCeilingMinor(5000, blocked), 0);
+  }
 });
 
-test("paid workspaces keep their configured voice budget", () => {
-  assert.equal(voiceIncluded("active"), true);
-  assert.equal(voiceSpendCeilingMinor(5000, "active"), 5000);
+test("seat count falls back to one", () => {
+  assert.equal(subscriptionSeats(paid), 3);
+  assert.equal(subscriptionSeats(null), 1);
+  assert.equal(subscriptionSeats({ metadata: { agents: "x" } }), 1);
 });

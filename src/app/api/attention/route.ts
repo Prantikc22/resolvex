@@ -2,6 +2,9 @@ import { NextResponse } from "next/server";
 import { executeComposioTool } from "@/lib/providers/composio";
 import { askJev, jevConfigured, type JevQuestion } from "@/lib/providers/jev";
 import { getCurrentOrganization } from "@/lib/supabase/current-org";
+import { consumeUsageGuard } from "@/lib/billing/guards";
+import { usageGuards } from "@/lib/pricing";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { gmailMessageUrl } from "@/lib/integrations/gmail-link";
 
 type JsonRecord = Record<string, unknown>;
@@ -256,6 +259,20 @@ export async function GET() {
     return NextResponse.json(
       { error: "Workspace not found." },
       { status: 401 },
+    );
+  const allowed = await consumeUsageGuard(
+    createAdminClient(),
+    `attention:${organizationId}`,
+    usageGuards.attentionPerHour,
+    3_600,
+  );
+  if (!allowed)
+    return NextResponse.json(
+      {
+        error:
+          "The attention brief refreshes up to 20 times an hour. Try again shortly.",
+      },
+      { status: 429 },
     );
   const { data: integrations } = await supabase
     .from("integrations")

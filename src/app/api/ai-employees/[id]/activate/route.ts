@@ -4,6 +4,7 @@ import { employeeTemplates } from "@/lib/ai/employee-templates";
 import { hasWorkspaceAccess } from "@/lib/billing/access";
 import { voiceIncluded } from "@/lib/pricing";
 import {
+  assignBolnaInboundAgent,
   bolnaConfigured,
   createBolnaAgent,
   updateBolnaAgent,
@@ -64,10 +65,10 @@ export async function POST(
     // are provisioned once the subscription is paid.
     const { data: subscription } = await supabase
       .from("subscriptions")
-      .select("status")
+      .select("status,provider,metadata")
       .eq("organization_id", organizationId)
       .maybeSingle();
-    const voiceAllowed = voiceIncluded(subscription?.status);
+    const voiceAllowed = voiceIncluded(subscription);
     const deferredChannels = voiceAllowed
       ? []
       : (employee.assigned_channels ?? []).filter((channel: string) =>
@@ -97,7 +98,7 @@ export async function POST(
     const admin = createAdminClient();
     const { data: existingProviders } = await admin
       .from("ai_provider_agents")
-      .select("provider,channel,external_agent_id")
+      .select("provider,channel,external_agent_id,status")
       .eq("organization_id", organizationId)
       .eq("ai_employee_id", id);
     const template =
@@ -124,7 +125,9 @@ export async function POST(
       if (wantsWebsiteVoice) {
         const current = existingProviders?.find(
           (row) =>
-            row.provider === "elevenlabs" && row.channel === "website_voice",
+            row.provider === "elevenlabs" &&
+            row.channel === "website_voice" &&
+            row.status === "active",
         );
         let externalAgentId = current?.external_agent_id as string | undefined;
         if (externalAgentId) {
@@ -164,7 +167,10 @@ export async function POST(
 
       if (wantsTelephone) {
         const current = existingProviders?.find(
-          (row) => row.provider === "bolna" && row.channel === "telephone",
+          (row) =>
+            row.provider === "bolna" &&
+            row.channel === "telephone" &&
+            row.status === "active",
         );
         let externalAgentId = current?.external_agent_id as string | undefined;
         if (externalAgentId) {
@@ -198,6 +204,33 @@ export async function POST(
           channel: "telephone",
           externalAgentId,
         });
+        // Numbers stay connected to the workspace while voice is paused;
+        // point them at the recreated agent so inbound calls resume.
+        const { data: numbers } = await admin
+          .from("phone_numbers")
+          .select("id,external_id,provider_metadata")
+          .eq("organization_id", organizationId)
+          .eq("status", "active")
+          .contains("assigned_employee_ids", [id])
+          .not("external_id", "is", null);
+        for (const number of numbers ?? []) {
+          if (number.provider_metadata?.bolna_agent_id === externalAgentId)
+            continue;
+          await assignBolnaInboundAgent({
+            agentId: externalAgentId,
+            phoneNumberId: number.external_id,
+          });
+          await admin
+            .from("phone_numbers")
+            .update({
+              provider_metadata: {
+                ...(number.provider_metadata ?? {}),
+                bolna_agent_id: externalAgentId,
+              },
+              updated_at: new Date().toISOString(),
+            })
+            .eq("id", number.id);
+        }
       }
 
       const legacyProvider =

@@ -1,6 +1,7 @@
 import { after, NextResponse } from "next/server";
 import { z } from "zod";
 import { executeComposioTool } from "@/lib/providers/composio";
+import { reserveEmployeeAction } from "@/lib/billing/guards";
 import {
   assignBolnaInboundAgent,
   createBolnaSipTrunk,
@@ -167,6 +168,7 @@ export async function PATCH(request: Request) {
             .select("id")
             .single();
           if (executionError) throw executionError;
+          await reserveEmployeeAction(createAdminClient(), organizationId);
           executionResult = sanitizeToolOutput(
             await executeComposioTool({
               organizationId,

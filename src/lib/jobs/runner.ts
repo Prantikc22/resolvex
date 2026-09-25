@@ -3,6 +3,8 @@ import "server-only";
 import crypto from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { askArlo } from "@/lib/ai/arlo";
+import { reserveEmployeeAction } from "@/lib/billing/guards";
+import { usageGuards } from "@/lib/pricing";
 import { createHumanHandoff } from "@/lib/handoff";
 import { executeComposioTool } from "@/lib/providers/composio";
 import { getBolnaExecution } from "@/lib/providers/bolna";
@@ -66,7 +68,11 @@ function resolveTemplates(value: unknown, context: JsonRecord): unknown {
 }
 
 function nextRun(schedule: JsonRecord, from: Date) {
-  const minutes = Math.max(1, Number(schedule.interval_minutes ?? 0));
+  // Older flows may predate the minimum interval; clamp rather than trust.
+  const minutes = Math.max(
+    usageGuards.minFlowIntervalMinutes,
+    Number(schedule.interval_minutes ?? 0),
+  );
   if (!Number.isFinite(minutes) || minutes <= 0) return null;
   return new Date(from.getTime() + minutes * 60_000).toISOString();
 }
@@ -413,6 +419,7 @@ async function executeFlowJob(admin: SupabaseClient, job: EmployeeJob) {
     } else if (type === "run_employee") {
       if (toolCalls >= job.max_tool_calls)
         throw new Error("Maximum action calls reached.");
+      await reserveEmployeeAction(admin, job.organization_id);
       output = await runEmployeeAction(admin, job, action);
       spendMinor += Number(asRecord(output).costMinor ?? 0);
       if (spendMinor > job.max_spend_minor)
@@ -421,6 +428,7 @@ async function executeFlowJob(admin: SupabaseClient, job: EmployeeJob) {
     } else if (type === "composio_tool") {
       if (toolCalls >= job.max_tool_calls)
         throw new Error("Maximum tool calls reached.");
+      await reserveEmployeeAction(admin, job.organization_id);
       output = await executeComposioAction(admin, job, action, index, results);
       if (asRecord(output).waitingApprovalId) {
         await admin

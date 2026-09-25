@@ -6,6 +6,7 @@ import {
 import { createAdminClient } from "@/lib/supabase/admin";
 import { reportDodoUsage } from "@/lib/billing/dodo";
 import { billingProvider } from "@/lib/billing/provider";
+import { suspendLapsedVoice } from "@/lib/voice/suspension";
 
 function authorized(request: Request) {
   const secret = process.env.CRON_SECRET?.trim();
@@ -28,7 +29,11 @@ export async function POST(request: Request) {
             return { reported: 0, error: "usage_report_failed" };
           })
         : null;
-    return NextResponse.json({ scheduled, jobs, usage });
+    const voice = await suspendLapsedVoice(admin).catch((error) => {
+      console.error("Voice suspension sweep failed", error);
+      return { suspended: 0, error: "voice_sweep_failed" };
+    });
+    return NextResponse.json({ scheduled, jobs, usage, voice });
   } catch (error) {
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "Worker failed." },

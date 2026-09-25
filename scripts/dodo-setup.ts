@@ -2,7 +2,7 @@
  * Idempotently provisions the ResolveX catalog in Dodo Payments:
  *   - "AI resolutions" and "Voice minutes" usage meters
  *   - the "ResolveX One" subscription product ($15 per seat / month with
- *     50 included resolutions, $0.39 per additional resolution and $0.12 per
+ *     50 included resolutions, $0.39 per additional resolution and $0.20 per
  *     connected voice minute)
  * Then previews a 3-seat checkout so the totals can be checked by eye.
  *
@@ -44,7 +44,7 @@ function productPrice(resolutionMeterId: string, voiceMeterId: string) {
     tax_inclusive: false,
     meters: [
       { meter_id: resolutionMeterId, price_per_unit: "39", free_threshold: 50 },
-      { meter_id: voiceMeterId, price_per_unit: "12", free_threshold: 0 },
+      { meter_id: voiceMeterId, price_per_unit: "20", free_threshold: 0 },
     ],
   };
 }

@@ -51,7 +51,7 @@ export const categoryComparison: Record<
     ],
     [
       "Website voice and phone agents",
-      "Included, $0.12 / minute",
+      "Included, $0.20 / minute",
       "Separate product or partner",
     ],
     ["Built-in sales CRM", "Included", "Separate product"],
@@ -69,7 +69,7 @@ export const categoryComparison: Record<
       "Included",
       "Chat-first, other channels vary",
     ],
-    ["Website voice assistant", "Included, $0.12 / minute", "Rarely available"],
+    ["Website voice assistant", "Included, $0.20 / minute", "Rarely available"],
     [
       "AI employees that complete tasks",
       "Included, with approvals",
@@ -95,7 +95,7 @@ export const categoryComparison: Record<
       "Included",
       "Usually needs a separate help desk",
     ],
-    ["Voice on web and phone", "Included, $0.12 / minute", "Varies"],
+    ["Voice on web and phone", "Included, $0.20 / minute", "Varies"],
     ["Sales CRM and follow-ups", "Included", "Not included"],
     [
       "Approvals for risky actions",
@@ -133,7 +133,7 @@ export const categoryComparison: Record<
     ],
     [
       "All-in voice price",
-      "$0.12 / minute including models",
+      "$0.20 / minute including models",
       "Platform fee plus model and telephony costs",
     ],
     [
@@ -617,7 +617,7 @@ export const competitors: Competitor[] = [
     switchReasons: [
       "No code: choose Arlo Receptionist, connect your number and go live.",
       "Calls land in a real inbox with transcripts, CRM updates and human transfer.",
-      "One all-in voice price of $0.12 a minute, including the speech and language models.",
+      "One all-in voice price of $0.20 a minute, including the speech and language models.",
     ],
     migration:
       "Point your SIP trunk or carrier number at ResolveX and reuse your call script as the employee’s instructions.",
@@ -635,7 +635,7 @@ export const competitors: Competitor[] = [
     switchReasons: [
       "Ready-made receptionist, support and sales roles instead of an API to assemble.",
       "Knowledge grounding, approvals, inbox and CRM already built.",
-      "Predictable $0.12 per minute rather than stacking several provider bills.",
+      "Predictable $0.20 per minute rather than stacking several provider bills.",
     ],
     migration:
       "Connect your existing number over SIP and move prompts into the AI employee setup.",

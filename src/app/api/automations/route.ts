@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { usageGuards } from "@/lib/pricing";
 import { z } from "zod";
 import { getCurrentOrganization } from "@/lib/supabase/current-org";
 
@@ -28,7 +29,12 @@ const createSchema = z.object({
   toolSlug: z.string().trim().max(200).optional().default(""),
   toolArguments: z.record(z.string(), z.unknown()).optional().default({}),
   scheduleAt: z.string().datetime().optional(),
-  intervalMinutes: z.number().int().min(5).max(525_600).optional(),
+  intervalMinutes: z
+    .number()
+    .int()
+    .min(usageGuards.minFlowIntervalMinutes)
+    .max(525_600)
+    .optional(),
 });
 const updateSchema = z.object({ id: z.string().uuid(), enabled: z.boolean() });
 const deleteSchema = z.object({ id: z.string().uuid() });

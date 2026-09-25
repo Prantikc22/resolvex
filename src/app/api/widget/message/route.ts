@@ -8,6 +8,8 @@ import { sendWorkspaceWebhooks } from "@/lib/integrations/webhooks";
 import { processEmployeeJobs } from "@/lib/jobs/runner";
 import { classifyCustomerSignal, jevConfigured } from "@/lib/providers/jev";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { consumeUsageGuard } from "@/lib/billing/guards";
+import { subscriptionSeats, usageGuards } from "@/lib/pricing";
 
 const schema = z.object({
   key: z.string().uuid(),
@@ -155,7 +157,17 @@ export async function POST(request: Request) {
       .single();
     if (incomingError) throw incomingError;
 
-    if (jevConfigured()) {
+    if (
+      jevConfigured() &&
+      (await consumeUsageGuard(
+        supabase,
+        `decisions:${organization.id}`,
+        usageGuards.aiConversationsPerSeatPerDay *
+          2 *
+          subscriptionSeats(subscription),
+        86_400,
+      ))
+    ) {
       const currentConversation = conversation;
       after(async () => {
         try {
@@ -304,6 +316,7 @@ export async function POST(request: Request) {
       (item) => item.sender_type === "ai",
     ).length;
     let allowanceAvailable = false;
+    let dailyLimitReached = false;
     if (approvedContext && aiReplies < 5) {
       const monthStart = new Date();
       monthStart.setUTCDate(1);
@@ -320,10 +333,22 @@ export async function POST(request: Request) {
       );
       if (reservationError) throw reservationError;
       allowanceAvailable = reserved === true;
+      // A daily ceiling per seat keeps automated or abusive traffic from
+      // generating AI cost beyond what the workspace pays for.
+      if (allowanceAvailable && aiReplies === 0) {
+        allowanceAvailable = await consumeUsageGuard(
+          supabase,
+          `ai-conversations:${organization.id}`,
+          usageGuards.aiConversationsPerSeatPerDay *
+            subscriptionSeats(subscription),
+          86_400,
+        );
+        dailyLimitReached = !allowanceAvailable;
+      }
     }
     const handoffMessage = !approvedContext
       ? "I don’t have an approved source for that yet. I’ve handed this to a teammate who can help."
-      : aiReplies >= 5
+      : aiReplies >= 5 || dailyLimitReached
         ? "I’m handing this conversation to a teammate so you get a careful answer."
         : "This workspace has used its included AI allowance for the month. A teammate will reply instead.";
     const result = allowanceAvailable
