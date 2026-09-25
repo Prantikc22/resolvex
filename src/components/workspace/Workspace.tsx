@@ -75,6 +75,7 @@ import { cn } from "@/lib/utils";
 import { KnowledgeManager } from "@/components/workspace/KnowledgeManager";
 import { LiveInbox } from "@/components/workspace/LiveInbox";
 import { TeamBillingView } from "@/components/workspace/TeamBillingView";
+import { BillingHubView } from "@/components/workspace/BillingHubView";
 import { TeamManagementView } from "@/components/workspace/TeamManagementView";
 import {
   ArloLiveView,
@@ -2264,12 +2265,16 @@ export function Workspace({
       case "integrations":
         return demo ? <IntegrationsView /> : <ConnectView />;
       case "usage":
-        return demo ? <TeamBillingView /> : <UsageView />;
+        return demo ? (
+          <TeamBillingView />
+        ) : (
+          <BillingHubView billingConfigured={capabilities.billing} />
+        );
       case "team":
         return demo ? (
           <TeamBillingView />
         ) : (
-          <TeamManagementView billingConfigured={capabilities.billing} />
+          <TeamManagementView onManageBilling={() => setView("usage")} />
         );
       case "channels":
         return <ChannelsView />;
@@ -2280,7 +2285,7 @@ export function Workspace({
           <SettingsView
             identity={identity}
             billingConfigured={capabilities.billing}
-            onManageBilling={() => setView("team")}
+            onManageBilling={() => setView("usage")}
           />
         );
     }

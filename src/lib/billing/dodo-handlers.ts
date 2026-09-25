@@ -19,6 +19,9 @@ const checkoutSchema = agentsSchema.extend({
   interval: z.enum(["month", "year"]).default("month"),
 });
 const syncSchema = z.object({ subscriptionId: z.string().min(4).max(80) });
+const actionSchema = z.object({
+  action: z.enum(["start_now", "switch_annual"]),
+});
 const manageable = (role: string | null) =>
   role === "owner" || role === "admin";
 
@@ -183,6 +186,9 @@ export async function dodoPost(request: Request) {
 
   const sync = syncSchema.safeParse(body);
   if (sync.success) return dodoSync(organization, sync.data.subscriptionId);
+  const planAction = actionSchema.safeParse(body);
+  if (planAction.success)
+    return dodoPlanAction(organization, planAction.data.action);
 
   const parsed = checkoutSchema.safeParse(body);
   if (!parsed.success)
@@ -285,6 +291,75 @@ async function dodoSync(organization: Organization, subscriptionId: string) {
   } catch (error) {
     console.error("Dodo subscription sync failed", error);
     return NextResponse.json({ error: dodoError(error) }, { status: 502 });
+  }
+}
+
+/**
+ * Ends a free trial early or moves a monthly plan to annual. Dodo charges
+ * immediately and, with prevent_change, leaves the plan untouched if the
+ * payment fails. The workspace is re-synced from Dodo straight away.
+ */
+async function dodoPlanAction(
+  organization: Organization,
+  action: "start_now" | "switch_annual",
+) {
+  const { supabase, organizationId } = organization;
+  const config = dodoConfiguration();
+  const current = currentEnvironmentSubscription(
+    await currentSubscription(supabase, organizationId!),
+  );
+  const id = current?.provider_subscription_id;
+  if (!current || !id || !["active", "trialing"].includes(current.status ?? ""))
+    return NextResponse.json(
+      { error: "Start a subscription first." },
+      { status: 409 },
+    );
+  const seats = Number(current.metadata?.agents ?? 1);
+  const currentProduct =
+    typeof current.metadata?.product_id === "string"
+      ? current.metadata.product_id
+      : config.productId;
+  const trialing = current.status === "trialing";
+  if (action === "start_now" && !trialing)
+    return NextResponse.json(
+      { error: "The paid plan is already active." },
+      { status: 409 },
+    );
+  if (action === "switch_annual") {
+    if (!config.annualProductId)
+      return NextResponse.json(
+        { error: "Annual billing is not configured yet." },
+        { status: 503 },
+      );
+    if (currentProduct === config.annualProductId)
+      return NextResponse.json(
+        { error: "This workspace is already on annual billing." },
+        { status: 409 },
+      );
+  }
+  try {
+    await getDodo().subscriptions.changePlan(id, {
+      product_id:
+        action === "switch_annual" ? config.annualProductId! : currentProduct!,
+      quantity: seats,
+      // During a trial any change ends the trial and charges in full;
+      // mid-cycle, unused monthly time is credited toward the annual plan.
+      proration_billing_mode:
+        trialing || action === "start_now"
+          ? "full_immediately"
+          : "prorated_immediately",
+      effective_at: "immediately",
+      on_payment_failure: "prevent_change",
+    });
+    const subscription = await getDodo().subscriptions.retrieve(id);
+    await syncDodoSubscription(createAdminClient(), {
+      ...subscription,
+      metadata: { ...subscription.metadata, organization_id: organizationId! },
+    });
+    return dodoGet();
+  } catch (error) {
+    console.error("Dodo plan action failed", error);
+    return NextResponse.json({ error: dodoError(error) }, { status: 402 });
   }
 }
 

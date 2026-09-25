@@ -48,6 +48,7 @@ import {
   WidgetStudio,
   WorkforceSection,
 } from "@/components/marketing/HomeSections";
+import { PlanPriceWithToggle } from "@/components/marketing/AnnualOffer";
 import { ease, Label, Reveal } from "@/components/marketing/primitives";
 
 const demoConversations = [
@@ -867,13 +868,7 @@ function PricingPreview() {
             </h2>
           </div>
           <div className="lg:justify-self-end">
-            <div className="font-display text-6xl">
-              ${pricing.agent}
-              <span className="font-sans text-base text-[#6c6f76]">
-                {" "}
-                / full agent / month
-              </span>
-            </div>
+            <PlanPriceWithToggle />
             <p className="mt-3 max-w-lg text-sm leading-relaxed text-[#666970]">
               Everything is included. The first {pricing.includedResolutions}{" "}
               completed AI resolutions each month are included, then each

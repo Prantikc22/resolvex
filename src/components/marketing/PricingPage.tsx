@@ -16,6 +16,7 @@ import { BillCalculator } from "@/components/marketing/BillCalculator";
 import { Header } from "@/components/marketing/Header";
 import { MarketingFooter } from "@/components/marketing/MarketingFooter";
 import { ResolveWidget } from "@/components/widget/ResolveWidget";
+import { PlanPriceWithToggle } from "@/components/marketing/AnnualOffer";
 import { money, pricing } from "@/lib/pricing";
 
 const included = [
@@ -128,16 +129,8 @@ export function PricingPage() {
               <div className="text-xs font-bold uppercase tracking-[.12em] text-[#d8ff70]">
                 ResolveX One
               </div>
-              <div className="mt-4 font-display text-7xl">
-                ${pricing.agent}
-                <span className="font-sans text-sm text-white/40">
-                  {" "}
-                  / agent / month
-                </span>
-              </div>
-              <div className="mt-2 text-sm text-white/55">
-                or {money(pricing.annualSeat / 12)} / agent / month billed
-                yearly ({money(pricing.annualSeat)}) — two months free
+              <div className="mt-5">
+                <PlanPriceWithToggle dark />
               </div>
               <div className="mt-6 space-y-3 text-sm text-white/65">
                 {[

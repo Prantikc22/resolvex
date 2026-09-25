@@ -9,10 +9,36 @@ const day = 86_400_000;
 test("maps Dodo subscription states onto workspace access states", () => {
   const now = Date.parse("2026-09-25T00:00:00Z");
   const created = new Date(now - 2 * day).toISOString();
-  const base = { created_at: created, trial_period_days: 7 };
+  const trialEnd = new Date(now + 5 * day).toISOString();
+  const base = {
+    created_at: created,
+    trial_period_days: 7,
+    next_billing_date: trialEnd,
+  };
   assert.equal(workspaceStatus({ ...base, status: "active" }, now), "trialing");
+  // Trial ended early: the next charge is a month out, not at trial end.
   assert.equal(
-    workspaceStatus({ ...base, trial_period_days: 1, status: "active" }, now),
+    workspaceStatus(
+      {
+        ...base,
+        status: "active",
+        next_billing_date: new Date(now + 30 * day).toISOString(),
+      },
+      now,
+    ),
+    "active",
+  );
+  // Trial finished naturally and the first month was charged.
+  assert.equal(
+    workspaceStatus(
+      {
+        ...base,
+        created_at: new Date(now - 10 * day).toISOString(),
+        next_billing_date: new Date(now + 27 * day).toISOString(),
+        status: "active",
+      },
+      now,
+    ),
     "active",
   );
   assert.equal(

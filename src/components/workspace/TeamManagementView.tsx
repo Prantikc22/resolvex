@@ -4,7 +4,6 @@ import { Loader2, Plus, Trash2, Users } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { pricing } from "@/lib/pricing";
-import { SubscriptionBillingView } from "@/components/workspace/SubscriptionBillingView";
 
 type Member = { user_id: string; role: string; name: string; email: string };
 type Invitation = {
@@ -30,11 +29,10 @@ type TeamMutationResponse = {
 };
 
 export function TeamManagementView({
-  billingConfigured,
+  onManageBilling,
 }: {
-  billingConfigured: boolean;
+  onManageBilling: () => void;
 }) {
-  const [tab, setTab] = useState<"people" | "billing">("people");
   const [data, setData] = useState<TeamData | null>(null);
   const [email, setEmail] = useState("");
   const [role, setRole] = useState("agent");
@@ -60,7 +58,7 @@ export function TeamManagementView({
       });
       const result = (await response.json()) as TeamMutationResponse;
       if (!response.ok) {
-        if (result.code === "PAID_SEAT_REQUIRED") setTab("billing");
+        if (result.code === "PAID_SEAT_REQUIRED") onManageBilling();
         throw new Error(result.error ?? "Could not send invitation.");
       }
       setEmail("");
@@ -85,7 +83,7 @@ export function TeamManagementView({
       });
       const result = (await response.json()) as TeamMutationResponse;
       if (!response.ok) {
-        if (result.code === "PAID_SEAT_REQUIRED") setTab("billing");
+        if (result.code === "PAID_SEAT_REQUIRED") onManageBilling();
         throw new Error(result.error);
       }
       await load();
@@ -113,23 +111,6 @@ export function TeamManagementView({
       setBusy(false);
     }
   }
-  if (tab === "billing")
-    return (
-      <div className="flex min-h-0 flex-1 flex-col">
-        <div className="border-b bg-white px-7 pt-4">
-          <button
-            onClick={() => setTab("people")}
-            className="mr-5 border-b-2 border-transparent pb-3 text-xs font-semibold text-[#777]"
-          >
-            People
-          </button>
-          <button className="border-b-2 border-[#ff5c35] pb-3 text-xs font-semibold">
-            Billing
-          </button>
-        </div>
-        <SubscriptionBillingView billingConfigured={billingConfigured} />
-      </div>
-    );
   return (
     <div className="min-h-0 flex-1 overflow-y-auto bg-[#f5f4ef] p-4 text-[#17191d] md:p-7">
       <div className="mx-auto max-w-6xl">
@@ -153,17 +134,19 @@ export function TeamManagementView({
             <span className="ml-2 text-xs text-white/50">paid seats</span>
           </div>
         </div>
-        <div className="mt-5 border-b">
-          <button className="mr-5 border-b-2 border-[#ff5c35] pb-3 text-xs font-semibold">
-            People
-          </button>
-          <button
-            onClick={() => setTab("billing")}
-            className="border-b-2 border-transparent pb-3 text-xs font-semibold text-[#777]"
-          >
-            Billing
-          </button>
-        </div>
+        <button
+          type="button"
+          onClick={onManageBilling}
+          className="mt-5 flex w-full items-center justify-between rounded-lg border border-black/10 bg-white px-5 py-3.5 text-left text-sm hover:border-[#355cff]/40"
+        >
+          <span>
+            <b>Seats, plan and invoices</b>
+            <span className="ml-2 text-[#74777f]">
+              live under Usage &amp; billing
+            </span>
+          </span>
+          <span className="font-semibold text-[#355cff]">Open billing →</span>
+        </button>
         <section className="mt-6 rounded-lg border border-black/10 bg-white p-5">
           <h3 className="text-sm font-semibold">Invite a teammate</h3>
           <p className="mt-1 text-[11px] leading-relaxed text-[#7b7f87]">

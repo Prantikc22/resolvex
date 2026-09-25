@@ -25,7 +25,13 @@ type VoiceData = {
 };
 
 /** Prepaid voice minutes: balance, packs and recent activity. */
-export function VoicePacksCard() {
+export function VoicePacksCard({
+  trialing = false,
+  onStartPaidPlan,
+}: {
+  trialing?: boolean;
+  onStartPaidPlan?: () => void;
+}) {
   const [data, setData] = useState<VoiceData | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
 
@@ -142,10 +148,22 @@ export function VoicePacksCard() {
         </div>
       )}
       {!data.canPurchase && (
-        <p className="mt-4 rounded-[8px] bg-[#f5f6f8] px-3 py-2.5 text-[13px] text-[#6b6e75]">
-          Voice minutes are available on an active paid plan. Trials include
-          Arlo text replies only.
-        </p>
+        <div className="mt-4 flex flex-col justify-between gap-3 rounded-[8px] bg-[#f5f6f8] px-4 py-3 sm:flex-row sm:items-center">
+          <p className="text-[13px] text-[#55585f]">
+            {trialing
+              ? "Your free trial covers Arlo text replies. Voice needs the paid plan — start it now to buy minutes."
+              : "Voice minutes are available on an active paid plan that isn’t scheduled to cancel."}
+          </p>
+          {trialing && onStartPaidPlan && (
+            <button
+              type="button"
+              onClick={onStartPaidPlan}
+              className="h-9 shrink-0 rounded-[7px] bg-[#17191d] px-4 text-[13px] font-semibold text-white"
+            >
+              Start paid plan now
+            </button>
+          )}
+        </div>
       )}
 
       <div className="mt-5 grid gap-3 sm:grid-cols-3">

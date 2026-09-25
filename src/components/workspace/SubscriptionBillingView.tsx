@@ -15,6 +15,8 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { money, pricing } from "@/lib/pricing";
 import { VoicePacksCard } from "@/components/workspace/VoicePacksCard";
+import { AnnualUpgradeCard } from "@/components/workspace/AnnualUpgradeCard";
+import { IntervalToggle } from "@/components/marketing/AnnualOffer";
 
 type Subscription = {
   id: string | null;
@@ -159,6 +161,7 @@ export function SubscriptionBillingView({
   const [testMode, setTestMode] = useState(false);
   const [busy, setBusy] = useState(false);
   const [annualAvailable, setAnnualAvailable] = useState(false);
+  const [voiceRefresh, setVoiceRefresh] = useState(0);
   const [chosenInterval, setChosenInterval] = useState<"month" | "year">(
     "month",
   );
@@ -410,6 +413,48 @@ export function SubscriptionBillingView({
     }
   }
 
+  async function planAction(action: "start_now" | "switch_annual") {
+    const seats = subscription?.agents ?? 1;
+    const charge =
+      action === "start_now"
+        ? money(seats * (yearly ? pricing.annualSeat : pricing.agent))
+        : money(seats * pricing.annualSeat);
+    const message =
+      action === "start_now"
+        ? `End the free trial now and pay ${charge} plus applicable tax today? Voice minutes can be bought right after.`
+        : subscription?.status === "trialing"
+          ? `Switch to annual billing? This ends the trial and charges ${charge} plus applicable tax today for 12 months.`
+          : `Switch to annual billing? You pay ${charge} plus applicable tax for 12 months today, less credit for unused days on your monthly plan.`;
+    if (!window.confirm(message)) return;
+    setBusy(true);
+    try {
+      const response = await fetch("/api/billing/subscription", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action }),
+      });
+      const data = await billingResponse<BillingResponse>(response);
+      if (!response.ok)
+        throw new Error(data.error ?? "The payment could not be completed.");
+      setSubscription(data.subscription ?? null);
+      setUsage(data.usage);
+      toast.success(
+        action === "start_now"
+          ? "Your paid plan is active. Voice minutes are now available."
+          : "You’re on annual billing — two months free.",
+      );
+      setVoiceRefresh((value) => value + 1);
+    } catch (error) {
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "The payment could not be completed.",
+      );
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function managePayment() {
     setBusy(true);
     try {
@@ -463,6 +508,40 @@ export function SubscriptionBillingView({
           </div>
         )}
 
+        {subscription?.status === "trialing" && (
+          <section className="mt-5 flex flex-col justify-between gap-4 rounded-[10px] border border-[#355cff]/20 bg-[#eef3ff] p-5 sm:flex-row sm:items-center">
+            <div>
+              <h3 className="text-[15px] font-semibold">
+                Free trial until {dateLabel(subscription.currentPeriodEnd)}
+              </h3>
+              <p className="mt-1 text-[13px] leading-relaxed text-[#35518f]">
+                The trial includes Arlo text replies. Start your paid plan now
+                to unlock website voice, phone agents and voice minutes today.
+              </p>
+            </div>
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => void planAction("start_now")}
+              className="flex h-11 shrink-0 items-center justify-center gap-2 rounded-[8px] bg-[#355cff] px-5 text-[13px] font-semibold text-white disabled:opacity-50"
+            >
+              {busy ? <Loader2 size={15} className="animate-spin" /> : null}
+              Start paid plan now
+            </button>
+          </section>
+        )}
+
+        {annualAvailable &&
+          subscription?.interval === "month" &&
+          ["active", "trialing"].includes(subscription.status ?? "") &&
+          !subscription.cancelAtPeriodEnd && (
+            <AnnualUpgradeCard
+              seats={subscription.agents}
+              busy={busy}
+              onUpgrade={() => void planAction("switch_annual")}
+            />
+          )}
+
         {!configured && (
           <section className="mt-7 flex flex-col justify-between gap-5 rounded-[10px] border border-[#dbb96d]/45 bg-[#fff7df] p-5 sm:flex-row sm:items-center">
             <div>
@@ -513,21 +592,11 @@ export function SubscriptionBillingView({
               <div className="flex flex-col justify-between gap-6 rounded-[8px] bg-[#f5f4ef] p-5 sm:flex-row sm:items-center">
                 <div>
                   {annualAvailable && !subscription?.interval && (
-                    <div className="mb-3 inline-flex rounded-[7px] bg-white p-1 shadow-sm">
-                      {(["month", "year"] as const).map((option) => (
-                        <button
-                          key={option}
-                          type="button"
-                          onClick={() => setChosenInterval(option)}
-                          className={`h-8 rounded-[5px] px-3 text-xs font-semibold transition-colors ${
-                            chosenInterval === option
-                              ? "bg-[#17191d] text-white"
-                              : "text-[#6b6e75]"
-                          }`}
-                        >
-                          {option === "month" ? "Monthly" : "Annual · save 20%"}
-                        </button>
-                      ))}
+                    <div className="mb-4">
+                      <IntervalToggle
+                        value={chosenInterval}
+                        onChange={setChosenInterval}
+                      />
                     </div>
                   )}
                   <div className="text-[10px] font-bold uppercase tracking-[.1em] text-[#858891]">
@@ -765,7 +834,13 @@ export function SubscriptionBillingView({
             </section>
           </div>
         </div>
-        {!activationGate && provider === "dodo" && <VoicePacksCard />}
+        {!activationGate && provider === "dodo" && (
+          <VoicePacksCard
+            key={voiceRefresh}
+            trialing={subscription?.status === "trialing"}
+            onStartPaidPlan={() => void planAction("start_now")}
+          />
+        )}
       </div>
     </div>
   );
