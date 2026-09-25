@@ -72,7 +72,7 @@ const questions = [
   ],
   [
     "How is voice billed?",
-    "ResolveX charges a $0.02 platform fee per connected minute. Carrier and phone-number rates are passed through and vary by country. The estimate displays both separately before activation.",
+    "AI voice is $0.12 per connected minute on your website or phone line, covering the speech and language models. Phone numbers stay with your own carrier (Twilio, Plivo, Exotel, Vonage or any SIP provider), which bills its own call rates. Voice and phone agents start with the paid plan; the free trial includes Arlo text replies.",
   ],
   [
     "Can we keep data in our own environment?",
@@ -84,7 +84,7 @@ const questions = [
   ],
   [
     "Does the trial need a card?",
-    "The 7-day trial includes the complete product and 50 AI resolutions. Dodo Payments securely authorises a payment method at checkout, and the first subscription charge is due after the trial unless you cancel.",
+    "The 7-day trial includes the inbox, CRM, help center and Arlo text replies with 50 AI resolutions. AI voice and phone calls start with the paid plan. Dodo Payments securely authorises a payment method at checkout, and the first subscription charge is due after the trial unless you cancel.",
   ],
 ];
 
@@ -236,7 +236,7 @@ export function PricingPage() {
             [
               Phone,
               "Voice",
-              "$0.02 per connected minute plus transparent carrier rates.",
+              "$0.12 per connected AI voice minute. Your phone carrier bills its own rates.",
             ],
             [
               ShieldCheck,

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { subscriptionHasWorkspaceAccess } from "@/lib/billing/access";
 import { bolnaConfigured } from "@/lib/providers/bolna";
+import { voiceIncluded } from "@/lib/pricing";
 import { encryptServerSecret } from "@/lib/security/secrets";
 import { getCurrentOrganization } from "@/lib/supabase/current-org";
 
@@ -99,6 +100,14 @@ export async function POST(request: Request) {
     if (!subscriptionHasWorkspaceAccess(subscription))
       return NextResponse.json(
         { error: "An active subscription is required for telephone service." },
+        { status: 402 },
+      );
+    if (!voiceIncluded(subscription?.status))
+      return NextResponse.json(
+        {
+          error:
+            "AI phone calls start with the paid plan. The free trial includes Arlo text replies only.",
+        },
         { status: 402 },
       );
     if (

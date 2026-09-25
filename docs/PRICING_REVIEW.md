@@ -1,47 +1,51 @@
-# ResolveX pricing review
+# ResolveX pricing and unit economics
 
-Reviewed 25 September 2026 against the active product surface and current
-public competitor pricing.
+Reviewed 25 September 2026 against current vendor pricing.
 
-## Current launch price
+## Price list
 
-- $15 per paid agent per month.
-- 50 completed AI resolutions included per month.
-- $0.39 per additional completed AI resolution.
-- $0.02 per connected voice minute, plus carrier pass-through.
-- Human collaborators, drafts, and human handoffs are not billed as AI
-  resolutions.
+| Item | Price | Notes |
+| --- | --- | --- |
+| Agent seat | $15 / month | Collaborators free |
+| AI resolutions | 50 included per workspace per month, then $0.39 | Only when AI closes the conversation |
+| AI voice (web or phone) | $0.12 / connected minute | Changed from $0.02, which lost money |
+| Phone numbers | Customer's own carrier | ResolveX never resells numbers |
+| Free trial | 7 days, Arlo text only | Voice and phone start with the paid plan |
 
-## Recommendation
+## Cost per unit
 
-Keep the current numbers for launch. They are simple, easy to calculate in the
-Dodo Payments usage-based product, and the outcome-based resolution charge is materially
-below the commonly published $0.90-ish per-resolution AI add-on used by
-Gorgias. Do not change the paid amount in the UI without creating and mapping
-a new Dodo Payments product first.
+| Unit | Our cost | Price | Gross margin |
+| --- | --- | --- | --- |
+| AI resolution (≈6 LLM calls, 18k in / 2.4k out tokens on DeepSeek v4 Flash at $0.049 / $0.098 per M) | ≈ $0.002–0.005 | $0.39 | ≈ 95% after payment fees |
+| Web voice minute (ElevenLabs agents $0.08 / min + LLM) | ≈ $0.09 | $0.12 | ≈ 20% |
+| Phone minute (voice provider ≈ $0.045–0.06 / min) | ≈ $0.06 | $0.12 | ≈ 45% |
+| Tool call (Composio: 100k free / month, then $0.0003) | ≈ $0 | included | — |
+| Seat payment (Dodo: 4% + $0.40, +0.5% subscriptions, +1.5% international) | $1.08 US / $1.30 intl for 1 seat | $15 | ≈ 91–93% |
 
-The main improvement is clarity, not a price increase:
+Fixed platform costs (Vercel, Supabase, provider plans, email) are roughly
+$100–200 per month, so the business breaks even at about 10–15 paid seats.
 
-1. Call the $15 line an “agent seat” everywhere.
-2. Keep “completed AI resolution” as the billing event and explicitly exclude
-   drafts and human handoffs.
-3. Keep voice minutes and carrier charges separate in the calculator.
-4. Revisit the included allowance after launch telemetry. If most customers
-   exhaust 50 quickly, test a 100-resolution allowance or volume packs as a
-   new Dodo Payments product rather than silently changing existing subscriptions.
-5. Add annual billing only when a real annual Dodo Payments product is provisioned.
+## What changed in this review
 
-This avoids the two common pricing traps: seat-only pricing that hides AI
-usage, and AI pricing that looks cheap but has unclear resolution semantics.
-Gorgias describes a combined helpdesk and outcome-based AI model; Zendesk
-describes seat plans with outcome-based automated resolutions; Intercom also
-separates seat pricing from Fin usage. ResolveX's current model is
-competitive, but its advantage is the transparent definition of a billable
-resolution rather than a claim that it is universally the cheapest option.
+1. **Voice repriced to $0.12 / minute.** At $0.02 every voice minute lost about
+   $0.07. The Dodo `voice.minute` meter was updated to 12 cents.
+2. **Trials are text-only.** Voice and phone provisioning, voice sessions and
+   number connection are blocked while a subscription is `trialing`, so a free
+   trial can never create provider spend beyond cheap text replies.
+3. **Per-employee voice budgets** remain enforced before every voice session
+   and outbound call.
 
-Reference pages checked:
+## Watch list
 
-- https://www.gorgias.com/pricing
-- https://www.gorgias.com/blog/ai-agent-pricing
-- https://www.zendesk.com/pricing/
-- https://www.intercom.com/help/en/articles/9061614-fin-and-intercom-plans-explained
+- **Web voice margin is thin (~20%).** Move to an ElevenLabs volume plan, or
+  raise web voice to $0.15 if usage grows faster than negotiated rates fall.
+- **Unresolved AI conversations are free.** A busy site whose chats never close
+  pays only for seats. The LLM cost is tiny (≈ $0.002 per conversation), but
+  add a fair-use ceiling (for example 2,000 AI conversations per seat each
+  month) before enterprise-scale traffic arrives.
+- **Decision API (Jev) cost** is not yet metered; confirm its per-call price.
+- **Annual billing** at $12 / seat (two months free) would improve cash flow;
+  add it as a separate Dodo product when ready.
+
+Do not change a live price without creating a new Dodo product or meter price
+first; existing subscriptions keep the product they were sold.

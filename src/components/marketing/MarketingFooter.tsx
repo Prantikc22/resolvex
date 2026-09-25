@@ -4,30 +4,43 @@ import Link from "next/link";
 import { ArrowRight, ExternalLink, MessageCircle } from "lucide-react";
 import { Logo } from "@/components/brand/Logo";
 import { brand } from "@/lib/brand";
+import { competitors } from "@/lib/competitors";
 
 const columns = [
   {
     title: "Product",
     links: [
       ["AI employees", "/#employees"],
+      ["Chat & website voice", "/#widget"],
+      ["AI phone agents", "/#widget"],
+      ["Knowledge & help center", "/#knowledge"],
       ["Sales CRM", "/#crm"],
+      ["Attention brief", "/#attention"],
       ["Integrations", "/#integrations"],
-      ["Live demo", "/demo"],
       ["Pricing", "/pricing"],
-      ["Install messenger", "/install"],
-      ["Help center", "/help"],
-      ["Resources", "/resources"],
-      ["Field notes", "/blog"],
-      ["FAQ", "/faq"],
     ],
   },
   {
     title: "Compare",
     links: [
-      ["ResolveX vs Intercom", "/compare/intercom"],
-      ["ResolveX vs Freshdesk", "/compare/freshdesk"],
+      ...competitors
+        .filter((item) => item.popular)
+        .slice(0, 7)
+        .map((item) => [`vs ${item.name}`, `/compare/${item.slug}`]),
+      ["All comparisons", "/compare"],
+    ],
+  },
+  {
+    title: "Resources",
+    links: [
+      ["Live demo", "/demo"],
+      ["Install messenger", "/install"],
+      ["Help center", "/help"],
+      ["Resource library", "/resources"],
+      ["Field notes", "/blog"],
+      ["Use cases", "/use-cases"],
       ["Bill calculator", "/pricing#calculator"],
-      ["Migration guide", "/compare/intercom#migration"],
+      ["FAQ", "/faq"],
     ],
   },
   {
@@ -92,7 +105,7 @@ export function MarketingFooter({ cta = true }: { cta?: boolean }) {
           </div>
         )}
 
-        <div className="grid gap-12 border-b border-white/10 py-14 lg:grid-cols-[1.1fr_2fr]">
+        <div className="grid gap-12 border-b border-white/10 py-14 lg:grid-cols-[.75fr_2.25fr]">
           <div>
             <Logo inverse />
             <p className="mt-6 max-w-sm text-sm leading-relaxed text-white/48">
@@ -108,7 +121,7 @@ export function MarketingFooter({ cta = true }: { cta?: boolean }) {
               A ResoluteX product <ExternalLink size={14} />
             </a>
           </div>
-          <div className="grid grid-cols-2 gap-x-8 gap-y-10 sm:grid-cols-4">
+          <div className="grid grid-cols-2 gap-x-8 gap-y-10 sm:grid-cols-3 xl:grid-cols-5">
             {columns.map((column) => (
               <div key={column.title}>
                 <div className="text-[11px] font-bold uppercase tracking-[0.12em] text-white/30">

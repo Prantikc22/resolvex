@@ -68,10 +68,7 @@ export async function POST(request: Request) {
     }
     const { data, error } = await supabase
       .from("help_centers")
-      .upsert(
-        values,
-        { onConflict: "organization_id" },
-      )
+      .upsert(values, { onConflict: "organization_id" })
       .select()
       .single();
     if (error) throw error;

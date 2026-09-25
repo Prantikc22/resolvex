@@ -315,6 +315,14 @@ export function AIEmployeesView() {
     const data = await response.json();
     setBusy(null);
     if (!response.ok) return toast.error(data.error);
+    if (actionName === "activate" && data.deferredChannels?.length) {
+      toast.success(`${employee.name} is active on chat and email.`, {
+        description:
+          "Voice and phone switch on when your paid plan starts. Activate again after the trial to enable them.",
+      });
+      await load();
+      return;
+    }
     toast.success(
       actionName === "activate"
         ? `${employee.name} is active.`

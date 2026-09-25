@@ -12,7 +12,7 @@ export const metadata: Metadata = {
 const faqs = [
   [
     "Can I try ResolveX without a sales call?",
-    "Yes. The trial lasts 7 days. Dodo Payments securely authorises your payment method at checkout, and you can cancel before renewal. Create a workspace, add approved knowledge, and use the product demo before deciding.",
+    "Yes. The trial lasts 7 days and includes the inbox, CRM, help center and Arlo text replies; AI voice and phone calls start with the paid plan. Dodo Payments securely authorises your payment method at checkout, and you can cancel before renewal. Create a workspace, add approved knowledge, and use the product demo before deciding.",
   ],
   [
     "What does Arlo answer from?",

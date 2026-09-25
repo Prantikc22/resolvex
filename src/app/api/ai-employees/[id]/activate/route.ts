@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { employeeTemplates } from "@/lib/ai/employee-templates";
 import { hasWorkspaceAccess } from "@/lib/billing/access";
+import { voiceIncluded } from "@/lib/pricing";
 import {
   bolnaConfigured,
   createBolnaAgent,
@@ -59,8 +60,23 @@ export async function POST(
         { status: 404 },
       );
 
-    const wantsWebsiteVoice = employee.assigned_channels?.includes("voice");
-    const wantsTelephone = employee.assigned_channels?.includes("phone");
+    // Free trials run Arlo on text channels only; voice and phone providers
+    // are provisioned once the subscription is paid.
+    const { data: subscription } = await supabase
+      .from("subscriptions")
+      .select("status")
+      .eq("organization_id", organizationId)
+      .maybeSingle();
+    const voiceAllowed = voiceIncluded(subscription?.status);
+    const deferredChannels = voiceAllowed
+      ? []
+      : (employee.assigned_channels ?? []).filter((channel: string) =>
+          ["voice", "phone"].includes(channel),
+        );
+    const wantsWebsiteVoice =
+      voiceAllowed && employee.assigned_channels?.includes("voice");
+    const wantsTelephone =
+      voiceAllowed && employee.assigned_channels?.includes("phone");
     if (wantsWebsiteVoice && !process.env.ELEVENLABS_API_KEY)
       return NextResponse.json(
         { error: "ElevenLabs website voice is not configured on the server." },
@@ -222,6 +238,7 @@ export async function POST(
           provider,
           channel,
         })),
+        deferredChannels,
       });
     } catch (providerError) {
       const message =

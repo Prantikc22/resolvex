@@ -2,9 +2,25 @@ export const pricing = {
   agent: 15,
   includedResolutions: 50,
   resolution: 0.39,
-  voicePlatformMinute: 0.02,
+  voicePlatformMinute: 0.12,
   trialDays: 7,
 };
+
+/**
+ * Voice and phone have a real per-minute provider cost, so free trials
+ * include Arlo text replies only; voice starts with the paid subscription.
+ */
+export function voiceIncluded(subscriptionStatus: string | null | undefined) {
+  return subscriptionStatus !== "trialing";
+}
+
+/** Monthly voice spend ceiling in minor units; zero during a free trial. */
+export function voiceSpendCeilingMinor(
+  budgetMinor: number,
+  subscriptionStatus: string | null | undefined,
+) {
+  return voiceIncluded(subscriptionStatus) ? budgetMinor : 0;
+}
 
 export function estimateResolveX(
   agents: number,

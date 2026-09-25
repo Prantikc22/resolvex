@@ -61,7 +61,7 @@ legacy flow). Add `DODO_PAYMENTS_API_KEY` and `DODO_PAYMENTS_ENVIRONMENT`
 (`test_mode` or `live_mode`), then run `npm run dodo:setup`. It idempotently
 creates the AI-resolution and voice-minute meters and the "ResolveX One"
 product ($15/seat/month, 50 included resolutions, $0.39 per extra resolution,
-$0.02 per voice minute) and prints `DODO_PAYMENTS_PRODUCT_ID`.
+$0.12 per voice minute) and prints `DODO_PAYMENTS_PRODUCT_ID`.
 
 Register a webhook in Dodo pointing at `/api/billing/dodo/webhook` and put its
 signing secret in `DODO_PAYMENTS_WEBHOOK_KEY`. Customers are also synced when

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { voiceSpendCeilingMinor } from "@/lib/pricing";
 import { z } from "zod";
 import { makeBolnaCall } from "@/lib/providers/bolna";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -30,28 +31,37 @@ export async function POST(request: Request) {
         { error: "You cannot place calls." },
         { status: 403 },
       );
-    const [{ data: employee }, { data: providerAgent }, { data: limits }] =
-      await Promise.all([
-        supabase
-          .from("ai_employees")
-          .select("id,name,status,assigned_channels,usage_budget_cents")
-          .eq("id", input.employeeId)
-          .eq("organization_id", organizationId)
-          .single(),
-        supabase
-          .from("ai_provider_agents")
-          .select("external_agent_id,status")
-          .eq("organization_id", organizationId)
-          .eq("ai_employee_id", input.employeeId)
-          .eq("provider", "bolna")
-          .eq("channel", "telephone")
-          .single(),
-        supabase
-          .from("spending_limits")
-          .select("monthly_limit_minor,hard_stop")
-          .eq("organization_id", organizationId)
-          .maybeSingle(),
-      ]);
+    const [
+      { data: employee },
+      { data: providerAgent },
+      { data: limits },
+      { data: subscription },
+    ] = await Promise.all([
+      supabase
+        .from("ai_employees")
+        .select("id,name,status,assigned_channels,usage_budget_cents")
+        .eq("id", input.employeeId)
+        .eq("organization_id", organizationId)
+        .single(),
+      supabase
+        .from("ai_provider_agents")
+        .select("external_agent_id,status")
+        .eq("organization_id", organizationId)
+        .eq("ai_employee_id", input.employeeId)
+        .eq("provider", "bolna")
+        .eq("channel", "telephone")
+        .single(),
+      supabase
+        .from("spending_limits")
+        .select("monthly_limit_minor,hard_stop")
+        .eq("organization_id", organizationId)
+        .maybeSingle(),
+      supabase
+        .from("subscriptions")
+        .select("status")
+        .eq("organization_id", organizationId)
+        .maybeSingle(),
+    ]);
     if (
       employee?.status !== "active" ||
       !employee.assigned_channels?.includes("phone") ||
@@ -75,9 +85,12 @@ export async function POST(request: Request) {
       (sum, row) => sum + Math.max(0, Number(row.monetary_amount_minor ?? 0)),
       0,
     );
-    const limitMinor = Math.min(
-      Number(limits?.monthly_limit_minor ?? employee.usage_budget_cents),
-      Number(employee.usage_budget_cents),
+    const limitMinor = voiceSpendCeilingMinor(
+      Math.min(
+        Number(limits?.monthly_limit_minor ?? employee.usage_budget_cents),
+        Number(employee.usage_budget_cents),
+      ),
+      subscription?.status,
     );
     if (limits?.hard_stop !== false && spentMinor >= limitMinor)
       return NextResponse.json(

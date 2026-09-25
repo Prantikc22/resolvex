@@ -2,7 +2,11 @@ import { NextResponse } from "next/server";
 import { getCurrentOrganization } from "@/lib/supabase/current-org";
 
 function contactPhone(attributes: unknown) {
-  if (!attributes || typeof attributes !== "object" || Array.isArray(attributes))
+  if (
+    !attributes ||
+    typeof attributes !== "object" ||
+    Array.isArray(attributes)
+  )
     return null;
   const phone = (attributes as Record<string, unknown>).phone;
   return typeof phone === "string" && phone.trim() ? phone.trim() : null;

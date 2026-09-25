@@ -43,7 +43,9 @@ export function BillingActivationGate({
             </h1>
             <p className="mx-auto mt-2 max-w-xl text-sm leading-relaxed text-[#74777f]">
               Choose your paid agent seats and authorise the subscription. Your
-              seven-day trial starts when Dodo Payments completes checkout.
+              seven-day trial starts when Dodo Payments completes checkout. The
+              trial includes Arlo text replies; AI voice and phone calls switch
+              on with the paid plan.
             </p>
           </div>
           <SubscriptionBillingView

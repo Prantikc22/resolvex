@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { subscriptionHasWorkspaceAccess } from "@/lib/billing/access";
+import { voiceSpendCeilingMinor } from "@/lib/pricing";
 import { createSignedConversationUrl } from "@/lib/providers/elevenlabs";
 import { createAdminClient } from "@/lib/supabase/admin";
 
@@ -149,9 +150,17 @@ export async function POST(request: Request) {
         total + Math.max(0, Number(row.monetary_amount_minor ?? 0)),
       0,
     );
-    if (used >= employee.usage_budget_cents)
+    if (
+      used >=
+      voiceSpendCeilingMinor(employee.usage_budget_cents, subscription?.status)
+    )
       return NextResponse.json(
-        { error: "This employee’s monthly voice budget has been reached." },
+        {
+          error:
+            subscription?.status === "trialing"
+              ? "Voice is available once the subscription starts. Chat is fully available during the trial."
+              : "This employee’s monthly voice budget has been reached.",
+        },
         { status: 402 },
       );
     const result = await createSignedConversationUrl(

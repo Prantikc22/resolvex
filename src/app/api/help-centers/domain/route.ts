@@ -173,7 +173,10 @@ async function dnsState(
 export async function GET() {
   const { supabase, organizationId } = await getCurrentOrganization();
   if (!organizationId)
-    return NextResponse.json({ error: "Workspace not found." }, { status: 401 });
+    return NextResponse.json(
+      { error: "Workspace not found." },
+      { status: 401 },
+    );
   const { data, error } = await supabase
     .from("help_centers")
     .select(
@@ -181,7 +184,8 @@ export async function GET() {
     )
     .eq("organization_id", organizationId)
     .maybeSingle();
-  if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+  if (error)
+    return NextResponse.json({ error: error.message }, { status: 400 });
   return NextResponse.json({ domain: data });
 }
 
@@ -226,9 +230,7 @@ export async function POST(request: Request) {
         .from("help_centers")
         .update({
           custom_domain_status: status,
-          custom_domain_verified_at: verified
-            ? new Date().toISOString()
-            : null,
+          custom_domain_verified_at: verified ? new Date().toISOString() : null,
         })
         .eq("organization_id", organizationId)
         .select(
@@ -243,8 +245,8 @@ export async function POST(request: Request) {
         vercel,
         error: verified
           ? undefined
-          : vercel.error ??
-            "DNS is not ready yet. Add the records below and try Verify again.",
+          : (vercel.error ??
+            "DNS is not ready yet. Add the records below and try Verify again."),
       });
     }
 
@@ -300,9 +302,7 @@ export async function POST(request: Request) {
     return NextResponse.json(
       {
         error:
-          error instanceof Error
-            ? error.message
-            : "Could not connect domain.",
+          error instanceof Error ? error.message : "Could not connect domain.",
       },
       { status: 400 },
     );
@@ -313,7 +313,10 @@ export async function DELETE() {
   const { supabase, organizationId, membershipRole } =
     await getCurrentOrganization();
   if (!organizationId)
-    return NextResponse.json({ error: "Workspace not found." }, { status: 401 });
+    return NextResponse.json(
+      { error: "Workspace not found." },
+      { status: 401 },
+    );
   const forbidden = managerError(membershipRole);
   if (forbidden) return forbidden;
   const { data: center } = await supabase
@@ -332,6 +335,7 @@ export async function DELETE() {
       custom_domain_verified_at: null,
     })
     .eq("organization_id", organizationId);
-  if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+  if (error)
+    return NextResponse.json({ error: error.message }, { status: 400 });
   return NextResponse.json({ ok: true });
 }

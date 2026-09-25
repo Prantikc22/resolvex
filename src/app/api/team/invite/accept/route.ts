@@ -39,30 +39,35 @@ export async function POST(request: Request) {
       { status: 403 },
     );
   if (invitation.role !== "viewer") {
-    const [{ data: subscription }, { count: paidMembers }, { count: paidInvites }] =
-      await Promise.all([
-        admin
-          .from("subscriptions")
-          .select("status,metadata")
-          .eq("organization_id", invitation.organization_id)
-          .maybeSingle(),
-        admin
-          .from("memberships")
-          .select("user_id", { count: "exact", head: true })
-          .eq("organization_id", invitation.organization_id)
-          .in("role", ["owner", "admin", "agent"]),
-        admin
-          .from("invitations")
-          .select("id", { count: "exact", head: true })
-          .eq("organization_id", invitation.organization_id)
-          .is("accepted_at", null)
-          .gt("expires_at", new Date().toISOString())
-          .in("role", ["admin", "agent"]),
-      ]);
+    const [
+      { data: subscription },
+      { count: paidMembers },
+      { count: paidInvites },
+    ] = await Promise.all([
+      admin
+        .from("subscriptions")
+        .select("status,metadata")
+        .eq("organization_id", invitation.organization_id)
+        .maybeSingle(),
+      admin
+        .from("memberships")
+        .select("user_id", { count: "exact", head: true })
+        .eq("organization_id", invitation.organization_id)
+        .in("role", ["owner", "admin", "agent"]),
+      admin
+        .from("invitations")
+        .select("id", { count: "exact", head: true })
+        .eq("organization_id", invitation.organization_id)
+        .is("accepted_at", null)
+        .gt("expires_at", new Date().toISOString())
+        .in("role", ["admin", "agent"]),
+    ]);
     const requiredSeats = Math.max(1, (paidMembers ?? 0) + (paidInvites ?? 0));
     const purchasedSeats = Number(subscription?.metadata?.agents ?? 0);
     if (
-      !new Set(["active", "authenticated", "trialing"]).has(subscription?.status ?? "") ||
+      !new Set(["active", "authenticated", "trialing"]).has(
+        subscription?.status ?? "",
+      ) ||
       purchasedSeats < requiredSeats
     ) {
       return NextResponse.json(
@@ -74,16 +79,14 @@ export async function POST(request: Request) {
       );
     }
   }
-  const { error } = await admin
-    .from("memberships")
-    .upsert(
-      {
-        organization_id: invitation.organization_id,
-        user_id: user.id,
-        role: invitation.role,
-      },
-      { onConflict: "organization_id,user_id" },
-    );
+  const { error } = await admin.from("memberships").upsert(
+    {
+      organization_id: invitation.organization_id,
+      user_id: user.id,
+      role: invitation.role,
+    },
+    { onConflict: "organization_id,user_id" },
+  );
   if (error)
     return NextResponse.json(
       { error: "Could not add you to the workspace." },
