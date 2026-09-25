@@ -1,7 +1,6 @@
 import Razorpay from "razorpay";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { getPaddle } from "@/lib/billing/paddle";
-import { paddleConfiguration } from "@/lib/billing/provider";
+import { changeDodoSeats } from "@/lib/billing/dodo";
 
 export const PAID_ROLES = new Set(["owner", "admin", "agent"]);
 
@@ -51,30 +50,27 @@ export async function syncSubscriptionSeats(
   if (current === seats) return { synced: true, changed: false };
 
   const increasing = seats > current;
-  if (row.provider === "paddle") {
-    const priceId = paddleConfiguration().seatPriceId;
-    if (!priceId || !row.provider_subscription_id?.startsWith("sub_")) {
-      throw new Error("Paddle subscription settings are incomplete.");
+  if (row.provider === "dodo") {
+    if (!row.provider_subscription_id) {
+      throw new Error("Dodo Payments subscription settings are incomplete.");
     }
-    await getPaddle().subscriptions.update(row.provider_subscription_id, {
-      items: [{ priceId, quantity: seats }],
-      prorationBillingMode: increasing
-        ? "prorated_immediately"
-        : "prorated_next_billing_period",
-      onPaymentFailure: "prevent_change",
-    });
+    const { scheduled } = await changeDodoSeats(
+      row.provider_subscription_id,
+      current,
+      seats,
+    );
     const metadata = {
       ...(row.metadata ?? {}),
-      agents: seats,
-      pending_agents: null,
-      seat_change_scheduled: !increasing,
+      agents: scheduled ? current : seats,
+      pending_agents: scheduled ? seats : null,
+      seat_change_scheduled: scheduled,
     };
     const { error: updateError } = await supabase
       .from("subscriptions")
       .update({ metadata })
       .eq("organization_id", organizationId);
     if (updateError) throw updateError;
-    return { synced: true, changed: true, scheduled: !increasing };
+    return { synced: true, changed: true, scheduled };
   }
 
   const keyId = process.env.RAZORPAY_KEY_ID;

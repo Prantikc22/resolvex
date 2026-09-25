@@ -37,7 +37,7 @@ export async function GET() {
 
   const { data: subscription } = await supabase
     .from("subscriptions")
-    .select("status,provider,metadata")
+    .select("status,provider,current_period_end,metadata")
     .eq("organization_id", organizationId)
     .maybeSingle();
   if (!subscriptionHasWorkspaceAccess(subscription))
@@ -93,7 +93,7 @@ export async function POST(request: Request) {
 
     const { data: subscription } = await supabase
       .from("subscriptions")
-      .select("status,provider,metadata")
+      .select("status,provider,current_period_end,metadata")
       .eq("organization_id", organizationId)
       .maybeSingle();
     if (!subscriptionHasWorkspaceAccess(subscription))

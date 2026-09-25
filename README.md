@@ -9,7 +9,7 @@ ResolveX is a standalone customer-support platform that combines a shared inbox,
 - `/signup` and `/login` - Supabase-backed authentication
 - `/onboarding` - workspace, inbox, and AI-policy setup
 - `/app` - authenticated support workspace
-- `/api/billing/*` - Paddle checkout, usage billing, portal, and webhook endpoints, with Razorpay compatibility during migration
+- `/api/billing/*` - Dodo Payments checkout, usage metering, customer portal, and webhook endpoints, with Razorpay compatibility during migration
 
 ## Local setup
 
@@ -38,7 +38,7 @@ NEXT_PUBLIC_RAZORPAY_KEY_ID=
 RAZORPAY_WEBHOOK_SECRET=
 ```
 
-Never expose the Supabase service-role key, Paddle API key, webhook secret, or Razorpay secret to browser code. The `NEXT_PUBLIC_*` values are the only client-readable variables.
+Never expose the Supabase service-role key, Dodo Payments API key, webhook key, or Razorpay secret to browser code. The `NEXT_PUBLIC_*` values are the only client-readable variables.
 
 ## Database
 
@@ -54,13 +54,20 @@ npm run db:migrate
 
 Add the Razorpay keys to `.env.local`, configure the webhook URL as `/api/billing/webhook`, and set the same webhook secret in Razorpay and `RAZORPAY_WEBHOOK_SECRET`. Checkout can call `/api/billing/create-order`, then submit the returned payment details to `/api/billing/verify`.
 
-## Paddle
+## Dodo Payments
 
-Set `BILLING_PROVIDER=paddle`, add the Paddle API key, browser client token,
-seat price, overage price, and notification secret shown in `.env.example`.
-Configure signed notifications at `/api/billing/paddle/webhook`. The hourly
-usage job submits one idempotent charge per subscription period for completed
-AI resolutions above the 50 included allowance.
+Billing defaults to Dodo Payments (set `BILLING_PROVIDER=razorpay` only for the
+legacy flow). Add `DODO_PAYMENTS_API_KEY` and `DODO_PAYMENTS_ENVIRONMENT`
+(`test_mode` or `live_mode`), then run `npm run dodo:setup`. It idempotently
+creates the AI-resolution and voice-minute meters and the "ResolveX One"
+product ($15/seat/month, 50 included resolutions, $0.39 per extra resolution,
+$0.02 per voice minute) and prints `DODO_PAYMENTS_PRODUCT_ID`.
+
+Register a webhook in Dodo pointing at `/api/billing/dodo/webhook` and put its
+signing secret in `DODO_PAYMENTS_WEBHOOK_KEY`. Customers are also synced when
+they return from checkout, so test-mode checkouts work before the webhook is
+registered. The minute worker (`/api/jobs/process`) reports completed AI
+resolutions and voice minutes to the meters with idempotent event IDs.
 
 ## Welcome email
 

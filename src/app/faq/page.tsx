@@ -12,7 +12,7 @@ export const metadata: Metadata = {
 const faqs = [
   [
     "Can I try ResolveX without a sales call?",
-    "Yes. The trial lasts 7 days. Paddle securely authorises your payment method at checkout, and you can cancel before renewal. Create a workspace, add approved knowledge, and use the product demo before deciding.",
+    "Yes. The trial lasts 7 days. Dodo Payments securely authorises your payment method at checkout, and you can cancel before renewal. Create a workspace, add approved knowledge, and use the product demo before deciding.",
   ],
   [
     "What does Arlo answer from?",
@@ -32,7 +32,7 @@ const faqs = [
   ],
   [
     "Can I cancel without contacting sales?",
-    "The public cancellation and refund policy describes the process. Active customers can manage payment methods, invoices, and cancellation through the secure Paddle customer portal.",
+    "The public cancellation and refund policy describes the process. Active customers can manage payment methods, invoices, and cancellation through the secure Dodo Payments customer portal.",
   ],
   [
     "Does voice work everywhere?",

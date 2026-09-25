@@ -62,6 +62,23 @@ calling remains on the managed telephone runtime.
 
 ResolveX Flows use the native durable `employee_jobs` queue. Event-triggered flows are persisted before execution, scheduled flows are picked up by the Supabase Cron worker, and consequential Composio actions pause in Approvals before resuming automatically. Activepieces is deliberately not part of the runtime.
 
+## Billing (Dodo Payments test mode)
+
+1. Run `npm run dodo:setup` once per environment. It is idempotent and prints
+   the product ID; set it as `DODO_PAYMENTS_PRODUCT_ID`.
+2. Sign in as a workspace owner, open Billing, choose seats and press
+   **Start ResolveX One**. You are redirected to Dodo's hosted checkout.
+3. Pay with test card `4242 4242 4242 4242`, any future expiry, any CVC.
+   Declines can be tested with `4000 0000 0000 0002`.
+4. Dodo returns you to `/app?billing=return`; the workspace pulls the
+   subscription directly and shows **Trial active** within a few seconds.
+5. Change seats (increase = prorated immediately, decrease = next renewal),
+   open **Manage subscription & invoices** for the customer portal, then
+   cancel at period end.
+6. Resolve a conversation that Arlo answered. Within a minute the worker
+   reports it to the `ai.resolution` meter; check Dodo → Subscriptions →
+   usage. Completed calls are reported to the `voice.minute` meter.
+
 ## Required provider checks
 
 - Managed telephony webhooks must return `401` without the configured unguessable token.

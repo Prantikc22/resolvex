@@ -1,36 +1,35 @@
 import "server-only";
 
-export type BillingProvider = "paddle" | "razorpay";
+export type BillingProvider = "dodo" | "razorpay";
 
 export function billingProvider(): BillingProvider {
-  return process.env.BILLING_PROVIDER === "paddle" ? "paddle" : "razorpay";
+  return process.env.BILLING_PROVIDER === "razorpay" ? "razorpay" : "dodo";
 }
 
-export function paddleConfiguration() {
-  const apiKey = process.env.PADDLE_API_KEY;
-  const clientToken = process.env.NEXT_PUBLIC_PADDLE_CLIENT_TOKEN;
-  const seatPriceId = process.env.PADDLE_SEAT_PRICE_ID;
-  const overagePriceId = process.env.PADDLE_OVERAGE_PRICE_ID;
-  const environment =
-    process.env.NEXT_PUBLIC_PADDLE_ENV === "production"
-      ? "production"
-      : "sandbox";
+export type DodoEnvironment = "test_mode" | "live_mode";
+
+export function dodoConfiguration() {
+  const apiKey = process.env.DODO_PAYMENTS_API_KEY?.trim();
+  const productId = process.env.DODO_PAYMENTS_PRODUCT_ID?.trim();
+  const webhookKey = process.env.DODO_PAYMENTS_WEBHOOK_KEY?.trim();
+  const environment: DodoEnvironment =
+    process.env.DODO_PAYMENTS_ENVIRONMENT === "live_mode"
+      ? "live_mode"
+      : "test_mode";
   return {
     apiKey,
-    clientToken,
-    seatPriceId,
-    overagePriceId,
+    productId,
+    webhookKey,
     environment,
-    configured: Boolean(apiKey && clientToken && seatPriceId),
-    usageConfigured: Boolean(overagePriceId),
+    configured: Boolean(apiKey && productId),
   };
 }
 
 export function billingConfigured() {
-  if (billingProvider() === "paddle") return paddleConfiguration().configured;
+  if (billingProvider() === "dodo") return dodoConfiguration().configured;
   return Boolean(
     process.env.RAZORPAY_KEY_ID &&
-      process.env.RAZORPAY_KEY_SECRET &&
-      process.env.RAZORPAY_PLAN_ID,
+    process.env.RAZORPAY_KEY_SECRET &&
+    process.env.RAZORPAY_PLAN_ID,
   );
 }

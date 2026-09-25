@@ -11,7 +11,7 @@ Required for the full local surface:
 - Composio key
 - ElevenLabs key
 - Plivo Auth ID and Auth Token
-- Existing Paddle or Razorpay sandbox values
+- Dodo Payments test-mode API key and product ID (`npm run dodo:setup`)
 
 ## 2. Apply the additive schema
 

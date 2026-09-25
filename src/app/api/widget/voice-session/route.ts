@@ -25,7 +25,7 @@ export async function POST(request: Request) {
       );
     const { data: subscription } = await admin
       .from("subscriptions")
-      .select("status,provider,metadata")
+      .select("status,provider,current_period_end,metadata")
       .eq("organization_id", organization.id)
       .maybeSingle();
     if (!subscriptionHasWorkspaceAccess(subscription))

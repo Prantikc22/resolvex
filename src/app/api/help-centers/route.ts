@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { normalizeCustomDomain } from "@/lib/help-center/domain";
 import { getCurrentOrganization } from "@/lib/supabase/current-org";
 
 const schema = z.object({
@@ -25,7 +26,9 @@ export async function GET() {
     );
   const { data, error } = await supabase
     .from("help_centers")
-    .select("id,name,slug,custom_domain,accent,is_published")
+    .select(
+      "id,name,slug,custom_domain,custom_domain_status,custom_domain_target,custom_domain_verification,custom_domain_verified_at,accent,is_published",
+    )
     .eq("organization_id", organizationId)
     .maybeSingle();
   if (error)
@@ -48,17 +51,25 @@ export async function POST(request: Request) {
         { error: "Only workspace managers can publish a help center." },
         { status: 403 },
       );
+    const values: Record<string, unknown> = {
+      organization_id: organizationId,
+      name: input.name,
+      slug: input.slug,
+      accent: input.accent,
+      is_published: input.published,
+    };
+    if (input.customDomain !== undefined) {
+      const domain = normalizeCustomDomain(input.customDomain);
+      values.custom_domain = domain;
+      values.custom_domain_status = domain ? "pending" : "unconfigured";
+      values.custom_domain_target = null;
+      values.custom_domain_verification = {};
+      values.custom_domain_verified_at = null;
+    }
     const { data, error } = await supabase
       .from("help_centers")
       .upsert(
-        {
-          organization_id: organizationId,
-          name: input.name,
-          slug: input.slug,
-          custom_domain: input.customDomain || null,
-          accent: input.accent,
-          is_published: input.published,
-        },
+        values,
         { onConflict: "organization_id" },
       )
       .select()

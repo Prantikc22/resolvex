@@ -1,7 +1,5 @@
 "use client";
 
-import { initializePaddle } from "@paddle/paddle-js";
-
 import {
   ArrowRight,
   CalendarClock,
@@ -30,7 +28,7 @@ type Subscription = {
 };
 
 type BillingResponse = {
-  provider?: "paddle" | "razorpay";
+  provider?: "dodo" | "razorpay";
   configured?: boolean;
   keyId?: string;
   customer?: { email?: string; name?: string };
@@ -49,12 +47,9 @@ type BillingResponse = {
   paymentPending?: boolean;
   reused?: boolean;
   chargedImmediately?: boolean;
-  clientToken?: string;
-  environment?: "sandbox" | "production";
-  priceId?: string;
-  transactionId?: string;
+  environment?: "test_mode" | "live_mode";
+  checkoutUrl?: string;
   agents?: number;
-  customData?: Record<string, unknown>;
 };
 
 type CheckoutResponse = {
@@ -154,10 +149,11 @@ export function SubscriptionBillingView({
   const [subscription, setSubscription] = useState<Subscription | null>(null);
   const [usage, setUsage] = useState<BillingResponse["usage"]>();
   const [configured, setConfigured] = useState(billingConfigured);
-  const [provider, setProvider] = useState<"paddle" | "razorpay">("razorpay");
+  const [provider, setProvider] = useState<"dodo" | "razorpay">("dodo");
   const [agents, setAgents] = useState(1);
   const [requiredAgents, setRequiredAgents] = useState(1);
   const [loading, setLoading] = useState(true);
+  const [testMode, setTestMode] = useState(false);
   const [busy, setBusy] = useState(false);
   const estimatedTotal = useMemo(() => agents * pricing.agent, [agents]);
   const canEditSeats =
@@ -177,6 +173,7 @@ export function SubscriptionBillingView({
         throw new Error(data.error ?? "Could not load billing.");
       setConfigured(Boolean(data.configured));
       setProvider(data.provider ?? "razorpay");
+      setTestMode(data.environment === "test_mode");
       setSubscription(data.subscription ?? null);
       setUsage(data.usage);
       const minimum = data.requiredAgents ?? 1;
@@ -192,8 +189,65 @@ export function SubscriptionBillingView({
   }, []);
 
   useEffect(() => {
-    queueMicrotask(() => void load());
-  }, [load]);
+    const params = new URLSearchParams(window.location.search);
+    const returned = params.get("billing");
+    const subscriptionId = params.get("subscription_id");
+    if (returned) {
+      params.delete("billing");
+      params.delete("subscription_id");
+      params.delete("status");
+      const query = params.toString();
+      window.history.replaceState(
+        null,
+        "",
+        `${window.location.pathname}${query ? `?${query}` : ""}`,
+      );
+    }
+    if (returned === "cancelled") {
+      toast.info("Checkout was closed. No subscription was started.");
+    }
+    if (returned !== "return" || !subscriptionId) {
+      queueMicrotask(() => void load());
+      return;
+    }
+    // Returning from Dodo checkout: pull the subscription directly so the
+    // workspace unlocks without waiting for the webhook.
+    const pending = toast.loading("Confirming your subscription…");
+    void fetch("/api/billing/subscription", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ subscriptionId }),
+    })
+      .then(async (response) => {
+        const data = await billingResponse<BillingResponse>(response);
+        if (!response.ok)
+          throw new Error(data.error ?? "Could not confirm the subscription.");
+        const status = data.subscription?.status;
+        if (status === "active" || status === "trialing") {
+          toast.success("ResolveX One is active. Welcome aboard!", {
+            id: pending,
+          });
+          if (activationGate) {
+            window.location.replace("/app");
+            return;
+          }
+        } else {
+          toast.info(
+            "Payment received. Dodo Payments is still confirming the subscription.",
+            { id: pending },
+          );
+        }
+      })
+      .catch((error) =>
+        toast.error(
+          error instanceof Error
+            ? error.message
+            : "Could not confirm the subscription.",
+          { id: pending },
+        ),
+      )
+      .finally(() => void load());
+  }, [activationGate, load]);
 
   async function verify(response: CheckoutResponse) {
     const verifyResponse = await fetch("/api/billing/subscription/verify", {
@@ -222,50 +276,17 @@ export function SubscriptionBillingView({
       const data = await billingResponse<BillingResponse>(response);
       if (!response.ok)
         throw new Error(data.error ?? "Could not start checkout.");
-      if (data.provider === "paddle") {
+      if (data.provider === "dodo") {
         if (data.reused && data.subscription) {
           setSubscription(data.subscription);
-          toast.info("This workspace already has a Paddle subscription.");
+          toast.info("This workspace already has an active subscription.");
+          setBusy(false);
           return;
         }
-        if (!data.clientToken || !data.transactionId || !data.environment) {
-          throw new Error("Paddle checkout configuration is incomplete.");
-        }
-        const paddle = await initializePaddle({
-          token: data.clientToken,
-          environment: data.environment,
-          eventCallback(event) {
-            if (event.name === "checkout.completed") {
-              toast.success(
-                "Subscription authorised. Paddle is syncing the workspace.",
-              );
-              window.setTimeout(() => {
-                if (activationGate) {
-                  window.location.replace("/app");
-                  return;
-                }
-                void load();
-              }, 2500);
-              setBusy(false);
-            }
-            if (
-              event.name === "checkout.error" ||
-              event.name === "checkout.payment.error"
-            ) {
-              toast.error("Paddle could not complete checkout. Please retry.");
-              setBusy(false);
-            }
-          },
-        });
-        if (!paddle) throw new Error("Paddle Checkout did not initialize.");
-        paddle.Checkout.open({
-          transactionId: data.transactionId,
-          settings: {
-            variant: "one-page",
-            successUrl: `${window.location.origin}/app`,
-          },
-        });
-        setBusy(false);
+        if (!data.checkoutUrl)
+          throw new Error("Dodo Payments did not return a checkout link.");
+        toast.loading("Opening secure checkout…");
+        window.location.assign(data.checkoutUrl);
         return;
       }
       if (!data.subscription?.id || !data.keyId) {
@@ -330,8 +351,8 @@ export function SubscriptionBillingView({
       setSubscription(data.subscription ?? null);
       if (agents > (subscription?.agents ?? 1)) {
         toast.success(
-          provider === "paddle"
-            ? "Paddle collected the prorated seat amount and activated the seat."
+          provider === "dodo"
+            ? "The prorated seat amount was charged and the seat is active."
             : data.paymentPending
               ? "Razorpay is collecting the prorated amount. The seat activates after payment confirmation."
               : "The trial seat is authorised and will be included in the first monthly charge.",
@@ -417,23 +438,32 @@ export function SubscriptionBillingView({
           </h2>
           <p className="mt-2 max-w-2xl text-sm leading-relaxed text-[#74777f]">
             Authorise recurring billing through{" "}
-            {provider === "paddle" ? "Paddle" : "Razorpay"}, manage paid seats,
+            {provider === "dodo" ? "Dodo Payments" : "Razorpay"}, manage paid
+            seats,
             and cancel at the end of a billing cycle from one place.
           </p>
         </div>
+
+        {configured && testMode && (
+          <div className="mt-5 rounded-[8px] border border-[#355cff]/20 bg-[#eef2ff] px-4 py-3 text-xs leading-relaxed text-[#26357a]">
+            <strong>Test mode.</strong> Checkout uses Dodo Payments test mode —
+            no real card is charged. Use test card 4242 4242 4242 4242, any
+            future expiry, and any CVC.
+          </div>
+        )}
 
         {!configured && (
           <section className="mt-7 flex flex-col justify-between gap-5 rounded-[10px] border border-[#dbb96d]/45 bg-[#fff7df] p-5 sm:flex-row sm:items-center">
             <div>
               <h3 className="text-sm font-semibold">
-                {provider === "paddle"
-                  ? "Paddle catalog required"
+                {provider === "dodo"
+                  ? "Dodo Payments product required"
                   : "Razorpay Plan ID required"}
               </h3>
               <p className="mt-1 text-xs leading-relaxed text-[#766331]">
                 Complete the{" "}
-                {provider === "paddle"
-                  ? "Paddle product, price, and client-token"
+                {provider === "dodo"
+                  ? "Dodo Payments API key and product ID (run npm run dodo:setup)"
                   : "Razorpay plan"}{" "}
                 configuration before enabling checkout.
               </p>
@@ -630,8 +660,8 @@ export function SubscriptionBillingView({
                 {[
                   "7 days free before the first billing cycle",
                   "First 50 AI resolutions included",
-                  `${provider === "paddle" ? "Paddle" : "Razorpay"} stores and secures payment details`,
-                  provider === "paddle"
+                  `${provider === "dodo" ? "Dodo Payments" : "Razorpay"} stores and secures payment details`,
+                  provider === "dodo"
                     ? `${money(pricing.resolution)} per completed AI resolution after 50`
                     : "Human handoff after the included allowance",
                   "Cancel at the end of the current cycle",
@@ -656,7 +686,7 @@ export function SubscriptionBillingView({
               )}
               {canManageSubscription && !subscription?.cancelAtPeriodEnd && (
                 <div className="mt-6 grid gap-2">
-                  {provider === "paddle" && (
+                  {provider === "dodo" && (
                     <button
                       type="button"
                       disabled={busy}
@@ -686,7 +716,7 @@ export function SubscriptionBillingView({
                   <p className="mt-2 text-xs leading-relaxed text-[#74777f]">
                     ResolveX never receives raw card or mandate details.
                     Checkout authorisation happens on{" "}
-                    {provider === "paddle" ? "Paddle" : "Razorpay"}, then a
+                    {provider === "dodo" ? "Dodo Payments" : "Razorpay"}, then a
                     signed response and signed webhooks update this workspace.
                   </p>
                 </div>

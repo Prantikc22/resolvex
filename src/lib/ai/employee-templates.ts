@@ -27,7 +27,7 @@ export const employeeTemplates: Record<
       "Answer from approved business knowledge and verified customer context. Never invent account, order, policy, or action status. Ask for confirmation before consequential actions and escalate when evidence is missing.",
     greeting: "Hi, I’m Arlo from support. How can I help today?",
     channels: ["chat"],
-    recommendedToolkits: ["gmail", "notion", "shopify"],
+    recommendedToolkits: ["gmail", "notion", "shopify", "zendesk", "whatsapp"],
   },
   receptionist: {
     label: "Arlo Receptionist",
@@ -38,7 +38,7 @@ export const employeeTemplates: Record<
     greeting:
       "Thanks for calling. I’m Arlo, the virtual receptionist. How may I help?",
     channels: ["voice", "phone", "chat"],
-    recommendedToolkits: ["googlecalendar", "gmail"],
+    recommendedToolkits: ["googlecalendar", "gmail", "calendly", "whatsapp"],
   },
   sales: {
     label: "Arlo Sales",
@@ -49,7 +49,13 @@ export const employeeTemplates: Record<
     greeting:
       "Hi, I’m Arlo. Tell me what you’re hoping to accomplish and I’ll help with the right next step.",
     channels: ["chat", "voice", "phone"],
-    recommendedToolkits: ["hubspot", "googlecalendar", "gmail"],
+    recommendedToolkits: [
+      "hubspot",
+      "googlecalendar",
+      "gmail",
+      "pipedrive",
+      "calendly",
+    ],
   },
   customer_success: {
     label: "Arlo Customer Success",
@@ -60,7 +66,7 @@ export const employeeTemplates: Record<
     greeting:
       "Hi, I’m Arlo from customer success. What outcome can I help you move forward today?",
     channels: ["chat", "email"],
-    recommendedToolkits: ["gmail", "slack", "hubspot"],
+    recommendedToolkits: ["gmail", "slack", "hubspot", "intercom", "typeform"],
   },
   custom: {
     label: "Custom employee",

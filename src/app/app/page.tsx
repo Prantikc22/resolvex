@@ -27,7 +27,7 @@ export default async function AppPage() {
         .maybeSingle(),
       supabase
         .from("subscriptions")
-        .select("status,provider,metadata")
+        .select("status,provider,current_period_end,metadata")
         .eq("organization_id", organizationId)
         .maybeSingle(),
     ]);

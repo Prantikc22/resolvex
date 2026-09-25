@@ -3,7 +3,6 @@
 import {
   AnimatePresence,
   motion,
-  useInView,
   useMotionValueEvent,
   useScroll,
   useTransform,
@@ -44,52 +43,16 @@ import { ResolveWidget } from "@/components/widget/ResolveWidget";
 import { blogPosts } from "@/lib/blog";
 import { money, pricing } from "@/lib/pricing";
 import { cn } from "@/lib/utils";
-
-const ease = [0.22, 1, 0.36, 1] as const;
-
-function Reveal({
-  children,
-  className = "",
-  delay = 0,
-}: {
-  children: React.ReactNode;
-  className?: string;
-  delay?: number;
-}) {
-  const ref = useRef<HTMLDivElement>(null);
-  const visible = useInView(ref, { once: true, margin: "-70px" });
-  return (
-    <motion.div
-      ref={ref}
-      initial={{ opacity: 0, y: 30 }}
-      animate={visible ? { opacity: 1, y: 0 } : undefined}
-      transition={{ duration: 0.75, delay, ease }}
-      className={className}
-    >
-      {children}
-    </motion.div>
-  );
-}
-
-function Label({
-  children,
-  light = false,
-}: {
-  children: React.ReactNode;
-  light?: boolean;
-}) {
-  return (
-    <div
-      className={cn(
-        "flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.14em]",
-        light ? "text-white/48" : "text-[#6d7077]",
-      )}
-    >
-      <span className="size-1.5 rounded-full bg-[#ff5c35]" />
-      {children}
-    </div>
-  );
-}
+import {
+  AttentionSection,
+  CrmSection,
+  GuardrailsSection,
+  IntegrationsSection,
+  ProofStrip,
+  WidgetStudio,
+  WorkforceSection,
+} from "@/components/marketing/HomeSections";
+import { ease, Label, Reveal } from "@/components/marketing/primitives";
 
 const demoConversations = [
   ["AM", "Avery Morgan", "Can I change our billing cycle?", "Now", "#d9ff72"],
@@ -667,7 +630,7 @@ const systemFeatures = [
   {
     visual: "inbox",
     title: "One priority inbox",
-    copy: "Email, web chat, forms, and API events with identity and history attached.",
+    copy: "Email, web chat, calls, forms and API events with identity, history and CRM context attached.",
   },
   {
     visual: "ai",
@@ -682,12 +645,12 @@ const systemFeatures = [
   {
     visual: "help",
     title: "Branded help center",
-    copy: "Publish fast, searchable answers on your domain without another CMS.",
+    copy: "Publish searchable answers on help.yourbrand.com — custom domain, verified DNS, no extra CMS.",
   },
   {
     visual: "voice",
-    title: "Provider-connected voice",
-    copy: "Call from the conversation now, then connect a browser softphone provider for full call controls and timeline events.",
+    title: "AI voice, web and phone",
+    copy: "A talking assistant on your website, and AI phone agents on the number you already own.",
   },
   {
     visual: "outcomes",
@@ -1302,28 +1265,29 @@ function KnowledgeSection() {
 
 function VoiceSection() {
   return (
-    <section className="bg-[#c5dcff] px-4 py-24 sm:px-6 md:py-32">
+    <section id="voice" className="bg-[#c5dcff] px-4 py-24 sm:px-6 md:py-32">
       <div className="mx-auto grid max-w-[1380px] gap-12 lg:grid-cols-[.9fr_1.1fr] lg:items-center">
         <Reveal>
           <Label>When typing is not enough</Label>
           <h2 className="mt-5 text-balance text-5xl font-semibold leading-[.95] tracking-[-.055em] md:text-7xl">
-            Call from the
+            Pick up every call.
             <br />
             <span className="font-display font-normal italic">
-              same customer thread.
+              Even at 3 a.m.
             </span>
           </h2>
           <p className="mt-7 max-w-xl text-lg leading-relaxed text-[#4f617a]">
-            Start a device call from the conversation today. Connect your voice
-            provider when you need a true browser softphone, inbound routing,
-            recordings, transfers, and call events on the timeline.
+            Visitors can talk to your assistant right on your website. Connect
+            the number you already own from Twilio, Plivo, Exotel, Vonage or any
+            SIP carrier, and an AI employee answers, books, qualifies and
+            transfers — with the transcript on the customer’s timeline.
           </p>
           <div className="mt-8 grid gap-3 sm:grid-cols-2">
             {[
-              "Click-to-call from the conversation",
-              "Browser softphone with provider setup",
-              "Consent, recording, and call notes",
-              "Carrier rates passed through",
+              "Talking assistant in your web widget",
+              "Bring your own number over SIP",
+              "Transcripts and summaries on the timeline",
+              "Warm transfer to a human anytime",
             ].map((item) => (
               <div key={item} className="flex items-center gap-2 text-sm">
                 <CheckCircle2 size={16} className="text-[#285fa8]" />
@@ -1335,7 +1299,9 @@ function VoiceSection() {
         <Reveal className="relative min-h-[500px] overflow-hidden rounded-[8px] bg-[#111214] p-5 text-white shadow-[0_35px_90px_rgba(35,65,105,.2)] sm:p-8">
           <div className="flex items-center justify-between">
             <div>
-              <div className="text-xs text-white/35">Live callback</div>
+              <div className="text-xs text-white/35">
+                Inbound · Arlo Receptionist
+              </div>
               <div className="mt-2 text-xl font-semibold">Avery Morgan</div>
             </div>
             <span className="rounded-[5px] bg-[#d8ff70]/10 px-2.5 py-1.5 text-[10px] font-semibold text-[#d8ff70]">
@@ -1355,7 +1321,7 @@ function VoiceSection() {
               </motion.div>
               <div className="mt-8 font-mono text-3xl">06:42</div>
               <div className="mt-2 text-xs text-white/35">
-                Connected through your voice provider
+                Answered by AI on your business number
               </div>
             </div>
           </div>
@@ -1624,7 +1590,7 @@ function BigCTA() {
         </h2>
         <p className="mx-auto mt-8 max-w-2xl text-lg leading-relaxed text-white/72">
           Bring one inbox and one help page. We will help migrate the rest. No
-          card, no implementation fee, no sales call required.
+          implementation fee, no sales call, and nothing to pay for 7 days.
         </p>
         <div className="mt-10 flex flex-col justify-center gap-3 sm:flex-row">
           <Link
@@ -1651,10 +1617,17 @@ export function MarketingV2() {
     <main className="bg-white">
       <Header />
       <Hero />
+      <ProofStrip />
       <Features />
+      <WorkforceSection />
       <ArloSection />
+      <CrmSection />
+      <AttentionSection />
       <KnowledgeSection />
+      <WidgetStudio />
       <VoiceSection />
+      <IntegrationsSection />
+      <GuardrailsSection />
       <PricingPreview />
       <Comparison />
       <BlogSection />

@@ -9,19 +9,18 @@
     "lint": "eslint",
     "test": "node --import tsx --test tests/*.test.ts",
     "test:e2e": "playwright test",
-    "test:paddle": "tsx --env-file=.env.local scripts/test-paddle-sandbox.ts",
-    "db:migrate": "tsx --env-file=.env.local scripts/migrate.ts"
+    "db:migrate": "tsx --env-file=.env.local scripts/migrate.ts",
+    "dodo:setup": "tsx --env-file=.env.local scripts/dodo-setup.ts"
   },
   "dependencies": {
     "@composio/core": "^0.20.0",
     "@elevenlabs/react": "^1.15.2",
-    "@paddle/paddle-js": "^1.6.4",
-    "@paddle/paddle-node-sdk": "^3.10.0",
     "@supabase/ssr": "^0.12.4",
     "@supabase/supabase-js": "^2.112.0",
     "cheerio": "^1.2.0",
     "clsx": "^2.1.1",
     "date-fns": "^4.4.0",
+    "dodopayments": "^2.51.0",
     "framer-motion": "^12.43.0",
     "lucide-react": "^1.28.0",
     "motion": "^12.43.0",
@@ -32,6 +31,7 @@
     "react-dom": "19.2.8",
     "recharts": "^3.10.1",
     "sonner": "^2.0.7",
+    "standardwebhooks": "^1.1.1",
     "tailwind-merge": "^3.6.0",
     "unpdf": "^1.8.0",
     "zod": "^4.4.3"

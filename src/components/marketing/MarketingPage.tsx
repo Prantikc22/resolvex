@@ -751,7 +751,7 @@ function Pricing() {
               featured: true,
               features: [
                 "Everything in Start",
-                "300 AI resolutions included",
+                "50 AI resolutions included",
                 "Workflows and safe actions",
                 "SLAs, CSAT and advanced reports",
               ],

@@ -1,5 +1,11 @@
 import type { Metadata } from "next";
+import { headers } from "next/headers";
+import { PublishedHelpCenter } from "@/components/help/PublishedHelpCenter";
 import { MarketingV2 } from "@/components/marketing/MarketingV2";
+import { getPublishedHelpCenterForHost } from "@/lib/help-center/domain";
+import { createAdminClient } from "@/lib/supabase/admin";
+
+export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "ResolveX - Your customers reach out. ResolveX gets it done.",
@@ -16,7 +22,25 @@ export const metadata: Metadata = {
   },
 };
 
-export default function HomePage() {
+export default async function HomePage() {
+  const host = (await headers()).get("host") ?? "";
+  const customHelpCenter = await getPublishedHelpCenterForHost(host);
+  if (customHelpCenter) {
+    const admin = createAdminClient();
+    const { data: articles } = await admin
+      .from("knowledge_articles")
+      .select("id,title,body,source_url,updated_at")
+      .eq("organization_id", customHelpCenter.organization_id)
+      .eq("status", "approved")
+      .order("updated_at", { ascending: false })
+      .limit(100);
+    return (
+      <PublishedHelpCenter
+        helpCenter={customHelpCenter}
+        articles={articles ?? []}
+      />
+    );
+  }
   const jsonLd = [
     {
       "@context": "https://schema.org",

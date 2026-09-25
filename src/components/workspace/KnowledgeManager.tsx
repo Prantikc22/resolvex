@@ -32,6 +32,15 @@ type HelpCenter = {
   name: string;
   slug: string;
   custom_domain: string | null;
+  custom_domain_status?: "unconfigured" | "pending" | "verified" | "error";
+  custom_domain_target?: string | null;
+  custom_domain_verification?: {
+    name?: string;
+    value?: string;
+    target?: string;
+    vercel?: unknown;
+  } | null;
+  custom_domain_verified_at?: string | null;
   accent: string;
   is_published: boolean;
 };
@@ -64,6 +73,19 @@ function slugify(value: string) {
     .slice(0, 55);
 }
 
+function vercelChallenge(value: unknown) {
+  const candidate = Array.isArray(value) ? value[0] : value;
+  if (!candidate || typeof candidate !== "object") return null;
+  const record = candidate as Record<string, unknown>;
+  if (typeof record.domain !== "string" || typeof record.value !== "string")
+    return null;
+  return {
+    type: typeof record.type === "string" ? record.type : "TXT",
+    domain: record.domain,
+    value: record.value,
+  };
+}
+
 export function KnowledgeManager({ demo = false }: { demo?: boolean }) {
   const [mode, setMode] = useState<"sources" | "help">("sources");
   const [url, setUrl] = useState("");
@@ -77,6 +99,8 @@ export function KnowledgeManager({ demo = false }: { demo?: boolean }) {
     accent: "#ff5c35",
     is_published: false,
   });
+  const [domainInput, setDomainInput] = useState("");
+  const [domainLoading, setDomainLoading] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const urlRef = useRef<HTMLInputElement>(null);
 
@@ -92,7 +116,10 @@ export function KnowledgeManager({ demo = false }: { demo?: boolean }) {
       if (!sourceResponse.ok)
         throw new Error(sourceData.error ?? "Could not load sources.");
       setSources(sourceData.sources ?? []);
-      if (helpResponse.ok && helpData.helpCenter) setHelp(helpData.helpCenter);
+      if (helpResponse.ok && helpData.helpCenter) {
+        setHelp(helpData.helpCenter);
+        setDomainInput(helpData.helpCenter.custom_domain ?? "");
+      }
     } catch (error) {
       toast.error(
         error instanceof Error ? error.message : "Could not load knowledge.",
@@ -105,6 +132,10 @@ export function KnowledgeManager({ demo = false }: { demo?: boolean }) {
   useEffect(() => {
     queueMicrotask(() => void load());
   }, [load]);
+
+  const providerChallenge = vercelChallenge(
+    help.custom_domain_verification?.vercel,
+  );
 
   async function importWebsite(event: FormEvent) {
     event.preventDefault();
@@ -229,7 +260,6 @@ export function KnowledgeManager({ demo = false }: { demo?: boolean }) {
       const payload = {
         name: help.name,
         slug: slugify(help.slug || help.name),
-        customDomain: help.custom_domain || undefined,
         accent: help.accent,
         published: true,
       };
@@ -259,6 +289,78 @@ export function KnowledgeManager({ demo = false }: { demo?: boolean }) {
       );
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function connectDomain() {
+    if (demo) {
+      toast.info("Connect a domain from a published workspace.");
+      return;
+    }
+    setDomainLoading(true);
+    try {
+      const response = await fetch("/api/help-centers/domain", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ domain: domainInput }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error ?? "Could not connect domain.");
+      setHelp((value) => ({ ...value, ...data.domain }));
+      setDomainInput(data.domain?.custom_domain ?? domainInput);
+      toast.success(
+        data.vercel?.configured
+          ? "Domain connected. Add both DNS records, then verify it."
+          : "Domain saved. An administrator must enable Vercel domain registration before it can go live.",
+      );
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Could not connect domain.");
+    } finally {
+      setDomainLoading(false);
+    }
+  }
+
+  async function verifyDomain() {
+    setDomainLoading(true);
+    try {
+      const response = await fetch("/api/help-centers/domain", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "verify" }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error ?? "Could not verify domain.");
+      setHelp((value) => ({ ...value, ...data.domain }));
+      if (!data.verified) throw new Error(data.error ?? "DNS is not ready yet.");
+      toast.success("Custom domain verified and ready.");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Could not verify domain.");
+    } finally {
+      setDomainLoading(false);
+    }
+  }
+
+  async function disconnectDomain() {
+    if (!window.confirm("Disconnect this custom help-center domain?")) return;
+    setDomainLoading(true);
+    try {
+      const response = await fetch("/api/help-centers/domain", { method: "DELETE" });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error ?? "Could not disconnect domain.");
+      setDomainInput("");
+      setHelp((value) => ({
+        ...value,
+        custom_domain: null,
+        custom_domain_status: "unconfigured",
+        custom_domain_target: null,
+        custom_domain_verification: null,
+        custom_domain_verified_at: null,
+      }));
+      toast.success("Custom domain disconnected.");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Could not disconnect domain.");
+    } finally {
+      setDomainLoading(false);
     }
   }
 
@@ -513,6 +615,144 @@ export function KnowledgeManager({ demo = false }: { demo?: boolean }) {
                       />
                     </div>
                   </label>
+                  <div className="rounded-[6px] border border-black/10 bg-[#f8f7f2] p-3">
+                    <div className="flex items-center justify-between gap-3">
+                      <div>
+                        <span className="block text-[10px] font-semibold">
+                          Custom domain
+                        </span>
+                        <span className="mt-1 block text-[10px] leading-relaxed text-[#7a7d84]">
+                          Use a hostname such as help.yourcompany.com. You own
+                          the domain and keep control of its DNS.
+                        </span>
+                      </div>
+                      {help.custom_domain_status &&
+                        help.custom_domain_status !== "unconfigured" && (
+                          <span
+                            className={cn(
+                              "shrink-0 rounded-full px-2 py-1 text-[9px] font-semibold capitalize",
+                              help.custom_domain_status === "verified"
+                                ? "bg-[#e8fbd0] text-[#36731b]"
+                                : "bg-[#fff0c9] text-[#8b6410]",
+                            )}
+                          >
+                            {help.custom_domain_status}
+                          </span>
+                        )}
+                    </div>
+                    <div className="mt-3 flex gap-2">
+                      <input
+                        value={domainInput}
+                        onChange={(event) => setDomainInput(event.target.value)}
+                        placeholder="help.yourcompany.com"
+                        disabled={domainLoading}
+                        className="h-10 min-w-0 flex-1 rounded-[5px] border border-black/10 bg-white px-3 text-xs outline-none focus:border-[#ff5c35]"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => void connectDomain()}
+                        disabled={
+                          domainLoading ||
+                          !domainInput.trim() ||
+                          !help.is_published
+                        }
+                        className="h-10 rounded-[5px] bg-[#17191d] px-3 text-[10px] font-semibold text-white disabled:opacity-50"
+                      >
+                        {help.custom_domain ? "Reconnect" : "Connect"}
+                      </button>
+                    </div>
+                    {!help.is_published && (
+                      <p className="mt-2 text-[10px] text-[#8a8d94]">
+                        Publish the help center first, then connect its domain.
+                      </p>
+                    )}
+                    {help.custom_domain &&
+                      help.custom_domain_status !== "verified" && (
+                        <div className="mt-3 space-y-2 rounded-[5px] bg-white p-3 text-[10px] leading-relaxed text-[#6f737c]">
+                          <p>
+                            Add these records at your domain registrar. DNS
+                            changes can take a few minutes to propagate. Add
+                            every record shown here.
+                          </p>
+                          <div className="grid gap-1">
+                            <span>
+                              CNAME{" "}
+                              <b className="break-all text-[#17191d]">
+                                {help.custom_domain}
+                              </b>{" "}
+                              →{" "}
+                              <b className="break-all text-[#17191d]">
+                                {help.custom_domain_target ??
+                                  help.custom_domain_verification?.target ??
+                                  "cname.vercel-dns-0.com"}
+                              </b>
+                            </span>
+                            <span>
+                              TXT{" "}
+                              <b className="break-all text-[#17191d]">
+                                {help.custom_domain_verification?.name ??
+                                  "_resolvex-verification." + help.custom_domain}
+                              </b>{" "}
+                              →{" "}
+                              <b className="break-all text-[#17191d]">
+                                {help.custom_domain_verification?.value ?? "copy the value from Connect"}
+                              </b>
+                            </span>
+                            {providerChallenge && (
+                              <span>
+                                {providerChallenge.type}{" "}
+                                <b className="break-all text-[#17191d]">
+                                  {providerChallenge.domain}
+                                </b>{" "}
+                                →{" "}
+                                <b className="break-all text-[#17191d]">
+                                  {providerChallenge.value}
+                                </b>
+                              </span>
+                            )}
+                          </div>
+                          <div className="flex gap-2 pt-1">
+                            <button
+                              type="button"
+                              onClick={() => void verifyDomain()}
+                              disabled={domainLoading}
+                              className="h-8 rounded-[5px] bg-[#355cff] px-3 text-[10px] font-semibold text-white disabled:opacity-50"
+                            >
+                              Verify DNS
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => void disconnectDomain()}
+                              disabled={domainLoading}
+                              className="h-8 rounded-[5px] border border-black/10 px-3 text-[10px] font-semibold text-[#6f737c] disabled:opacity-50"
+                            >
+                              Disconnect
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    {help.custom_domain &&
+                      help.custom_domain_status === "verified" && (
+                        <div className="mt-3 flex items-center justify-between gap-2 text-[10px]">
+                          <a
+                            href={"https://" + help.custom_domain}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="flex items-center gap-1 font-semibold text-[#355cff]"
+                          >
+                            Open custom help center <ExternalLink size={11} />
+                          </a>
+                          <button
+                            type="button"
+                            onClick={() => void disconnectDomain()}
+                            disabled={domainLoading}
+                            className="text-[#8b8e95] underline"
+                          >
+                            Disconnect
+                          </button>
+                        </div>
+                      )}
+                  </div>
                   <label>
                     <span className="mb-2 block text-[10px] font-semibold">
                       Accent

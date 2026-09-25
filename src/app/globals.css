@@ -655,7 +655,12 @@ html[data-workspace-theme="dark"] body {
   animation: logo-marquee 30s linear infinite;
 }
 
-.logo-marquee:hover {
+.logo-marquee-reverse {
+  animation: logo-marquee 34s linear infinite reverse;
+}
+
+.logo-marquee:hover,
+.logo-marquee-reverse:hover {
   animation-play-state: paused;
 }
 
@@ -701,7 +706,8 @@ html[data-workspace-theme="dark"] body {
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
-  .logo-marquee {
+  .logo-marquee,
+  .logo-marquee-reverse {
     animation: none !important;
   }
 }

@@ -84,7 +84,7 @@ const questions = [
   ],
   [
     "Does the trial need a card?",
-    "The 7-day trial includes the complete product and 50 AI resolutions. Paddle securely authorises a payment method at checkout, and the first subscription charge is due after the trial unless you cancel.",
+    "The 7-day trial includes the complete product and 50 AI resolutions. Dodo Payments securely authorises a payment method at checkout, and the first subscription charge is due after the trial unless you cancel.",
   ],
 ];
 
@@ -114,7 +114,7 @@ export function PricingPage() {
               </h1>
               <p className="mt-7 max-w-2xl text-lg leading-relaxed text-white/52">
                 Every channel, workflow, report, and AI Copilot feature is
-                included. Full agents cost money. Collaborators do not. AI is
+                included. Full agents cost money. Collaborators do not. AI
                 includes 50 completed resolutions each month, with transparent
                 usage pricing after that.
               </p>

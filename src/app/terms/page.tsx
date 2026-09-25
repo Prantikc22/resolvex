@@ -31,7 +31,7 @@ export default function TermsPage() {
       </p>
       <h2>Trials, cancellation, and refunds</h2>
       <p>
-        Paddle may securely authorise a payment method when a trial begins.
+        Dodo Payments, our merchant of record, may securely authorise a payment method when a trial begins.
         Cancellation stops future renewal and access continues through the paid
         period unless the account is terminated for misuse. Refund eligibility and processing are
         described in our{" "}

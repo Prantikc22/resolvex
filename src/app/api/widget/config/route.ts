@@ -22,7 +22,7 @@ export async function GET(request: Request) {
       );
     const { data: subscription } = await supabase
       .from("subscriptions")
-      .select("status,provider,metadata")
+      .select("status,provider,current_period_end,metadata")
       .eq("organization_id", data.id)
       .maybeSingle();
     if (!subscriptionHasWorkspaceAccess(subscription)) {

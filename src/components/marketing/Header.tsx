@@ -108,7 +108,7 @@ export function Header() {
             className="hidden items-center gap-6 lg:flex"
             aria-label="Primary navigation"
           >
-            {marketingNav.slice(0, 4).map((item) => (
+            {marketingNav.map((item) => (
               <Link
                 key={item.label}
                 href={item.href}
@@ -131,12 +131,6 @@ export function Header() {
                 }
               />
             </button>
-            <Link
-              href="/about"
-              className="text-sm font-medium text-[#505662] transition-colors hover:text-[#101114]"
-            >
-              About
-            </Link>
           </nav>
           <div className="hidden items-center gap-2 md:flex">
             <Link
@@ -245,6 +239,7 @@ export function Header() {
               { label: "Resources", href: "/resources" },
               { label: "Field notes", href: "/blog" },
               { label: "FAQ", href: "/faq" },
+              { label: "About", href: "/about" },
             ]
               .filter(
                 (item, index, list) =>

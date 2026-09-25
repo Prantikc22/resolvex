@@ -1,6 +1,6 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { paddleConfiguration } from "@/lib/billing/provider";
+import { dodoConfiguration } from "@/lib/billing/provider";
 
 export const WORKSPACE_ACCESS_STATUSES = new Set([
   "authenticated",
@@ -13,21 +13,32 @@ export const WORKSPACE_ACCESS_STATUSES = new Set([
 type AccessSubscription = {
   status?: string | null;
   provider?: string | null;
+  current_period_end?: string | null;
   metadata?: Record<string, unknown> | null;
 };
 
 export function subscriptionHasWorkspaceAccess(
   subscription: AccessSubscription | null | undefined,
+  now = Date.now(),
 ) {
   if (!WORKSPACE_ACCESS_STATUSES.has(subscription?.status ?? "")) return false;
-  if (subscription?.provider !== "paddle") return true;
-  const configuredEnvironment = paddleConfiguration().environment;
-  const storedEnvironment = subscription.metadata?.paddle_environment;
-  // Records created before environment tagging were sandbox-only.
-  return (
-    storedEnvironment === configuredEnvironment ||
-    (storedEnvironment == null && configuredEnvironment === "sandbox")
-  );
+  if (subscription?.provider === "dodo") {
+    // Test-mode subscriptions never unlock a live-mode deployment.
+    return (
+      subscription.metadata?.dodo_environment ===
+      dodoConfiguration().environment
+    );
+  }
+  if (subscription?.provider === "paddle") {
+    // Legacy Paddle sandbox subscriptions no longer receive webhooks. Honour
+    // them until their paid period ends so existing workspaces can move to
+    // Dodo Payments without an interruption.
+    const end = subscription.current_period_end
+      ? new Date(subscription.current_period_end).getTime()
+      : Number.NaN;
+    return Number.isFinite(end) && end > now;
+  }
+  return true;
 }
 
 export async function hasWorkspaceAccess(
@@ -36,7 +47,7 @@ export async function hasWorkspaceAccess(
 ) {
   const { data, error } = await supabase
     .from("subscriptions")
-    .select("status,provider,metadata")
+    .select("status,provider,current_period_end,metadata")
     .eq("organization_id", organizationId)
     .maybeSingle();
   if (error) throw error;

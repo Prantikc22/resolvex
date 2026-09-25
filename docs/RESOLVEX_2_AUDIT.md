@@ -24,7 +24,7 @@ ResolveX will extend its native communication and automation systems rather than
 | Arlo            | Server-only OpenRouter client, approved-context boundary, prompt-injection instruction, conversation history, AI allowance reservation, handoff | Retain as the shared text engine. Improve model configuration, token/cost capture, retrieval, tools, and role-specific context.                     |
 | Voice           | Only legacy settings/call-dialog surfaces existed before ResolveX 2.0                                                                           | Missing before this work. The new adapter uses ElevenLabs Agents and private signed sessions.                                                       |
 | Telephony       | No live carrier adapter before ResolveX 2.0                                                                                                     | Missing before this work. Plivo search is now isolated behind a provider adapter; purchasing remains behind billing/compliance approval.            |
-| Billing         | Paddle and Razorpay subscription routes, signature verification, team-seat synchronization, AI-resolution overage batches                       | Retain. Preserve existing subscriptions and pricing. Add the new immutable usage/credit ledger and hard spend controls.                             |
+| Billing         | Dodo Payments and Razorpay subscription routes, signature verification, team-seat synchronization, AI-resolution overage batches                       | Retain. Preserve existing subscriptions and pricing. Add the new immutable usage/credit ledger and hard spend controls.                             |
 | User management | Invitations, role changes, seat checks, email delivery, owner protection                                                                        | Retain.                                                                                                                                             |
 | CRM             | Contacts existed, but companies, deals, activities, appointments, tasks, identifiers, and timeline did not                                      | Extend natively. A full external CRM is unnecessary; Composio should connect HubSpot or another supported CRM for customers who already use one.    |
 | Automation      | Message rules for priority, tags, and handoff                                                                                                   | Extend natively. Durable run records are now added; scheduled triggers, retries, and approval waits require a worker/queue before production scale. |
@@ -39,7 +39,7 @@ ResolveX will extend its native communication and automation systems rather than
 - Website messenger installation, configuration, public key rotation, inbound message persistence, and real live inbox display.
 - Human reply and resolve actions, including stopping AI replies after a human takes over.
 - Approved website/PDF knowledge ingestion and grounded Arlo replies through OpenRouter.
-- AI resolution metering and Paddle overage submission.
+- AI resolution and voice-minute metering reported to Dodo Payments meters.
 - Team invitations, roles, paid-seat checks, and provider seat synchronization.
 - Webhook integrations with URL and private-network validation.
 - Public marketing, demo, pricing, resources, help, comparison, legal, and status surfaces.
@@ -128,7 +128,7 @@ External resource mapping always originates from the authenticated workspace. `o
 | Composio        | Managed customer OAuth and tools | Provider plan limits apply                                   | Credential and 1,000-toolkit catalog verified; real customer OAuth/action journey still needs testing |
 | ElevenLabs      | Voice agents and browser voice   | Usage-based                                                  | Credential and 22-voice catalog verified; real agent creation and microphone session still required  |
 | Plivo           | Numbers, SIP, calls              | Number rental and usage charges; regional compliance applies | Credential/inventory access verified; purchase deliberately blocked pending billing/compliance flow  |
-| Paddle/Razorpay | Subscription and usage billing   | Existing providers                                           | Retained                                                                                             |
+| Dodo/Razorpay   | Subscription and usage billing   | Existing providers                                           | Retained                                                                                             |
 | Resend          | Transactional email              | Provider plan and verified domain required                   | Existing integration retained                                                                        |
 
 ## Security findings and controls
