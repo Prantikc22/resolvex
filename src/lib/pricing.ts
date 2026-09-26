@@ -63,6 +63,8 @@ type VoiceSubscription =
  * ever be consumed that we are unable to bill.
  */
 export function voiceIncluded(subscription: VoiceSubscription) {
+  if (subscription?.provider === "complimentary")
+    return subscription.status === "active";
   return (
     subscription?.provider === "dodo" &&
     subscription.status === "active" &&

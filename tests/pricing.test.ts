@@ -26,6 +26,17 @@ test("voice runs only on an active, paid, non-cancelling subscription", () => {
   }
 });
 
+test("complimentary workspaces keep voice while active", () => {
+  assert.equal(
+    voiceIncluded({ provider: "complimentary", status: "active" }),
+    true,
+  );
+  assert.equal(
+    voiceIncluded({ provider: "complimentary", status: "cancelled" }),
+    false,
+  );
+});
+
 test("seat count falls back to one", () => {
   assert.equal(subscriptionSeats(paid), 3);
   assert.equal(subscriptionSeats(null), 1);

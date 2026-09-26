@@ -154,9 +154,17 @@ export async function dodoGet() {
   if (denied) return denied;
   const { supabase, organizationId } = organization;
   try {
-    const row = currentEnvironmentSubscription(
-      await currentSubscription(supabase, organizationId!),
-    );
+    const stored = await currentSubscription(supabase, organizationId!);
+    if (stored?.provider === "complimentary" && stored.status === "active")
+      return NextResponse.json({
+        provider: "dodo",
+        configured: true,
+        complimentary: true,
+        subscription: null,
+        requiredAgents: await requiredPaidSeats(supabase, organizationId!),
+        usage: await usageSummary(supabase, organizationId!, null),
+      });
+    const row = currentEnvironmentSubscription(stored);
     const config = dodoConfiguration();
     // A plan-change charge on an Indian mandate can stay "processing" for up
     // to a day; surface it so the page explains the wait instead of offering

@@ -35,6 +35,7 @@ type BillingResponse = {
   provider?: "dodo" | "razorpay";
   configured?: boolean;
   annualAvailable?: boolean;
+  complimentary?: boolean;
   pendingPayment?: {
     amount: number;
     currency: string;
@@ -167,6 +168,7 @@ export function SubscriptionBillingView({
   const [busy, setBusy] = useState(false);
   const [annualAvailable, setAnnualAvailable] = useState(false);
   const [voiceRefresh, setVoiceRefresh] = useState(0);
+  const [complimentary, setComplimentary] = useState(false);
   const [pendingPayment, setPendingPayment] =
     useState<BillingResponse["pendingPayment"]>(null);
   const [chosenInterval, setChosenInterval] = useState<"month" | "year">(
@@ -196,6 +198,7 @@ export function SubscriptionBillingView({
       setProvider(data.provider ?? "razorpay");
       setTestMode(data.environment === "test_mode");
       setAnnualAvailable(Boolean(data.annualAvailable));
+      setComplimentary(Boolean(data.complimentary));
       setPendingPayment(data.pendingPayment ?? null);
       setSubscription(data.subscription ?? null);
       setUsage(data.usage);
@@ -536,6 +539,22 @@ export function SubscriptionBillingView({
           </p>
         </div>
 
+        {complimentary && (
+          <section className="mt-7 flex items-start gap-3 rounded-[10px] border border-[#3e8218]/25 bg-[#dff8bc] p-5">
+            <ShieldCheck size={18} className="mt-0.5 shrink-0 text-[#3e8218]" />
+            <div>
+              <h3 className="text-[15px] font-semibold text-[#17191d]">
+                Complimentary plan
+              </h3>
+              <p className="mt-1 text-[13px] leading-relaxed text-[#315b13]">
+                This workspace has full ResolveX access with no subscription and
+                nothing billed for seats or AI resolutions. Voice minutes are
+                still prepaid below.
+              </p>
+            </div>
+          </section>
+        )}
+
         {configured && testMode && (
           <div className="mt-5 rounded-[8px] border border-[#355cff]/20 bg-[#eef2ff] px-4 py-3 text-xs leading-relaxed text-[#26357a]">
             <strong>Test mode.</strong> No real card is charged. US / USD
@@ -620,7 +639,13 @@ export function SubscriptionBillingView({
           </section>
         )}
 
-        <div className="mt-7 grid gap-5 lg:grid-cols-[1.08fr_.92fr]">
+        <div
+          className={
+            complimentary
+              ? "hidden"
+              : "mt-7 grid gap-5 lg:grid-cols-[1.08fr_.92fr]"
+          }
+        >
           <section className="overflow-hidden rounded-[10px] border border-black/10 bg-white">
             <div className="border-b border-black/8 p-5 md:p-6">
               <div className="flex flex-wrap items-center justify-between gap-4">

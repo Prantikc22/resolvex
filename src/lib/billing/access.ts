@@ -22,6 +22,9 @@ export function subscriptionHasWorkspaceAccess(
   now = Date.now(),
 ) {
   if (!WORKSPACE_ACCESS_STATUSES.has(subscription?.status ?? "")) return false;
+  // Complimentary workspaces (the founder's own, partners) are never billed.
+  if (subscription?.provider === "complimentary")
+    return subscription.status === "active";
   if (subscription?.provider === "dodo") {
     // Test-mode subscriptions never unlock a live-mode deployment.
     return (
