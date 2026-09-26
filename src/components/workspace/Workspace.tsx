@@ -95,6 +95,10 @@ import {
 } from "@/components/workspace/ResolveXModules";
 import { PhoneNumbersView } from "@/components/workspace/PhoneNumbersView";
 import { SalesCRMView } from "@/components/workspace/SalesCRMView";
+import { installResilientFetch } from "@/lib/resilient-fetch";
+
+// Install before any screen mounts so first loads are covered too.
+installResilientFetch();
 
 type View =
   | "overview"

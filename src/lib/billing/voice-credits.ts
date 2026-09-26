@@ -122,3 +122,17 @@ export async function settleVoiceUsage(admin: SupabaseClient) {
   }
   return { settled: calls.length };
 }
+
+/** Why voice is off right now, phrased for the workspace owner. */
+export async function voicePauseReason(
+  admin: SupabaseClient,
+  organizationId: string,
+  subscription: Subscription,
+) {
+  if (!voiceIncluded(subscription))
+    return "Voice needs an active paid plan. Chat keeps working.";
+  const minutes = await voiceBalance(admin, organizationId);
+  if (minutes < voiceLimits.suspendBelowMinutes)
+    return `You have ${Math.max(0, minutes)} prepaid voice minutes. Add a voice pack under Usage & billing (at least ${voiceLimits.suspendBelowMinutes} minutes), then activate the employee again.`;
+  return "Voice minutes are available. Activate the employee again to switch voice back on.";
+}

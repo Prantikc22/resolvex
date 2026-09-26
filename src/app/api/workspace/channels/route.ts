@@ -1,4 +1,6 @@
 import { NextResponse } from "next/server";
+import { voicePauseReason } from "@/lib/billing/voice-credits";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { getCurrentOrganization } from "@/lib/supabase/current-org";
 
 type Channel = {
@@ -16,7 +18,7 @@ export async function GET() {
   if (!user || !organizationId)
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const [organization, employees, integrations, agents, numbers] =
+  const [organization, employees, integrations, agents, numbers, subscription] =
     await Promise.all([
       supabase
         .from("organizations")
@@ -34,13 +36,18 @@ export async function GET() {
         .eq("status", "connected"),
       supabase
         .from("ai_provider_agents")
-        .select("provider,channel,status,last_error")
+        .select("provider,channel,status")
         .eq("organization_id", organizationId),
       supabase
         .from("phone_numbers")
         .select("status")
         .eq("organization_id", organizationId)
         .eq("status", "active"),
+      supabase
+        .from("subscriptions")
+        .select("status,provider,metadata")
+        .eq("organization_id", organizationId)
+        .maybeSingle(),
     ]);
 
   const active = (employees.data ?? []).filter((e) => e.status === "active");
@@ -56,6 +63,14 @@ export async function GET() {
   const webVoice = agent("elevenlabs", "website_voice");
   const phoneAgent = agent("bolna", "telephone");
   const liveNumbers = numbers.data?.length ?? 0;
+  const pauseReason =
+    webVoice?.status === "paused" || phoneAgent?.status === "paused"
+      ? await voicePauseReason(
+          createAdminClient(),
+          organizationId,
+          subscription.data,
+        )
+      : null;
   const email = ["gmail", "outlook"].filter((app) =>
     connected.has(`composio:${app}`),
   );
@@ -114,8 +129,7 @@ export async function GET() {
             state: "paused",
             status: "Paused",
             detail:
-              webVoice.last_error ??
-              "Add prepaid voice minutes, then reactivate the employee.",
+              pauseReason ?? "Add prepaid voice minutes, then reactivate.",
             view: "usage",
           }
         : {
@@ -144,8 +158,7 @@ export async function GET() {
             phoneAgent?.status === "paused" ? "Paused" : "Bring your number",
           detail:
             phoneAgent?.status === "paused"
-              ? (phoneAgent.last_error ??
-                "Add prepaid voice minutes, then reactivate.")
+              ? (pauseReason ?? "Add prepaid voice minutes, then reactivate.")
               : "Connect a number you own from Twilio, Plivo, Exotel, Vonage or any SIP carrier.",
           view: "phone_numbers",
         },

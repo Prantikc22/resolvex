@@ -1,4 +1,6 @@
 import { NextResponse } from "next/server";
+import { voicePauseReason } from "@/lib/billing/voice-credits";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { z } from "zod";
 import {
   employeeTemplateIds,
@@ -69,10 +71,21 @@ export async function GET() {
     return NextResponse.json({ error: error.message }, { status: 400 });
   // Voice agents are paused when the plan or prepaid minutes lapse; surface
   // that per employee so the UI never offers a test that will be refused.
-  const { data: agents } = await supabase
-    .from("ai_provider_agents")
-    .select("ai_employee_id,channel,status,last_error")
-    .eq("organization_id", organizationId);
+  const [{ data: agents }, { data: subscription }] = await Promise.all([
+    supabase
+      .from("ai_provider_agents")
+      .select("ai_employee_id,channel,status")
+      .eq("organization_id", organizationId),
+    supabase
+      .from("subscriptions")
+      .select("status,provider,metadata")
+      .eq("organization_id", organizationId)
+      .maybeSingle(),
+  ]);
+  // Explain the current reason, not whatever was true when voice paused.
+  const pausedReason = (agents ?? []).some((row) => row.status === "paused")
+    ? await voicePauseReason(createAdminClient(), organizationId, subscription)
+    : null;
   const employees = (data ?? []).map((employee) => {
     const web = (agents ?? []).find(
       (row) =>
@@ -81,7 +94,7 @@ export async function GET() {
     return {
       ...employee,
       voice_status: web?.status ?? null,
-      voice_note: web?.status === "paused" ? web.last_error : null,
+      voice_note: web?.status === "paused" ? pausedReason : null,
     };
   });
   return NextResponse.json({

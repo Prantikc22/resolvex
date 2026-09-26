@@ -234,13 +234,16 @@ html[data-workspace-theme="dark"] {
   background: rgba(255, 255, 255, 0.04) !important;
 }
 
-.workspace-dark .inbox-row-active {
-  background: #f6f7f9 !important;
-  color: #151619 !important;
+/* Selected conversation: a blue highlight with light text. Specificity must
+   beat the generic dark-mode background remap for bg-[#edf1ff]. */
+.workspace-dark .workspace-main .inbox-row-active {
+  background: rgba(91, 121, 255, 0.2) !important;
+  color: #f5f7fb !important;
 }
 
-.workspace-dark .inbox-row-active .inbox-muted {
-  color: rgba(0, 0, 0, 0.48) !important;
+.workspace-dark .workspace-main .inbox-row-active .inbox-muted,
+.workspace-dark .workspace-main .inbox-row-active .inbox-faint {
+  color: rgba(245, 247, 251, 0.68) !important;
 }
 
 .workspace-dark .inbox-value {
@@ -365,9 +368,29 @@ html[data-workspace-theme="dark"] body {
     [class*="text-[#8"],
     [class*="text-[#9"],
     [class~="text-[#aaa]"],
-    [class~="text-[#999]"]
+    [class~="text-[#999]"],
+    [class~="text-[#55585f]"],
+    [class~="text-[#5f636b]"],
+    [class~="text-[#59606c]"],
+    [class~="text-[#58708b]"],
+    [class~="text-[#5b6170]"],
+    [class~="text-[#5b5e66]"],
+    [class~="text-[#4c4f56]"],
+    [class~="text-[#3c3f45]"]
   ) {
   color: #aeb5c2 !important;
+}
+
+.workspace-dark
+  .workspace-main
+  :is(
+    [class~="text-[#58713e]"],
+    [class~="text-[#559127]"],
+    [class~="text-[#526d16]"],
+    [class~="text-[#315b13]"],
+    [class~="text-[#345d17]"]
+  ) {
+  color: #c4ec95 !important;
 }
 
 .workspace-dark
