@@ -84,6 +84,12 @@ type CallRow = {
   duration_seconds: number;
 };
 
+/**
+ * Prepaid voice launched at this moment. Calls before it were covered by the
+ * old model and must never be deducted from a prepaid balance.
+ */
+export const VOICE_PREPAID_SINCE = "2026-09-25T13:00:00Z";
+
 /** Deducts finished calls from prepaid minutes, rounded up per call. */
 export async function settleVoiceUsage(admin: SupabaseClient) {
   const { data, error } = await admin
@@ -92,6 +98,7 @@ export async function settleVoiceUsage(admin: SupabaseClient) {
     .not("status", "in", "(queued,ringing,in_progress)")
     .gt("duration_seconds", 0)
     .is("billing_reported_at", null)
+    .gte("created_at", VOICE_PREPAID_SINCE)
     .limit(500);
   if (error) throw error;
   const calls = (data ?? []) as CallRow[];

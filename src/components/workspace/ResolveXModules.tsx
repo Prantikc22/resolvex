@@ -93,6 +93,8 @@ function ModuleShell({
 
 type Employee = {
   id: string;
+  voice_status?: string | null;
+  voice_note?: string | null;
   name: string;
   template_type:
     "support" | "receptionist" | "sales" | "customer_success" | "custom";
@@ -593,7 +595,15 @@ export function AIEmployeesView() {
                     widget in Channels → Messenger; use the panel below for a
                     browser voice test.
                   </div>
-                  <VoiceTester employee={employee} />
+                  {employee.voice_status === "paused" ? (
+                    <div className="rounded-[8px] border border-[#ffcf70]/60 bg-[#fff7df] p-3 text-[12px] leading-5 text-[#73520a]">
+                      <b>Voice is paused.</b>{" "}
+                      {employee.voice_note ??
+                        "Add prepaid voice minutes under Usage & billing, then activate again."}
+                    </div>
+                  ) : (
+                    <VoiceTester employee={employee} />
+                  )}
                 </div>
               )}
             {employee.status === "active" && (
@@ -1168,6 +1178,7 @@ export function ApprovalsView() {
 
 type CallRow = {
   id: string;
+  provider?: string | null;
   direction: string;
   handler_type: string;
   from_number: string | null;
@@ -1241,8 +1252,15 @@ export function CallsView() {
               <b className="text-xs capitalize">
                 {call.direction} · {call.handler_type}
               </b>
-              <p className="mt-1 text-[10px] text-[#858a93]">
-                {call.from_number ?? "Unknown"} → {call.to_number ?? "Unknown"}
+              <p className="mt-1 text-[12px] text-[#858a93]">
+                {call.from_number || call.to_number
+                  ? `${call.from_number ?? "Private number"} → ${call.to_number ?? "Unknown"}`
+                  : "Website voice"}
+                {" · "}
+                {new Date(call.created_at).toLocaleString(undefined, {
+                  dateStyle: "medium",
+                  timeStyle: "short",
+                })}
               </p>
             </div>
             <div className="text-right">
@@ -2357,58 +2375,80 @@ function CalendarClockIcon() {
   return <Clock3 size={13} className="mr-1.5 inline -translate-y-px" />;
 }
 
-export function ChannelsView() {
+type ChannelStatus = {
+  id: string;
+  name: string;
+  state: "live" | "action" | "paused" | "soon";
+  status: string;
+  detail: string;
+  view?: string;
+};
+
+const channelTone: Record<ChannelStatus["state"], string> = {
+  live: "bg-[#dff8bc] text-[#3e8218]",
+  action: "bg-[#fff1c9] text-[#73520a]",
+  paused: "bg-[#ffe1da] text-[#8c2d18]",
+  soon: "bg-[#f1f2f4] text-[#6b6e75]",
+};
+
+export function ChannelsView({
+  onNavigate,
+}: {
+  onNavigate?: (view: string) => void;
+}) {
+  const [channels, setChannels] = useState<ChannelStatus[] | null>(null);
+  useEffect(() => {
+    fetch("/api/workspace/channels", { cache: "no-store" })
+      .then((response) => response.json())
+      .then((data) => setChannels(data.channels ?? []))
+      .catch(() => setChannels([]));
+  }, []);
+  if (!channels) return <Loading />;
   return (
     <ModuleShell
       eyebrow="Settings"
       title="Channels"
-      copy="Only channels with verified authentication and required permissions can be marked active."
+      copy="Live status of every way customers reach you. A channel shows as live only when it is authenticated and answered."
       tone="#f4f5f6"
     >
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        {[
-          [
-            "Website chat",
-            "Available",
-            "Install the ResolveX messenger from workspace settings.",
-          ],
-          [
-            "Email",
-            "Setup required",
-            "Connect Gmail through ResolveX Connect or configure inbound email.",
-          ],
-          [
-            "AI voice",
-            "Employee required",
-            "Activate a voice-enabled AI employee and test in the browser.",
-          ],
-          [
-            "Telephone",
-            "Bring your number",
-            "Connect a number you own from Twilio, Plivo, Exotel, Vonage or any SIP carrier under Phone numbers.",
-          ],
-          [
-            "WhatsApp",
-            "Via integrations",
-            "Connect WhatsApp Business under Integrations so AI employees can send confirmations and replies.",
-          ],
-          [
-            "Instagram & Messenger",
-            "Not connected",
-            "Requires Meta permissions and a verified connection.",
-          ],
-        ].map(([name, status, copy]) => (
+        {channels.map((channel) => (
           <article
-            key={name}
-            className="rounded-[9px] border border-black/10 bg-white p-5"
+            key={channel.id}
+            className="flex flex-col rounded-[10px] border border-black/10 bg-white p-5"
           >
-            <div className="flex justify-between gap-3">
-              <b className="text-sm">{name}</b>
-              <span className="rounded-full bg-[#f0f1f3] px-2 py-1 text-[9px] font-bold">
-                {status}
+            <div className="flex items-start justify-between gap-3">
+              <b className="text-[15px]">{channel.name}</b>
+              <span
+                className={cn(
+                  "shrink-0 rounded-full px-2.5 py-1 text-[11px] font-bold",
+                  channelTone[channel.state],
+                )}
+              >
+                {channel.status}
               </span>
             </div>
-            <p className="mt-6 text-xs leading-5 text-[#7a7f88]">{copy}</p>
+            <p className="mt-4 flex-1 text-[13px] leading-relaxed text-[#6b7079]">
+              {channel.detail}
+            </p>
+            {channel.view && onNavigate && channel.state !== "live" && (
+              <button
+                type="button"
+                onClick={() => onNavigate(channel.view!)}
+                className="mt-4 flex items-center gap-1.5 self-start text-[13px] font-semibold text-[#355cff]"
+              >
+                Set up <ArrowRight size={13} />
+              </button>
+            )}
+            {channel.view && onNavigate && channel.state === "live" && (
+              <button
+                type="button"
+                onClick={() => onNavigate(channel.view!)}
+                className="mt-4 flex items-center gap-1.5 self-start text-[13px] font-semibold text-[#6b6e75]"
+              >
+                Manage <ArrowRight size={13} />
+              </button>
+            )}
           </article>
         ))}
       </div>

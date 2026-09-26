@@ -67,8 +67,25 @@ export async function GET() {
     .order("created_at", { ascending: false });
   if (error)
     return NextResponse.json({ error: error.message }, { status: 400 });
+  // Voice agents are paused when the plan or prepaid minutes lapse; surface
+  // that per employee so the UI never offers a test that will be refused.
+  const { data: agents } = await supabase
+    .from("ai_provider_agents")
+    .select("ai_employee_id,channel,status,last_error")
+    .eq("organization_id", organizationId);
+  const employees = (data ?? []).map((employee) => {
+    const web = (agents ?? []).find(
+      (row) =>
+        row.ai_employee_id === employee.id && row.channel === "website_voice",
+    );
+    return {
+      ...employee,
+      voice_status: web?.status ?? null,
+      voice_note: web?.status === "paused" ? web.last_error : null,
+    };
+  });
   return NextResponse.json({
-    employees: data ?? [],
+    employees,
     templates: employeeTemplates,
   });
 }

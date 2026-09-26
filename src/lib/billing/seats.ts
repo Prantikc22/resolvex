@@ -76,6 +76,9 @@ export async function syncSubscriptionSeats(
     return { synced: true, changed: true, scheduled };
   }
 
+  // Complimentary and legacy plans have no provider seats to update.
+  if (row.provider !== "razorpay") return { synced: true, changed: false };
+
   const keyId = process.env.RAZORPAY_KEY_ID;
   const keySecret = process.env.RAZORPAY_KEY_SECRET;
   if (

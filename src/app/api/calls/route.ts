@@ -11,7 +11,7 @@ export async function GET() {
   const { data, error } = await supabase
     .from("calls")
     .select(
-      "id,contact_id,ai_employee_id,phone_number_id,direction,handler_type,from_number,to_number,status,started_at,ended_at,duration_seconds,summary,transcript,recording_url,outcome,cost_minor,currency,created_at",
+      "id,provider,contact_id,ai_employee_id,phone_number_id,direction,handler_type,from_number,to_number,status,started_at,ended_at,duration_seconds,summary,transcript,recording_url,outcome,cost_minor,currency,created_at",
     )
     .eq("organization_id", organizationId)
     .order("created_at", { ascending: false })

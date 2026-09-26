@@ -2277,7 +2277,7 @@ export function Workspace({
           <TeamManagementView onManageBilling={() => setView("usage")} />
         );
       case "channels":
-        return <ChannelsView />;
+        return <ChannelsView onNavigate={(next) => setView(next as View)} />;
       case "phone_numbers":
         return <PhoneNumbersView onNavigate={() => setView("approvals")} />;
       case "settings":
