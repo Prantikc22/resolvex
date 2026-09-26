@@ -56,6 +56,9 @@ export function PhoneNumbersView({
         setEmployeeId(data.voiceEmployees?.[0]?.id ?? "");
         setConfigured(Boolean(data.configured));
       })
+      .catch(() =>
+        toast.error("Could not load phone numbers. Check your connection."),
+      )
       .finally(() => setLoading(false));
   }, []);
 

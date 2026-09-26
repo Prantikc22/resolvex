@@ -118,7 +118,7 @@ export function AttentionBrief({
         "attention-brief",
         compact
           ? "attention-brief--compact border-b p-4"
-          : "rounded-[12px] border",
+          : "min-w-0 rounded-[12px] border",
       )}
     >
       <div

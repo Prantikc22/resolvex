@@ -439,6 +439,18 @@ html[data-workspace-theme="dark"] body {
   color: #f5f7fb !important;
 }
 
+/* Dark primary buttons would disappear on dark cards; lift them slightly. */
+.workspace-dark
+  .workspace-main
+  :is(button, a):is(
+    [class~="bg-[#15171b]"],
+    [class~="bg-[#17191d]"],
+    [class~="bg-[#111318]"]
+  ) {
+  background-color: #2b3140 !important;
+  color: #f5f7fb !important;
+}
+
 .setup-track {
   background-color: #e7e9ee;
 }

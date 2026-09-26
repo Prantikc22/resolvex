@@ -1200,6 +1200,7 @@ export function CallsView() {
         if (response.ok) setCalls(data.calls ?? []);
         else toast.error(data.error);
       })
+      .catch(() => toast.error("Could not load calls. Check your connection."))
       .finally(() => setLoading(false));
   }, []);
   if (loading) return <Loading />;
@@ -2212,10 +2213,10 @@ export function OverviewDashboard({
         ))}
       </div>
 
-      <div className="mt-5 grid gap-5 xl:grid-cols-[1.45fr_1fr]">
+      <div className="mt-5 grid grid-cols-1 gap-5 xl:grid-cols-[1.45fr_1fr]">
         <AttentionBrief onOpenIntegrations={() => onNavigate("integrations")} />
 
-        <div className="space-y-5">
+        <div className="min-w-0 space-y-5">
           <section className="rounded-[12px] bg-[#15171b] p-5 text-white">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2.5">
