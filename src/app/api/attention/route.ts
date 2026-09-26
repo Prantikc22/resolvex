@@ -253,13 +253,22 @@ async function addDecisions(signals: Signal[]) {
     .slice(0, 8);
 }
 
-export async function GET() {
+// Short-lived, in-memory only: a brief is reused for a few minutes so moving
+// between screens is instant, without persisting any mailbox content.
+const BRIEF_TTL_MS = 5 * 60_000;
+const briefCache = new Map<string, { at: number; body: unknown }>();
+
+export async function GET(request: Request) {
   const { supabase, user, organizationId } = await getCurrentOrganization();
   if (!user || !organizationId)
     return NextResponse.json(
       { error: "Workspace not found." },
       { status: 401 },
     );
+  const refresh = new URL(request.url).searchParams.has("refresh");
+  const cached = briefCache.get(organizationId);
+  if (!refresh && cached && Date.now() - cached.at < BRIEF_TTL_MS)
+    return NextResponse.json(cached.body);
   const allowed = await consumeUsageGuard(
     createAdminClient(),
     `attention:${organizationId}`,
@@ -304,7 +313,7 @@ export async function GET() {
       needsHuman: 0,
     }));
   }
-  return NextResponse.json({
+  const body = {
     items,
     connected: {
       gmail: connected.has("composio:gmail"),
@@ -312,5 +321,7 @@ export async function GET() {
     },
     decisionEngine: jevConfigured(),
     storage: "none",
-  });
+  };
+  briefCache.set(organizationId, { at: Date.now(), body });
+  return NextResponse.json(body);
 }

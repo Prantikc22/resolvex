@@ -74,11 +74,15 @@ export function AttentionBrief({
   const [items, setItems] = useState<AttentionItem[]>([]);
   const [connected, setConnected] = useState({ gmail: false, slack: false });
   const [loading, setLoading] = useState(true);
+  const [loaded, setLoaded] = useState(false);
   const [expanded, setExpanded] = useState(false);
-  const load = useCallback(async () => {
+  const load = useCallback(async (refresh = false) => {
     setLoading(true);
     try {
-      const response = await fetch("/api/attention", { cache: "no-store" });
+      const response = await fetch(
+        refresh ? "/api/attention?refresh=1" : "/api/attention",
+        { cache: "no-store" },
+      );
       const data = await response.json();
       if (!response.ok)
         throw new Error(data.error ?? "Could not load attention brief.");
@@ -92,6 +96,7 @@ export function AttentionBrief({
       );
     } finally {
       setLoading(false);
+      setLoaded(true);
     }
   }, []);
   useEffect(() => {
@@ -140,16 +145,18 @@ export function AttentionBrief({
             </p>
             {!compact && (
               <p className="attention-muted mt-0.5 truncate text-[13px]">
-                {connectedCount
-                  ? `${needsYou ? `${needsYou} need you · ` : ""}Read live from ${sources}. Nothing is stored.`
-                  : "Connect Gmail or Slack and ResolveX triages them every morning."}
+                {!loaded
+                  ? "Checking your connected inboxes…"
+                  : connectedCount
+                    ? `${needsYou ? `${needsYou} need you · ` : ""}Read live from ${sources}. Nothing is stored.`
+                    : "Connect Gmail or Slack and ResolveX triages them every morning."}
               </p>
             )}
           </div>
         </div>
         <button
           type="button"
-          onClick={() => void load()}
+          onClick={() => void load(true)}
           disabled={loading}
           aria-label="Refresh attention brief"
           className="attention-control grid size-8 shrink-0 place-items-center rounded-[7px] border"
