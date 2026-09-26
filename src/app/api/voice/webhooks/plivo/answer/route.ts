@@ -16,7 +16,9 @@ function xmlEscape(value: string) {
 }
 
 export async function POST(request: Request) {
-  const form = await request.formData();
+  const form = await request.formData().catch(() => null);
+  if (!form)
+    return NextResponse.json({ error: "Invalid request." }, { status: 400 });
   const params = Object.fromEntries(
     [...form.entries()].map(([key, value]) => [key, String(value)]),
   );

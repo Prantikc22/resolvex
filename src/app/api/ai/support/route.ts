@@ -22,7 +22,15 @@ const context =
 
 export async function POST(request: Request) {
   try {
-    const input = requestSchema.parse(await request.json());
+    const parsed = requestSchema.safeParse(
+      await request.json().catch(() => null),
+    );
+    if (!parsed.success)
+      return NextResponse.json(
+        { error: "Send at least one message." },
+        { status: 400 },
+      );
+    const input = parsed.data;
     const admin = createAdminClient();
     const [visitorAllowed, dailyAllowed] = await Promise.all([
       consumeUsageGuard(

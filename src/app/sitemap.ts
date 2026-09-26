@@ -20,7 +20,6 @@ export default function sitemap(): MetadataRoute.Sitemap {
     ["/install", "monthly", 0.7],
     ["/faq", "monthly", 0.7],
     ["/about", "monthly", 0.6],
-    ["/company", "monthly", 0.6],
     ["/contact", "monthly", 0.6],
     ["/security", "monthly", 0.65],
     ["/status", "weekly", 0.5],
